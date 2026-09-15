@@ -13,7 +13,9 @@ from fractions import Fraction
 
 EPS = 1e-9
 
-REASON_INCONCLUSIVE = "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，因此当前证明器无法处理。"
+REASON_INCONCLUSIVE = (
+    "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，" "因此当前证明器无法处理。"
+)
 REASON_FAILED = "数值最小值未达到证明要求；该不等式可能不成立，或超出当前搜索范围。"
 REASON_NO_LINE = "不等式数值上已通过，但当前情形没有生成中间直线证明。"
 REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索没有找到漂亮的有理切点直线。"
@@ -268,7 +270,7 @@ def line_gap_terms(base_terms, m, b, sign):
     line = [(m, ("linear",)), (b, ("const",))]
     if sign == 1:
         return combine_terms(line + [(-c, a) for c, a in base_terms])
-    return combine_terms(base_terms + [(-m, ("linear",)), (-b, ("const",))])
+    return combine_terms([*base_terms, (-m, ("linear",)), (-b, ("const",))])
 
 
 def fraction_label(frac):
