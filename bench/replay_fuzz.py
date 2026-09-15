@@ -45,7 +45,7 @@ def bodies_equal(site_raw: str, ours_raw: str) -> bool:
 
 def main() -> None:
     """Replay every stored probe and rewrite ours_* fields in place."""
-    recs = [json.loads(l) for l in OUT.open() if l.strip()]
+    recs = [json.loads(line) for line in OUT.open() if line.strip()]
     client = app.test_client()
     n_match = 0
     mismatches = []
