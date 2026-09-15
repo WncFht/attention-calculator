@@ -74,8 +74,9 @@ def main() -> None:
     client = app.test_client()
     results = []
     for name, checker in (("combo", check_combo), ("decompose", check_decompose)):
-        for rec in (json.loads(l) for l in open(DATA / f"{name}.jsonl") if l.strip()):
-            results.append({"set": name, **checker(client, rec)})
+        with open(DATA / f"{name}.jsonl") as fh:
+            for rec in (json.loads(line) for line in fh if line.strip()):
+                results.append({"set": name, **checker(client, rec)})
 
     if args.out:
         with open(args.out, "w") as f:
