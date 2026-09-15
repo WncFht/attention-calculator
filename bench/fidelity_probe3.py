@@ -12,6 +12,7 @@ semiconvergent below). Predictions from the exact solver are in the notes.
 
 Appends to bench/data/fidelity-probes.jsonl; resumable via id skip.
 """
+import contextlib
 import json
 import math
 import sys
@@ -22,7 +23,7 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from attention_calculator.integrand import constant_mpf  # noqa: E402
+from attention_calculator.integrand import constant_mpf
 
 BASE = "https://zhuyidao.net"
 OUT = Path(__file__).parent / "data" / "fidelity-probes.jsonl"
@@ -114,10 +115,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     print(f"{len(done)} done, {len(todo)} to probe", flush=True)
     last = 0.0
