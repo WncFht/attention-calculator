@@ -135,7 +135,7 @@ def check_input(q: Fraction, bound: Fraction, kind: str) -> tuple[Fraction, str]
         q_eff = q / 180
     else:
         if not 0 < q < Fraction(1, 2) or q.denominator == 1:
-            raise ValueError("请在输入一个在(0,1/2)内的分数，本情况不支持整数")  # noqa: RUF001
+            raise ValueError("请在输入一个在(0,1/2)内的分数，本情况不支持整数")
         q_eff = q
     # Niven: the only rational values are sin(pi/6) = cos(pi/3) = 1/2.
     if q_eff == (Fraction(1, 6) if is_sin else Fraction(1, 3)) and bound == Fraction(1, 2):
