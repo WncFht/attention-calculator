@@ -96,7 +96,8 @@ def main() -> None:
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    records = [json.loads(line) for line in open(args.golden) if line.strip()]
+    with open(args.golden) as fh:
+        records = [json.loads(line) for line in fh if line.strip()]
     if args.type:
         records = [r for r in records if r["type"] == args.type]
     if args.limit:
