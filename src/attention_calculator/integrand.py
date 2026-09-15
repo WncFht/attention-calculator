@@ -1,3 +1,4 @@
+# ruff: noqa: RUF002, RUF003  # 中文标点属刻意文体
 """被积函数重建器：站点 parameters + type/power/comparison → sympy 表达式与积分域。
 
 唯一权威实现。验证脚本 bench/verify.py 与本方求解器的一致性检查都走这里。
@@ -87,12 +88,17 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
     if kind == "pi":
         return base_quad(p) * polyx2 / (1 + x**2), *DOMAIN_UNIT
     if kind == "pi_n":
-        # π^k：矩空间要求指数奇偶与 k 相反（偶 k 用奇指数取 η(k)）
-        e = 2 * int(p["m"]) + (1 if int(power) % 2 == 0 else 0)
+        # π^{u/v} 先升到 v 次幂变 π^u 再证：核 ln^{u-1}(1/x)，LHS 为 ±(π^u−r^v)。
+        # 矩空间要求基指数奇偶与 u 相反（偶 u 用奇指数取 η(u)）。
+        u = power.numerator
+        e = 2 * int(p["m"]) + (1 if u % 2 == 0 else 0)
         f = x**e * (1 - x**2) ** int(p["n"]) * polyx2 \
-            * sp.log(1 / x) ** (int(power) - 1) / (1 + x**2)
+            * sp.log(1 / x) ** (u - 1) / (1 + x**2)
         return f, *DOMAIN_UNIT
-    if kind in ("e", "e_q"):
+    if kind == "e":
+        # e 型的 power 是系数（k·e），核恒为 e^x；e_q 的 power 才是指数
+        return base * polyx * sp.exp(x), *DOMAIN_UNIT
+    if kind == "e_q":
         return base * polyx * sp.exp(q * x), *DOMAIN_UNIT
     if kind == "e_pi":
         return base_sin(p) * polysin * sp.exp(x), *DOMAIN_PI
@@ -159,16 +165,17 @@ def gamma_integrand(comp: str, p: dict):
     """
     m, n, u = int(p["m"]), int(p["n"]), int(p["u_val"])
     a, b = frac(p["a_val"]), frac(p["b_val"])
+    y = 1 - x  # 合并成单分式消去 1/(1-x) 与 1/ln x 在 x→1 的灾难性对消
     if comp == "<":
-        first = x**k * ((2 - x) / 2 - 1 / (1 - x) - 1 / sp.log(x))
+        first = x**k * ((y**2 + y - 2) * sp.log(x) - 2 * y) / (2 * y * sp.log(x))
     else:
-        first = x**k * (1 / (1 - x) + 1 / sp.log(x) - sp.Rational(1, 2))
+        first = x**k * ((2 - y) * sp.log(x) + 2 * y) / (2 * y * sp.log(x))
     if u == 0:
         return first
     sub = x**m * (1 - x) ** n \
         * (sp.Rational(a.numerator, a.denominator)
            + sp.Rational(b.numerator, b.denominator) * x) \
-        / (u * (1 + k * x) ** n)
+        / (1 + k * x) ** n
     return first + sub
 
 
@@ -178,7 +185,7 @@ def constant_mpf(kind: str, power: Fraction):
     const = {
         "pi": mp.pi * q,
         "e": mp.e * q,
-        "pi_n": mp.pi ** int(power),
+        "pi_n": mp.pi ** q,
         "e_q": mp.exp(q),
         "ln_q": mp.log(q),
         "ln_q_square": mp.log(q) ** 2,
@@ -191,11 +198,11 @@ def constant_mpf(kind: str, power: Fraction):
         "sinh_q": mp.sinh(q), "cosh_q": mp.cosh(q),
         "tanh_q": mp.tanh(q), "coth_q": 1 / mp.tanh(q),
         "artanh_q": mp.atanh(q), "arcoth_q": mp.atanh(1 / q),
-        "gamma": mp.euler,
-        "golden": (1 + mp.sqrt(5)) / 2,
-        "catalan": mp.catalan,
-        "zeta3": mp.zeta(3),
-        "e_pi": mp.exp(mp.pi * q),
+        "gamma": q * mp.euler,
+        "golden": q * (1 + mp.sqrt(5)) / 2,
+        "catalan": q * mp.catalan,
+        "zeta3": q * mp.zeta(3),
+        "e_pi": q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         "varpi": mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
         "gauss": mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
     }[kind]
@@ -210,6 +217,10 @@ def lhs_mpf(kind: str, comp: str, power: Fraction, rational: Fraction):
     """
     c = constant_mpf(kind, power)
     r = mp.mpf(rational.numerator) / rational.denominator
+    if kind == "pi_n" and power.denominator != 1:
+        # 分数幂升幂后比较 C^v 与 r^v
+        v = power.denominator
+        c, r = c ** v, r ** v
     if kind == "varpi" and comp == ">":
         return 1 - r / c
     if kind == "gauss" and comp == "<":
