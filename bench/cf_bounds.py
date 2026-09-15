@@ -10,8 +10,10 @@ from fractions import Fraction
 
 sys.path.insert(0, "src")
 from mpmath import mp
-mp.dps = 120
+
 from attention_calculator.integrand import constant_mpf
+
+mp.dps = 120
 
 
 def cf_terms(x, n):
@@ -81,6 +83,7 @@ if __name__ == "__main__":
         C = constant_mpf(kind, Fraction(power))
         Cf = float(C)
         near = bounds_near(kind, power)
-        print(f"== {kind} {power}  Cf={Cf!r} (C-Cf={mp.nstr(C-mp.mpf(Fraction(Cf).numerator)/Fraction(Cf).denominator,4)})")
+        gap0 = C - mp.mpf(Fraction(Cf).numerator) / Fraction(Cf).denominator
+        print(f"== {kind} {power}  Cf={Cf!r} (C-Cf={mp.nstr(gap0, 4)})")
         for gap, r in near[:8]:
             print(f"   gap={mp.nstr(gap,4):>10s}  r={r}  float_eq={float(r)==Cf}")
