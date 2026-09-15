@@ -94,6 +94,8 @@ def test_calculate_no_solution_limits(client, monkeypatch):
 BAD_TYPE = "无效的证明类型"
 BAD_COMP = "无效的不等号方向"
 BAD_POWER = "左侧系数格式无效"
+BAD_POWER_DENOM = "左侧系数分母不能为0"
+BAD_POWER_CAP = "左侧系数请输入小于10^16的整数或分数"
 BAD_RATIONAL = "右侧有理数格式无效"
 ZERO_DENOM = "右侧有理数分母不能为0"
 RATIONAL_TOO_BIG = "右侧有理数请输入小于10^16的整数或分数"
@@ -111,7 +113,8 @@ def test_calculate_format_errors(client):
         (form(power=""), BAD_POWER),
         (form(power="x"), BAD_POWER),
         (form(power="-1"), BAD_POWER),
-        (form(power="1/0"), BAD_POWER),
+        (form(power="1/0"), BAD_POWER_DENOM),
+        (form(power="1" + "0" * 17), BAD_POWER_CAP),
         (form(rational=""), BAD_RATIONAL),
         (form(rational="abc"), BAD_RATIONAL),
         (form(rational="3.14"), BAD_RATIONAL),
@@ -120,9 +123,21 @@ def test_calculate_format_errors(client):
         (form(rational="1/0"), ZERO_DENOM),
         (form(rational="1" + "0" * 17 + "/1"), RATIONAL_TOO_BIG),
         (form(rational="1/" + "1" + "0" * 16), RATIONAL_TOO_BIG),
+        # 站端把整个右侧字段校验置于左侧之前（成对探针实测）
+        (form(power="abc", rational="xyz"), BAD_RATIONAL),
+        (form(power="abc", rational="1/0"), ZERO_DENOM),
+        (form(power="1/0", rational="1/0"), ZERO_DENOM),
+        (form(power="1" + "0" * 17, rational="1/0"), ZERO_DENOM),
+        (form(power="1/0", rational="1" + "0" * 17), RATIONAL_TOO_BIG),
+        # type 缺省回退 pi；显式空串仍是无效类型
+        ({"power": "1", "comparison": "<", "rational": "22/7"}, None),
+        (form(type=""), BAD_TYPE),
     ]
     for form, error in cases:
         resp = post_calc(client, **form)
+        if error is None:
+            assert resp.status_code == 200 and resp.get_json()["type"] == "pi"
+            continue
         assert resp.status_code == 400, (form, resp.get_json())
         assert resp.get_json() == {"error": error}, form
 

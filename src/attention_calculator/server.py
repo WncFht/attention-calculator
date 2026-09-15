@@ -92,7 +92,8 @@ def index():
 @app.post("/calculate")
 def calculate():
     """Run a proof search; wraps solve.prove into the site's response shape."""
-    kind = request.form.get("type", "")
+    # type 缺省回退 pi（实测：不发 type 字段照常出解；发 type="" 报无效类型）
+    kind = request.form.get("type", "pi")
     power = request.form.get("power", "").strip()
     comp = request.form.get("comparison", "")
     rational = request.form.get("rational", "").strip()
@@ -102,10 +103,7 @@ def calculate():
     if comp not in (">", "<"):
         return fail("无效的不等号方向", 400)
 
-    power_parts = split_num(power)
-    if power_parts is None or power_parts[1] == 0:
-        return fail("左侧系数格式无效", 400)
-    power_val = Fraction(*power_parts)
+    # 校验顺序（成对探针钉死）：右侧 format→分母→上限 全部先于左侧一切检查
     bound_parts = split_num(rational)
     if bound_parts is None:
         return fail("右侧有理数格式无效", 400)
@@ -113,6 +111,15 @@ def calculate():
         return fail("右侧有理数分母不能为0", 400)
     if bound_parts[0] >= RATIONAL_CAP or bound_parts[1] >= RATIONAL_CAP:
         return fail("右侧有理数请输入小于10^16的整数或分数", 400)
+
+    power_parts = split_num(power)
+    if power_parts is None:
+        return fail("左侧系数格式无效", 400)
+    if power_parts[1] == 0:
+        return fail("左侧系数分母不能为0", 400)
+    if power_parts[0] >= RATIONAL_CAP or power_parts[1] >= RATIONAL_CAP:
+        return fail("左侧系数请输入小于10^16的整数或分数", 400)
+    power_val = Fraction(*power_parts)
 
     err = domain_error(kind, power_val)
     if err:
