@@ -10,7 +10,7 @@ from fractions import Fraction
 
 sys.path.insert(0, "src")
 from attention_calculator.engine import mn_order, poly_nonneg, solve_moment
-from attention_calculator.kernels import quadlog, exp_family, log_family, trig_q
+from attention_calculator.kernels import exp_family, log_family, quadlog, trig_q
 
 
 def f64_nonneg(coeffs):
@@ -48,8 +48,6 @@ def plans_for(kind, power, comp):
         plans = ((m, n, quadlog.basis_moments(m, n, odd, sym, term))
                  for m, n in mn_order(cfg["limit"]))
         sign = 1 if comp == ">" else -1
-        bound_sign = sign
-        target = {sym: sign * cfg["coef"], "1": -sign * Fraction(0)}  # placeholder
         return plans, cfg, sign
     raise ValueError(kind)
 
@@ -90,10 +88,10 @@ def trace_exp(kind, power_s, comp, bound_s, maxplans=2000):
     power, bound = Fraction(power_s), Fraction(bound_s)
     if kind == "e_q":
         sym, coef, q, limit = "e_q", Fraction(1), power, exp_family.LIMIT_OTHER
-        mk = lambda m, n: [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
     else:
         sym, coef, q, limit = "e", power, Fraction(1), exp_family.LIMIT_E
-        mk = lambda m, n: [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
+    def mk(m, n):
+        return [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
     sign = 1 if comp == ">" else -1
     target = {sym: sign * coef, "1": -sign * bound}
     print(f"== {kind} {power_s} {comp} {bound_s}  (limit {limit})")
@@ -118,12 +116,9 @@ def trace_log(kind, power_s, comp, bound_s, maxplans=300):
     c = qt - 1
     square = kind == "ln_q_square"
     sign = Fraction(1 if comp == ">" else -1)
-    if square:
-        target = {"ln2": sign, "1": -sign * bound}
-    else:
-        target = {"ln": sign, "1": -sign * bound}
+    target = {"ln2": sign, "1": -sign * bound} if square else {"ln": sign, "1": -sign * bound}
     print(f"== {kind} {power_s} {comp} {bound_s}  (limit 10)")
-    for i, (m, n) in enumerate(mn_order(10)):
+    for m, n in mn_order(10):
         basis = [log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
                  for j in range(3 if square else 2)]
         try:
@@ -133,7 +128,8 @@ def trace_log(kind, power_s, comp, bound_s, maxplans=300):
         e, f = verdict(coeffs)
         if e != "indef" or f != "indef":
             mark = "" if e == f else "   <-- DIVERGES"
-            print(f"  ({m},{n}) exact={e:7s} float={f:7s} coeffs={[str(c2) for c2 in coeffs]}{mark}")
+            print(f"  ({m},{n}) exact={e:7s} float={f:7s} "
+                  f"coeffs={[str(c2) for c2 in coeffs]}{mark}")
 
 
 def trace_trig(kind, power_s, comp, bound_s):
@@ -154,7 +150,8 @@ def trace_trig(kind, power_s, comp, bound_s):
         e, f = verdict(coeffs)
         if e != "indef" or f != "indef":
             mark = "" if e == f else "   <-- DIVERGES"
-            print(f"  ({m},{n}) exact={e:7s} float={f:7s} coeffs={[str(c2) for c2 in coeffs]}{mark}")
+            print(f"  ({m},{n}) exact={e:7s} float={f:7s} "
+                  f"coeffs={[str(c2) for c2 in coeffs]}{mark}")
 
 
 if __name__ == "__main__":
