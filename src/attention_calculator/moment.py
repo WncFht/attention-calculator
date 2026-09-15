@@ -34,6 +34,6 @@ def scale(u: Moment, c: Fraction) -> Moment:
 def combine(coeffs: list[Fraction], moments: list[Moment]) -> Moment:
     """Linear combination of moment vectors with rational coefficients."""
     out: Moment = {}
-    for c, m in zip(coeffs, moments):
+    for c, m in zip(coeffs, moments, strict=True):
         out = add(out, scale(m, c))
     return out
