@@ -1,4 +1,4 @@
-# ruff: noqa: RUF002, RUF003  # 中文标点属刻意文体
+# 中文标点属刻意文体
 """被积函数重建器：站点 parameters + type/power/comparison → sympy 表达式与积分域。
 
 唯一权威实现。验证脚本 bench/verify.py 与本方求解器的一致性检查都走这里。
