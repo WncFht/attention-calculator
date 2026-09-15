@@ -184,7 +184,10 @@ def test_provided_line(client):
 
 
 def test_line_parse_errors_400(client):
-    """line 字段走同一文法：坏原子 -> 400。"""
+    """line 惰性解析：只在进入证明路径时解析（probe: x>0+foo(x) 边界失败→200；
+    x^2+1>0+foo(x) 可证路径→400 unsupported atom）。"""
     resp = prove(client, inequality="x>0", line="foo(x)")
+    assert resp.status_code == 200
+    resp = prove(client, inequality="x^2+1>0", line="foo(x)")
     assert resp.status_code == 400
     assert "unsupported atom" in resp.get_json()["error"]

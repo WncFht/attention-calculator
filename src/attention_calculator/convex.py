@@ -1,677 +1,578 @@
-"""POST /convex/prove 求解器 —— zhuyidao.net「凹凸不等式计算器」克隆。
+"""POST /convex/prove solver — byte-exact clone of zhuyidao.net 凹凸不等式计算器.
 
-管线（契约见 docs/sibling-apps.md §1，全部行为按该文档实测记录实现）:
-ast 解析受限文法 → 项的线性组合 → 归一 left > right → 二阶导符号分类 →
-定义域数值最小值 → (proved|inconclusive|failed) → 有理切点切线搜索。
-
-错误面与站端逐字一致: ast.dump(node, show_empty=True) 直接进错误串
-（`unsupported atom Call(func=Name(id='foo', ctx=Load()), ...)`）、
-`log only supports argument x`、缺字段 `请输入一个不等式。`。
-
-待探测钉死的细节全部收在 ProbeConfig 与候选生成器接缝中——数值对齐时
-只改配置默认值，不动结构:
-
-* 定义域: 含 log/sqrt/分数幂时 x>1e-8（实测"从 1e-08 起扫"）；无受限
-  原子时是否退回全体实数未钉死（domain_pos_only / domain_neg_lo）。
-* 扫描上界 domain_hi、网格数 grid_n、网格对数排布——均为假设值。
-* 数值最小值机制: 网格取优 + f' 变号单元 brentq 求根（站端 15 位
-  x 指向导数求根；bounded Brent 只到 ~1e-8）。bracket 选区与
-  root_xtol 影响最后几个 ulp，样本最小值差 1 ulp。
-* 切点候选集: 默认假设 = 数值最小值点 xmin 的连分数渐近分数列（样本
-  tangent_at=17/30 正是 xmin≈0.567143290409784 的第 5 个渐近分数）。
-  真实候选集与排除规则待探测。
-* 阈值: 数值最小值判负 min_tol、切线 gap 判正 gap_tol（实测 e^x>=x+1
-  的 ~0 gap 被拒 → 存在正阈值或边界判定）。
-* 未实测的错误文案: 非比较输入 / 非法比较符 / 非仿射 line / 空侧渲染
-  / 首项负号形态等，见各 PROBE 注释。
+Core = lianghuatiaojiushi/ConvexConcaveProver scripts/prove.py verbatim
+(float64 term model, derivative-sign bisection with 160 halvings, CF tangent
+candidates 12 terms/denominator<=10000) + the site's JSON/latex wrapper:
+normalized/*_latex fields, status/reason strings, line/domain params.
 """
-
-from __future__ import annotations
 
 import ast
 import math
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+import re
 from fractions import Fraction
-from itertools import pairwise
 
-import sympy as sp
-from scipy.optimize import brentq
+EPS = 1e-9
 
-X = sp.symbols("x")
+REASON_INCONCLUSIVE = "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，因此当前证明器无法处理。"
+REASON_FAILED = "数值最小值未达到证明要求；该不等式可能不成立，或超出当前搜索范围。"
+REASON_NO_LINE = "不等式数值上已通过，但当前情形没有生成中间直线证明。"
+REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索没有找到漂亮的有理切点直线。"
 
-# ---- 站端原文文案（实测） ----
-MISSING_INEQUALITY = "请输入一个不等式。"
-REASON_INCONCLUSIVE = "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，因此当前证明器无法处理。"  # noqa: E501 -- 站端原文
-REASON_FAILED = "数值最小值未达到证明要求；该不等式可能不成立，或超出当前搜索范围。"  # 站端原文
-REASON_NO_LINE = "不等式数值上已通过，但当前情形没有生成中间直线证明。"  # 站端原文
-REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索没有找到漂亮的有理切点直线。"  # 站端原文
-
-# ---- 未实测文案（PROBE） ----
-NOT_INEQUALITY = MISSING_INEQUALITY  # PROBE: 非比较/语法错误输入的文案未实测
-LINE_NOT_AFFINE = "line 只支持 m*x+b 形式的直线。"  # PROBE: 文案未实测
-
-# Term = (coef: Fraction, atom)；atom = ("exp"|"log"|"sqrt"|"x"|"const")
-#        或 ("pow", Fraction)；求值原子 evalatom = ("logat"|"sqrtat"|"expat", q)
-#        或 ("powat", q, r)，只用于切线截距的字面显示。
-Term = tuple[Fraction, tuple]
-Atom = tuple
-EvalAtom = tuple
+# atom = ("const",) | ("linear",) | ("exp",) | ("log",) | ("power", float)
+# term = (coeff: float, atom)
 
 
-# ============================ 解析 ============================
-
-def is_const_expr(node: ast.expr) -> bool:
-    """True if the AST subtree contains no x and no calls (pure arithmetic)."""
-    if isinstance(node, ast.Constant):
-        return isinstance(node.value, (int, float))
-    if isinstance(node, ast.UnaryOp):
-        return isinstance(node.op, (ast.UAdd, ast.USub)) and is_const_expr(node.operand)
-    if isinstance(node, ast.BinOp):
-        return (isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow))
-                and is_const_expr(node.left) and is_const_expr(node.right))
-    return False
-
-
-def eval_const(node: ast.expr) -> Fraction:
-    """Evaluate an is_const_expr subtree to a Fraction.
-
-    小数按 str() 十进制串收纳（0.1 -> 1/10）；PROBE: 站端也可能用
-    Fraction(0.1) 的二进制有理形态。
-    """
-    if isinstance(node, ast.Constant):
-        v = node.value
-        return Fraction(v) if isinstance(v, int) else Fraction(str(v))
-    if isinstance(node, ast.UnaryOp):
-        val = eval_const(node.operand)
-        return -val if isinstance(node.op, ast.USub) else val
-    a, b = eval_const(node.left), eval_const(node.right)
-    op = node.op
-    if isinstance(op, ast.Add):
-        return a + b
-    if isinstance(op, ast.Sub):
-        return a - b
-    if isinstance(op, ast.Mult):
-        return a * b
-    if isinstance(op, ast.Div):
-        return a / b
-    # Pow：整数指数精确，分数指数经 float 再按十进制串回收
-    res = a ** b
-    return res if isinstance(res, Fraction) else Fraction(str(res))
-
-
-def parse_atom(node: ast.expr) -> Atom:
-    """Term atom: exp/log/sqrt call on bare x, x^rational, or x itself."""
-    if isinstance(node, ast.Name):
-        if node.id == "x":
-            return ("x",)
-        raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
-    if isinstance(node, ast.Call):
-        fname = node.func.id if isinstance(node.func, ast.Name) else ""
-        if fname not in ("exp", "log", "sqrt"):
-            raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
-        if (len(node.args) != 1 or node.keywords
-                or not isinstance(node.args[0], ast.Name) or node.args[0].id != "x"):
-            raise ValueError(f"{fname} only supports argument x")
-        return (fname,)
-    if (isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow)
-            and isinstance(node.left, ast.Name) and node.left.id == "x"
-            and is_const_expr(node.right)):
-        return ("pow", eval_const(node.right))
-    raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
-
-
-def mul_factors(node: ast.expr) -> list[ast.expr]:
-    """Flatten a Mult chain into its factor list."""
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
-        return mul_factors(node.left) + mul_factors(node.right)
-    return [node]
-
-
-def parse_term(node: ast.expr) -> Term:
-    """One additive term -> (coefficient, atom).
-
-    `系数*原子` / `原子/常数` 剥出系数；纯常数项归 ("const",)。多个非常数
-    因子（x*x）或非常数分母 -> unsupported atom（项整体 dump）。
-    """
-    if is_const_expr(node):
-        return eval_const(node), ("const",)
-    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mult, ast.Div)):
-        if isinstance(node.op, ast.Div):
-            numer, denom = [node.left], [node.right]
-        else:
-            numer, denom = mul_factors(node), []
-        coef = Fraction(1)
-        atoms = []
-        for f in numer:
-            if is_const_expr(f):
-                coef *= eval_const(f)
-            else:
-                atoms.append(parse_atom(f))  # 各因子自己的错误串（Name('y') 等）
-        for f in denom:
-            if not is_const_expr(f):
-                raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
-            coef /= eval_const(f)
-        if len(atoms) != 1:
-            raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
-        return coef, atoms[0]
-    return Fraction(1), parse_atom(node)
-
-
-def parse_sum(node: ast.expr) -> list[Term]:
-    """An expression -> signed (coef, atom) term list, input order preserved."""
-    out: list[Term] = []
-
-    def walk(n: ast.expr, neg: bool) -> None:
-        if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Add):
-            walk(n.left, neg)
-            walk(n.right, neg)
-        elif isinstance(n, ast.BinOp) and isinstance(n.op, ast.Sub):
-            walk(n.left, neg)
-            walk(n.right, not neg)
-        elif isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
-            walk(n.operand, neg != isinstance(n.op, ast.USub))
-        else:
-            c, a = parse_term(n)
-            out.append((-c if neg else c, a))
-
-    walk(node, False)
-    return out
-
-
-def parse_expression(text: str) -> ast.expr:
-    """共享入口: `^`→`**` 后 ast.parse（实测二者响应字节相同）。"""
-    try:
-        return ast.parse(text.replace("^", "**"), mode="eval").body
-    except SyntaxError:
-        raise ValueError(NOT_INEQUALITY) from None
-
-
-def parse_inequality(text: str) -> list[Term]:
-    """`lhs > rhs`（含 >=/< /<=）归一为 difference 项列表 lhs - rhs。"""
-    node = parse_expression(text)
-    if not isinstance(node, ast.Compare) or len(node.ops) != 1:
-        raise ValueError(NOT_INEQUALITY)
-    op = node.ops[0]
-    if isinstance(op, (ast.Gt, ast.GtE)):
-        lhs, rhs = node.left, node.comparators[0]
-    elif isinstance(op, (ast.Lt, ast.LtE)):
-        lhs, rhs = node.comparators[0], node.left
-    else:
-        raise ValueError(NOT_INEQUALITY)  # PROBE: ==/!= 等比较符文案未实测
-    terms = parse_sum(lhs) + [(-c, a) for c, a in parse_sum(rhs)]
-    return [(c, a) for c, a in terms if c != 0]
-
-
-# ============================ 显示 ============================
-
-def fmt_frac(q: Fraction, tex: bool) -> str:
-    """`261/112` / `\\frac{261}{112}`；调用方传绝对值，符号由 join 处理。"""
-    if q.denominator == 1:
-        return str(q.numerator)
-    if tex:
-        return f"\\frac{{{q.numerator}}}{{{q.denominator}}}"
-    return f"{q.numerator}/{q.denominator}"
-
-
-def atom_render(atom: Atom, tex: bool) -> str:
-    """`e^x` `ln x` `√x` `x^1.5` / latex `\\ln x` `\\sqrt{x}` `x^{\\frac{3}{2}}`。"""
+def atom_value(atom, x):
     kind = atom[0]
+    if kind == "const":
+        return 1.0
+    if kind == "linear":
+        return x
     if kind == "exp":
-        return "e^x"
+        return math.exp(x)
     if kind == "log":
-        return "\\ln x" if tex else "ln x"
-    if kind == "sqrt":
-        return "\\sqrt{x}" if tex else "√x"
-    if kind == "x":
-        return "x"
-    r = atom[1]  # pow: 文本态指数按小数（x^(3/2) -> x^1.5），latex 态按分数
-    if r.denominator == 1:
-        e = str(r.numerator)
-    else:
-        e = f"\\frac{{{r.numerator}}}{{{r.denominator}}}" if tex else str(float(r))
-    return f"x^{{{e}}}" if tex else f"x^{e}"
+        return math.log(x)
+    return x ** atom[1]
 
 
-def term_render(term: Term, tex: bool) -> str:
-    """|coef|·atom；系数 1 裸原子。text 用 `*` 连接，latex 直接相邻。"""
-    c, atom = abs(term[0]), term[1]
-    if atom[0] == "const":
-        return fmt_frac(c, tex)
-    body = atom_render(atom, tex)
-    if c == 1:
-        return body
-    return f"{fmt_frac(c, tex)}{body}" if tex else f"{fmt_frac(c, tex)}*{body}"
-
-
-def render_terms(terms: list[Term], tex: bool) -> str:
-    """` + `/` - ` 连接的项列表；空侧显示 0（PROBE: 未实测）；首项负号 `- `。"""
-    if not terms:
-        return "0"
-    out = []
-    for i, term in enumerate(terms):
-        body = term_render(term, tex)
-        if i == 0:
-            out.append(f"- {body}" if term[0] < 0 else body)
-        else:
-            out.append((" - " if term[0] < 0 else " + ") + body)
-    return "".join(out)
-
-
-def evalatom_render(ea: EvalAtom, tex: bool) -> str:
-    """切线截距里的"原子在 x0 取值"字面显示: `ln(17/30)` / `\\ln \\frac{17}{30}`。"""
-    kind, q = ea[0], ea[1]
-    if kind == "logat":
-        return f"\\ln {fmt_frac(q, True)}" if tex else f"ln({q})"
-    if kind == "sqrtat":
-        return f"\\sqrt{{{fmt_frac(q, True)}}}" if tex else f"√({q})"
-    if kind == "expat":
-        return f"e^{{{fmt_frac(q, True)}}}" if tex else f"e^({q})"
-    r = ea[2]  # powat
-    if r.denominator == 1:
-        e = str(r.numerator)
-    else:
-        e = f"\\frac{{{r.numerator}}}{{{r.denominator}}}" if tex else str(float(r))
-    return f"\\left({fmt_frac(q, True)}\\right)^{{{e}}}" if tex else f"({q})^{e}"
-
-
-def evalterm_render(coef: Fraction, ea: EvalAtom, tex: bool) -> str:
-    """|coef|·evalatom（截距显示项）。"""
-    body = evalatom_render(ea, tex)
-    if abs(coef) == 1:
-        return body
-    c = fmt_frac(abs(coef), tex)
-    return f"{c}{body}" if tex else f"{c}*{body}"
-
-
-def line_render(m: Fraction, num: Fraction, items: list[tuple[Fraction, EvalAtom]],
-                const: Fraction, tex: bool) -> str:
-    """分离直线: `(m*x + 截距) + 右侧常数`，截距 = -m·x0 + Σ c_i·atom_i(x0)。
-
-    实测怪癖: 斜率 1 印 `1x`/`1*x`（不约简）、`\\ln 1` 不化简、截距常数项
-    排在求值项之前（`- 1 + ln(17/30)`）。
-    """
-    mx = f"{fmt_frac(m, True)}x" if tex else f"{fmt_frac(m, False)}*x"
-    seq: list[tuple[Fraction, str]] = []
-    if num or not items:
-        seq.append((num, fmt_frac(abs(num), tex)))
-    seq += [(c, evalterm_render(c, ea, tex)) for c, ea in items]
-    inner = mx + "".join((" - " if c < 0 else " + ") + body for c, body in seq)
-    line = f"({inner})"
-    if const:
-        line += (" - " if const < 0 else " + ") + fmt_frac(abs(const), tex)
-    return line
-
-
-# ============================ 归一与分类 ============================
-
-def atom_curv(atom: Atom) -> int:
-    """正系数原子的二阶导符号: +1 凸 / -1 凹 / 0 仿射。"""
+def atom_d1(atom, x):
     kind = atom[0]
+    if kind == "const":
+        return 0.0
+    if kind == "linear":
+        return 1.0
     if kind == "exp":
+        return math.exp(x)
+    if kind == "log":
+        return 1.0 / x
+    a = atom[1]
+    return a * x ** (a - 1.0)
+
+
+def atom_d2_sign(atom, coeff):
+    kind = atom[0]
+    if kind in ("const", "linear"):
+        return 0
+    if kind == "exp":
+        raw = 1.0
+    elif kind == "log":
+        raw = -1.0
+    else:
+        a = atom[1]
+        raw = a * (a - 1.0)
+    val = coeff * raw
+    if val > EPS:
         return 1
-    if kind in ("log", "sqrt"):
+    if val < -EPS:
         return -1
-    if kind == "pow":
-        r = atom[1]
-        return 1 if (r > 1 or r < 0) else (-1 if 0 < r < 1 else 0)
-    return 0  # x / const
+    return 0
 
 
-def normalize(terms: list[Term]) -> tuple[list[Term], list[Term]]:
-    """difference 拆成 left > right（实测规则，sibling-apps.md §1）:
+def normalize_expr(text):
+    text = text.strip()
+    text = text.replace("^", "**")
+    text = re.sub(r"\bln\s*\(", "log(", text)
+    text = re.sub(r"\be\s*\*\*\s*x\b", "exp(x)", text)
+    return text
 
-    正系数项留左侧（凹凸留给分类器裁决）；负系数项取负后若为凹/仿射则
-    移到右侧（右侧项系数恒正）；常数按符号归属（正留左、负移右）。
-    """
+
+def split_inequality(text):
+    text = normalize_expr(text)
+    for op in (">=", "<=", ">", "<", "="):
+        if op in text:
+            lhs, rhs = text.split(op, 1)
+            if op in ("<=", "<"):
+                lhs, rhs = rhs, lhs
+            return lhs.strip(), rhs.strip(), op
+    return text, "0", ">="
+
+
+def dump(node):
+    return ast.dump(node, show_empty=True)
+
+
+def parse_number(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        return -parse_number(node.operand)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        return parse_number(node.left) / parse_number(node.right)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+        return parse_number(node.left) ** parse_number(node.right)
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "sqrt"
+    ):
+        if len(node.args) != 1:
+            raise ValueError("sqrt expects one argument")
+        return math.sqrt(parse_number(node.args[0]))
+    raise ValueError(f"expected numeric constant, got {dump(node)}")
+
+
+def parse_atom(node):
+    if isinstance(node, ast.Name) and node.id == "x":
+        return ("linear",)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        name = node.func.id
+        if len(node.args) != 1:
+            raise ValueError(f"{name} expects one argument")
+        arg = node.args[0]
+        if not (isinstance(arg, ast.Name) and arg.id == "x"):
+            raise ValueError(f"{name} only supports argument x")
+        if name == "exp":
+            return ("exp",)
+        if name == "log":
+            return ("log",)
+        if name == "sqrt":
+            return ("power", 0.5)
+    if (
+        isinstance(node, ast.BinOp)
+        and isinstance(node.op, ast.Pow)
+        and isinstance(node.left, ast.Name)
+        and node.left.id == "x"
+    ):
+        return ("power", parse_number(node.right))
+    raise ValueError(f"unsupported atom {dump(node)}")
+
+
+def parse_factor_term(node):
+    try:
+        return (parse_number(node), ("const",))
+    except ValueError:
+        return (1.0, parse_atom(node))
+
+
+def parse_product(node):
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        left = parse_product(node.left)
+        right = parse_product(node.right)
+        if left[1][0] == "const":
+            return (right[0] * left[0], right[1])
+        if right[1][0] == "const":
+            return (left[0] * right[0], left[1])
+        raise ValueError("products of two non-constant atoms are unsupported")
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        left = parse_product(node.left)
+        denom = parse_number(node.right)
+        return (left[0] * (1.0 / denom), left[1])
+    return parse_factor_term(node)
+
+
+def collect_terms(node, sign=1.0):
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return collect_terms(node.left, sign) + collect_terms(node.right, sign)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Sub):
+        return collect_terms(node.left, sign) + collect_terms(node.right, -sign)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        try:
+            factor = parse_number(node.left)
+            return collect_terms(node.right, sign * factor)
+        except ValueError:
+            pass
+        try:
+            factor = parse_number(node.right)
+            return collect_terms(node.left, sign * factor)
+        except ValueError:
+            pass
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        try:
+            factor = parse_number(node.right)
+            return collect_terms(node.left, sign / factor)
+        except ValueError:
+            pass
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        return collect_terms(node.operand, -sign)
+    return [(parse_product(node)[0] * sign, parse_product(node)[1])]
+
+
+def parse_terms(text):
+    tree = ast.parse(normalize_expr(text), mode="eval")
+    return collect_terms(tree.body)
+
+
+def combine_terms(terms):
+    buckets = {}
+    for c, a in terms:
+        buckets[a] = buckets.get(a, 0.0) + c
+    return [(c, a) for a, c in buckets.items() if abs(c) > EPS]
+
+
+def split_positive_negative(terms):
     left, right = [], []
     for c, a in terms:
-        if a[0] == "const":
-            (left if c > 0 else right).append((abs(c), a))
-        elif c > 0 or atom_curv(a) > 0:
+        if c >= 0:
             left.append((c, a))
         else:
             right.append((-c, a))
     return left, right
 
 
-def atom_expr(atom: Atom) -> sp.Expr:
-    """atom -> sympy 表达式。"""
-    kind = atom[0]
-    if kind == "exp":
-        return sp.exp(X)
-    if kind == "log":
-        return sp.log(X)
-    if kind == "sqrt":
-        return sp.sqrt(X)
-    if kind == "pow":
-        return X ** sp.Rational(atom[1].numerator, atom[1].denominator)
-    if kind == "x":
-        return X
-    return sp.Integer(1)  # const
-
-
-def sum_expr(terms: list[Term]) -> sp.Expr:
-    """项列表 -> sympy 表达式（系数走 Rational 保持精确）。"""
-    total = sp.Integer(0)
+def evaluate(terms, x):
+    # 站端跑旧 CPython（sum 为朴素顺序累加）；3.12+ 的 sum 改 Neumaier 补偿求和，
+    # 末位 ulp 会差——手写循环复刻旧行为
+    total = 0
     for c, a in terms:
-        total += sp.Rational(c.numerator, c.denominator) * atom_expr(a)
+        total += c * atom_value(a, x)
     return total
 
 
-def safe_func(f: Callable[[float], float]) -> Callable[[float], float]:
-    """float 函数包装: 域外/奇异点返回 inf（真实数值边界）。"""
-
-    def g(v: float) -> float:
-        try:
-            out = f(v)
-        except (ArithmeticError, ValueError, TypeError):
-            return math.inf
-        return out if math.isfinite(out) else math.inf
-
-    return g
+def derivative(terms, x):
+    total = 0
+    for c, a in terms:
+        total += c * atom_d1(a, x)
+    return total
 
 
-def domain_of(terms: list[Term], cfg: ProbeConfig) -> tuple[float, float]:
-    """定义域: 含 log/sqrt/分数幂/负幂 -> (1e-8, hi)（实测下界 1e-08）。"""
-    need_pos = any(
-        a[0] in ("log", "sqrt") or (a[0] == "pow" and a[1].denominator != 1)
-        or (a[0] == "pow" and a[1] < 0)
-        for _, a in terms)
-    if need_pos or cfg.domain_pos_only:
-        return cfg.domain_lo, cfg.domain_hi
-    return cfg.domain_neg_lo, cfg.domain_hi
-
-
-def make_grid(lo: float, hi: float, n: int) -> list[float]:
-    """扫描网格：正域用对数等分（1e-8 起步时线性网格几乎全压在大端），
-    跨零域用线性等分。PROBE: 站端网格形态未钉死。"""
-    if lo > 0:
-        step = math.log(hi / lo) / (n - 1)
-        return [lo * math.exp(step * i) for i in range(n)]
-    return [lo + (hi - lo) * i / (n - 1) for i in range(n)]
-
-
-def numeric_min(expr: sp.Expr, domain: tuple[float, float],
-                cfg: ProbeConfig) -> tuple[float, float]:
-    """网格取优 + f' 变号单元 brentq 求根 -> (argmin, min)。
-
-    站端 x 给到 ~15 位有效数字，指向导数求根而非直接极小化；
-    候选 = 两端点 + 网格最优点 + 每个 f' 变号网格单元的 brentq 根。
-    """
-    f = safe_func(sp.lambdify(X, expr, "math"))
-    fp = safe_func(sp.lambdify(X, sp.diff(expr, X), "math"))
-    xs = make_grid(*domain, cfg.grid_n)
-    cands = [xs[0], xs[-1], min(xs, key=f)]
-    for a, b in pairwise(xs):
-        fa, fb = fp(a), fp(b)
-        if math.isfinite(fa) and math.isfinite(fb) and fa * fb < 0:
-            cands.append(brentq(fp, a, b, xtol=cfg.root_xtol))
-    x = min(cands, key=f)
-    return float(x), float(f(x))
-
-
-def classify(terms: list[Term], domain: tuple[float, float], cfg: ProbeConfig) -> str:
-    """convex|concave|affine —— 项级二阶导符号一致即可定；混合符号时按
-    f'' 数值采样再判（PROBE: 站端是否做数值兜底、不定串如何标记均未实测）。"""
-    pos = any(atom_curv(a) * (1 if c > 0 else -1) > 0 for c, a in terms)
-    neg = any(atom_curv(a) * (1 if c > 0 else -1) < 0 for c, a in terms)
-    if pos and not neg:
-        return "convex"
-    if neg and not pos:
-        return "concave"
-    if not pos and not neg:
+def curvature(terms):
+    signs = {atom_d2_sign(a, c) for c, a in terms}
+    signs.discard(0)
+    if not signs:
         return "affine"
-    d2 = sp.diff(sum_expr(terms), X, 2)
-    _, mn = numeric_min(d2, domain, cfg)
-    _, mx_neg = numeric_min(-d2, domain, cfg)
-    if mn >= -cfg.curv_tol:
-        return "convex" if -mx_neg > cfg.curv_tol else "affine"
-    if -mx_neg <= cfg.curv_tol:
+    if signs == {1}:
+        return "convex"
+    if signs == {-1}:
         return "concave"
-    return "indefinite"  # PROBE: 不定情形站端如何标记未实测
+    return "mixed"
 
 
-# ============================ 切线搜索 ============================
-
-def convergent_candidates(xmin: float, domain: tuple[float, float],
-                          cfg: ProbeConfig) -> Iterator[Fraction]:
-    """默认候选集: xmin 的连分数渐近分数（分母 ≤ cfg.candidate_den）。
-
-    样本钉死: xmin≈0.567143290409784 的渐近分数依次为
-    0, 1, 1/2, 4/7, 17/30, 38/67 —— 站端取到 17/30；分母更小的可证
-    中间分数（如 13/23）未被采用，排除 Farey/limit_denominator 全枚举。
-    PROBE: 真实候选集与排除规则待探测代理钉死，替换 cfg.candidates 即可。
-    """
+def minimize_convex(terms, domain):
     lo, hi = domain
-    rem = Fraction(xmin)
-    p0, p1, q0, q1 = 0, 1, 1, 0
-    while rem:
-        a = rem.numerator // rem.denominator
-        p, q = a * p1 + p0, a * q1 + q0
-        if q > cfg.candidate_den:
-            return
-        x0 = Fraction(p, q)
-        if lo < x0 < hi:
-            yield x0
-        p0, p1, q0, q1 = p1, p, q1, q
-        rem -= a
-        if rem:
-            rem = 1 / rem
-
-
-def slope_at(g_terms: list[Term], x0: Fraction) -> Fraction | None:
-    """g'(x0) 精确值；非有理数（sqrt/pow 在一般切点无理）返回 None。"""
-    total = Fraction(0)
-    xs = sp.Rational(x0.numerator, x0.denominator)
-    for c, a in g_terms:
-        kind = a[0]
-        if kind == "x":
-            d = Fraction(1)
-        elif kind == "log":
-            d = 1 / x0
+    lo = max(lo, 1e-8)
+    if hi is not None:
+        if derivative(terms, lo) >= 0:
+            return lo, evaluate(terms, lo)
+        if derivative(terms, hi) <= 0:
+            return hi, evaluate(terms, hi)
+        a, b = lo, hi
+    else:
+        if derivative(terms, lo) >= 0:
+            return lo, evaluate(terms, lo)
+        a, b = lo, 1.0
+        while derivative(terms, b) <= 0 and b < 1e8:
+            b *= 2.0
+        if b >= 1e8 and derivative(terms, b) <= 0:
+            return b, evaluate(terms, b)
+    for _ in range(160):
+        mid = (a + b) / 2.0
+        if derivative(terms, mid) <= 0:
+            a = mid
         else:
-            v = sp.diff(atom_expr(a), X).subs(X, xs)
-            if not v.is_Rational:
-                return None
-            d = Fraction(v.p, v.q)
-        total += c * d
-    return total
+            b = mid
+    x = (a + b) / 2.0
+    return x, evaluate(terms, x)
 
 
-def atom_value_at(atom: Atom, x0: Fraction) -> Fraction | EvalAtom:
-    """atom 在 x0 的取值：有理数折成 Fraction，否则返回字面求值原子。
+def line_gap_terms(base_terms, m, b, sign):
+    line = [(m, ("linear",)), (b, ("const",))]
+    if sign == 1:
+        return combine_terms(line + [(-c, a) for c, a in base_terms])
+    return combine_terms(base_terms + [(-m, ("linear",)), (-b, ("const",))])
 
-    log 永不折叠（实测 `\\ln 1` 不化简 → 按字面保留）；sqrt/pow 取值为
-    有理数时折叠进截距常数项（PROBE: 站端是否同样按字面显示未实测）。
-    """
+
+def fraction_label(frac):
+    if frac.denominator == 1:
+        return str(frac.numerator)
+    return f"{frac.numerator}/{frac.denominator}"
+
+
+def fraction_latex(frac):
+    if frac.denominator == 1:
+        return str(frac.numerator)
+    return f"\\frac{{{frac.numerator}}}{{{frac.denominator}}}"
+
+
+def signed_fraction_label(frac):
+    if frac == 0:
+        return ""
+    sign = "+" if frac > 0 else "-"
+    return f" {sign} {fraction_label(abs(frac))}"
+
+
+def signed_fraction_latex(frac):
+    if frac == 0:
+        return ""
+    sign = "+" if frac > 0 else "-"
+    return f" {sign} {fraction_latex(abs(frac))}"
+
+
+def continued_fraction_convergents(x, max_terms=12, max_denominator=10000):
+    terms = []
+    y = x
+    for _ in range(max_terms):
+        a = math.floor(y)
+        terms.append(a)
+        frac_part = y - a
+        if abs(frac_part) < 1e-14:
+            break
+        y = 1.0 / frac_part
+    convergents = []
+    for i in range(1, len(terms) + 1):
+        value = Fraction(terms[i - 1], 1)
+        for a in reversed(terms[: i - 1]):
+            value = a + Fraction(1, value)
+        if value.denominator <= max_denominator and value not in convergents:
+            convergents.append(value)
+    return convergents
+
+
+def tangent_line_at(terms, x0):
+    m = derivative(terms, x0)
+    b = evaluate(terms, x0) - m * x0
+    return m, b
+
+
+def tangent_term_text(coeff, atom, point):
+    c = Fraction(coeff).limit_denominator(1000000)
+    r = fraction_label(point)
+    prefix = "" if c == 1 else "-" if c == -1 else f"{fraction_label(c)}*"
     kind = atom[0]
-    if kind == "x":
-        return x0
-    if kind == "log":
-        return ("logat", x0)
+    if kind == "const":
+        return fraction_label(c)
+    if kind == "linear":
+        return f"{prefix}x"
     if kind == "exp":
-        return ("expat", x0)
-    q = sp.Rational(x0.numerator, x0.denominator)
-    v = sp.sqrt(q) if kind == "sqrt" else sp.Pow(
-        q, sp.Rational(atom[1].numerator, atom[1].denominator))
-    return Fraction(v.p, v.q) if v.is_Rational else (
-        ("sqrtat", x0) if kind == "sqrt" else ("powat", x0, atom[1]))
+        shift = signed_fraction_label(1 - point)
+        return f"{prefix}e^({r})(x{shift})"
+    if kind == "log":
+        reciprocal = fraction_label(1 / point)
+        return f"{prefix}({reciprocal}*x - 1 + ln({r}))"
+    a = atom[1]
+    if abs(a - 0.5) < 1e-12:
+        return f"{prefix}((x + {r})/(2*sqrt({r})))"
+    return f"{prefix}(({r})^{a:g} + {a:g}*({r})^({a:g}-1)*(x - {r}))"
 
 
-def intercept_parts(g_terms: list[Term], m: Fraction, x0: Fraction
-                    ) -> tuple[Fraction, list[tuple[Fraction, EvalAtom]]]:
-    """切线截距 = -m·x0 + Σ c_i·atom_i(x0) -> (常数项, 字面显示项)。"""
-    num = -m * x0
-    items = []
-    for c, a in g_terms:
-        v = atom_value_at(a, x0)
-        if isinstance(v, Fraction):
-            num += c * v
-        else:
-            items.append((c, v))
-    return num, items
+def tangent_term_latex(coeff, atom, point):
+    c = Fraction(coeff).limit_denominator(1000000)
+    r = fraction_latex(point)
+    prefix = "" if c == 1 else "-" if c == -1 else fraction_latex(c)
+    kind = atom[0]
+    if kind == "const":
+        return fraction_latex(c)
+    if kind == "linear":
+        return f"{prefix}x"
+    if kind == "exp":
+        shift = signed_fraction_latex(1 - point)
+        return f"{prefix}e^{{{r}}}(x{shift})"
+    if kind == "log":
+        reciprocal = fraction_latex(1 / point)
+        return f"{prefix}({reciprocal}x - 1 + \\ln {r})"
+    a = Fraction(atom[1]).limit_denominator(1000000)
+    a_tex = fraction_latex(a)
+    if abs(atom[1] - 0.5) < 1e-12:
+        return f"{prefix}\\frac{{x + {r}}}{{2\\sqrt{{{r}}}}}"
+    return f"{prefix}(({r})^{{{a_tex}}} + {a_tex}({r})^{{{a_tex}-1}}(x - {r}))"
 
 
-def evalatom_sym(ea: EvalAtom) -> sp.Expr:
-    """求值原子 -> sympy 精确表达式（gap 检验走符号导数求根）。"""
-    kind = ea[0]
-    q = sp.Rational(ea[1].numerator, ea[1].denominator)
-    if kind == "logat":
-        return sp.log(q)
-    if kind == "sqrtat":
-        return sp.sqrt(q)
-    if kind == "expat":
-        return sp.exp(q)
-    return q ** sp.Rational(ea[2].numerator, ea[2].denominator)  # powat
+def tangent_expr(terms, point, tex):
+    fn = tangent_term_latex if tex else tangent_term_text
+    return " + ".join(fn(c, a, point) for c, a in terms).replace("+ -", "- ")
 
 
-def search_tangent(left: list[Term], g_terms: list[Term],
-                   const: Fraction, domain: tuple[float, float], xmin: float,
-                   cfg: ProbeConfig, left_tex: str, right_tex: str) -> dict | None:
-    """枚举有理切点，取凹侧切线，数值验证 left - line > 0。
-
-    实测行为: 候选的切线就是凹侧自身（仿射右侧切线 ≡ 自身，e^x>=x+1
-    的零 gap 因此全灭 → "没找到漂亮的有理切点直线"）；站端只验证
-    left-line 一侧的 gap（proof 无 right_gap 字段）。
-    """
-    lexpr = sum_expr(left)
-    for x0 in cfg.candidates(xmin, domain, cfg):
-        m = slope_at(g_terms, x0)
-        if m is None:
+def find_line(left, right, domain, x_center, strict, left_tex, right_tex):
+    for rational in continued_fraction_convergents(x_center):
+        x0 = float(rational)
+        if x0 <= domain[0] or (domain[1] is not None and x0 >= domain[1]):
             continue
-        num, items = intercept_parts(g_terms, m, x0)
-        b = sp.Rational((num + const).numerator, (num + const).denominator)
-        for c, ea in items:
-            b += sp.Rational(c.numerator, c.denominator) * evalatom_sym(ea)
-        line_expr = sp.Rational(m.numerator, m.denominator) * X + b
-        gx, gmin = numeric_min(lexpr - line_expr, domain, cfg)
-        if gmin > cfg.gap_tol:
-            line_text = line_render(m, num, items, const, False)
-            line_tex = line_render(m, num, items, const, True)
+        m, b = tangent_line_at(right, x0)
+        upper_gap = line_gap_terms(left, m, b, -1)
+        x_gap, min_gap = minimize_convex(upper_gap, domain)
+        line_proves = min_gap > 1e-8 if strict else min_gap >= -1e-7
+        if line_proves:
+            line_text = tangent_expr(right, rational, False)
+            line_latex = tangent_expr(right, rational, True)
+            rel = ">" if strict and min_gap > 1e-8 else "\\ge"
             return {
-                "formula_latex": f"{left_tex} > {line_tex} \\ge {right_tex}",
-                "left_gap_min": gmin,
-                "left_gap_min_x": gx,
-                "line_latex": line_tex,
+                "formula_latex": f"{left_tex} {rel} {line_latex} \\ge {right_tex}",
+                "left_gap_min": min_gap,
+                "left_gap_min_x": x_gap,
+                "line_latex": line_latex,
                 "line_text": line_text,
-                "tangent_at": str(x0),
-                "tangent_at_latex": fmt_frac(x0, True),
+                "tangent_at": fraction_label(rational),
+                "tangent_at_latex": fraction_latex(rational),
             }
     return None
 
 
-# ============================ provided_line ============================
+def parse_domain(text):
+    if not text:
+        return (1e-8, None)
+    parts = [p.strip() for p in text.split(",")]
+    if len(parts) != 2:
+        raise ValueError("domain must look like '0,inf' or '0,10'")
+    lo = float(parts[0])
+    hi = None if parts[1].lower() in {"inf", "infinity", "+inf"} else float(parts[1])
+    return (lo, hi)
 
-def check_line(text: str, left: list[Term], right: list[Term],
-               domain: tuple[float, float], cfg: ProbeConfig) -> dict:
-    """隐藏字段 line: 同文法解析后归约成浮点 (m,b)，数值检验两侧 gap。"""
-    m, b = Fraction(0), Fraction(0)
-    for c, a in parse_sum(parse_expression(text)):
-        if a[0] == "x":
+
+def atom_text(atom):
+    kind = atom[0]
+    if kind == "linear":
+        return "x"
+    if kind == "exp":
+        return "e^x"
+    if kind == "log":
+        return "ln x"
+    if kind == "power":
+        if abs(atom[1] - 0.5) < 1e-12:
+            return "√x"
+        return f"x^{atom[1]:g}"
+    return ""
+
+
+def atom_latex(atom):
+    kind = atom[0]
+    if kind == "linear":
+        return "x"
+    if kind == "exp":
+        return "e^x"
+    if kind == "log":
+        return "\\ln x"
+    if kind == "power":
+        if abs(atom[1] - 0.5) < 1e-12:
+            return "\\sqrt{x}"
+        e = Fraction(atom[1]).limit_denominator(1000000)
+        body = (
+            str(e.numerator)
+            if e.denominator == 1
+            else f"\\frac{{{e.numerator}}}{{{e.denominator}}}"
+        )
+        return f"x^{{{body}}}"
+    return ""
+
+
+def fmt_terms(terms, tex):
+    pieces = []
+    for coeff_f, atom in terms:
+        coeff = Fraction(coeff_f).limit_denominator(1000000)
+        if coeff == 0:
+            continue
+        sign = "-" if coeff < 0 else "+"
+        mag = abs(coeff)
+        if tex:
+            c_str = fraction_latex(mag)
+            a_str = atom_latex(atom)
+            joiner = ""
+        else:
+            c_str = fraction_label(mag)
+            a_str = atom_text(atom)
+            joiner = "*"
+        if atom[0] == "const":
+            body = c_str
+        elif mag == 1:
+            body = a_str
+        else:
+            body = f"{c_str}{joiner}{a_str}"
+        pieces.append((sign, body))
+    if not pieces:
+        return "0"
+    first_sign, first_body = pieces[0]
+    out = first_body if first_sign == "+" else f"-{first_body}"
+    for sign, body in pieces[1:]:
+        out += f" {sign} {body}"
+    return out
+
+
+def affine_line_from_expr(text):
+    m = 0.0
+    b = 0.0
+    for c, a in combine_terms(parse_terms(text)):
+        if a[0] == "linear":
             m += c
         elif a[0] == "const":
             b += c
         else:
-            raise ValueError(LINE_NOT_AFFINE)
-    mf, bf = float(m), float(b)
-    line_expr = sp.Rational(m.numerator, m.denominator) * X + sp.Rational(
-        b.numerator, b.denominator)
-    gx, gmin = numeric_min(sum_expr(left) - line_expr, domain, cfg)
-    rx, rmin = numeric_min(line_expr - sum_expr(right), domain, cfg)
+            raise ValueError("--line must be an affine expression in x")
+    return m, b
+
+
+def verify_line(left, right, domain, m, b):
+    left_gap = line_gap_terms(left, m, b, -1)
+    right_gap = line_gap_terms(right, m, b, 1)
+    x_left, min_left = minimize_convex(left_gap, domain)
+    x_right, min_right = minimize_convex(right_gap, domain)
     return {
-        "b": bf,
-        "left_gap_min": gmin,
-        "left_gap_min_x": gx,
-        "m": mf,
-        "ok": gmin > -cfg.gap_tol and rmin > -cfg.gap_tol,  # PROBE: 判据未实测
-        "right_gap_min": rmin,
-        "right_gap_min_x": rx,
+        "m": m,
+        "b": b,
+        "left_gap_min_x": x_left,
+        "left_gap_min": min_left,
+        "right_gap_min_x": x_right,
+        "right_gap_min": min_right,
+        "ok": min_left >= -1e-8 and min_right >= -1e-8,
     }
 
 
-# ============================ 主流程 ============================
-
-@dataclass
-class ProbeConfig:
-    """站端数值机制的接缝参数；默认值是待探测钉死的假设（见模块 docstring）。"""
-
-    domain_lo: float = 1e-8       # 实测: 含 log/sqrt 时从 x≈1e-08 起扫
-    domain_hi: float = 10.0       # PROBE: 扫描上界未钉死
-    domain_pos_only: bool = True  # PROBE: 无受限原子时是否仍 x>1e-8
-    domain_neg_lo: float = -10.0  # PROBE: 全体实数时的左端
-    grid_n: int = 400             # PROBE: 网格数与排布未钉死
-    root_xtol: float = 2e-12      # brentq 的 xtol；影响最小值点末位 ulp（PROBE）
-    min_tol: float = -1e-9        # fmin < min_tol -> failed（容忍边界 ~0 极小值）
-    gap_tol: float = 1e-9         # 切线 gap > gap_tol 才采纳（零 gap 被拒实测）
-    curv_tol: float = 1e-7        # 混合符号 f'' 数值分类的判零阈值
-    candidate_den: int = 200      # PROBE: 切点候选渐近分数的分母上限
-    candidates: Callable[..., Iterator[Fraction]] = convergent_candidates
-
-
-CFG = ProbeConfig()
-
-
-def prove(inequality: str, line: str | None = None, cfg: ProbeConfig = CFG) -> dict:
-    """POST /convex/prove 的 result 字典；ValueError 由路由层映射 400。"""
-    terms = parse_inequality(inequality)
-    left, right = normalize(terms)
-    domain = domain_of(terms, cfg)
-    curvature = {
-        "difference": classify(terms, domain, cfg),
-        "left": classify(left, domain, cfg),
-        "right": classify(right, domain, cfg),
-    }
-    normalized = {
-        "difference": render_terms(terms, False),
-        "difference_latex": render_terms(terms, True),
-        "left": render_terms(left, False),
-        "left_latex": render_terms(left, True),
-        "right": render_terms(right, False),
-        "right_latex": render_terms(right, True),
-    }
+def prove(inequality, line=None, domain=None):
+    """POST /convex/prove 的 result 字典；异常由路由层映射 400。"""
+    dom = parse_domain(domain or "")
+    lhs, rhs, op = split_inequality(inequality)
+    f_terms = combine_terms(parse_terms(lhs) + [(-c, a) for c, a in parse_terms(rhs)])
+    left, right = split_positive_negative(f_terms)
+    diff = combine_terms(left + [(-c, a) for c, a in right])
+    left_curv = curvature(left)
+    right_curv = curvature(right)
+    diff_curv = curvature(diff)
     result = {
-        "curvature": curvature,
+        "curvature": {
+            "difference": diff_curv,
+            "left": left_curv,
+            "right": right_curv,
+        },
         "minimum": None,
-        "normalized": normalized,
+        "normalized": {
+            "difference": fmt_terms(diff, False),
+            "difference_latex": fmt_terms(diff, True),
+            "left": fmt_terms(left, False),
+            "left_latex": fmt_terms(left, True),
+            "right": fmt_terms(right, False),
+            "right_latex": fmt_terms(right, True),
+        },
         "ok": False,
         "proof": None,
         "provided_line": None,
         "reason": "",
         "status": "",
     }
-    if line:
-        result["provided_line"] = check_line(line, left, right, domain, cfg)
-
-    if (curvature["left"] not in ("convex", "affine")
-            or curvature["right"] not in ("concave", "affine")):
+    template_ok = left_curv in {"convex", "affine"} and right_curv in {
+        "concave",
+        "affine",
+    }
+    if not template_ok or diff_curv not in {"convex", "affine"}:
         result["status"] = "inconclusive"
         result["reason"] = REASON_INCONCLUSIVE
         return result
-
-    xmin, fmin = numeric_min(sum_expr(terms), domain, cfg)
+    x_min, f_min = minimize_convex(diff, dom)
     result["minimum"] = {
-        "value": fmin,
-        "value_text": f"{fmin:.12g}",
-        "x": xmin,
-        "x_text": f"{xmin:.12g}",
+        "value": f_min,
+        "value_text": f"{f_min:.12g}",
+        "x": x_min,
+        "x_text": f"{x_min:.12g}",
     }
-    if fmin < cfg.min_tol:
+    strict = op in {">", "<"}
+    ok = f_min > 1e-8 if strict else f_min >= -1e-8
+    if not ok:
         result["status"] = "failed"
         result["reason"] = REASON_FAILED
         return result
-
     result["status"] = "proved"
     result["ok"] = True
-    g_terms = [(c, a) for c, a in right if a[0] != "const"]
-    const = sum((c for c, a in right if a[0] == "const"), Fraction(0))
-    # left 仿射 / 右侧无常数项部分 -> 无中间直线可生成（PROBE: 后一子情形
-    # 站端是否共用同一条 reason 未实测）
-    if curvature["left"] == "affine" or not g_terms:
+    if line:
+        m, b = affine_line_from_expr(line)
+        result["provided_line"] = verify_line(left, right, dom, m, b)
+    if left_curv != "convex":
         result["reason"] = REASON_NO_LINE
         return result
-    proof = search_tangent(left, g_terms, const, domain, xmin, cfg,
-                           normalized["left_latex"], normalized["right_latex"])
+    proof = find_line(
+        left,
+        right,
+        dom,
+        x_min,
+        strict,
+        result["normalized"]["left_latex"],
+        result["normalized"]["right_latex"],
+    )
     if proof is None:
         result["reason"] = REASON_SEARCH_MISS
     else:

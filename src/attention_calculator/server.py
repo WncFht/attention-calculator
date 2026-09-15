@@ -345,8 +345,9 @@ def convex_prove():
     if len(inequality) > 500:
         return fail("输入过长，请输入一个较短的单变量不等式", 400)
     line = request.form.get("line") or None  # 隐藏参数，缺席与空串同等处理
+    domain = request.form.get("domain") or None  # '0,inf'/'0,10' 形；缺席走默认域
     try:
-        result = convex.prove(inequality, line)
+        result = convex.prove(inequality, line, domain)
     except Exception as exc:
         # 站端 prove 包装器把一切内核异常（不限 ValueError）包成 400 str(exc)：
         # "x/0>0"→"float division by zero"、x^1e309→"cannot convert Infinity
