@@ -13,7 +13,8 @@
 - valid            恒等式成立且被积函数定号（有效证明）
 - indefinite-sign  恒等式成立但被积函数变号（证明无效）
 - false-identity   积分真值与声称 LHS 不符（本方 solver bug 的证据）
-- unresolved-param 自由参数（ln 族分母幂 s、gamma 核指数 k）反解失败
+- unresolved-param 自由参数（ln 族分母幂 s；gamma 的 k 已证实即
+  cu_val，不再反解，枚举代码留作兜底）反解失败
 - harness-error    验证器自身异常
 
 对 success=false 的记录核对真实方向是否与站点报错一致
@@ -165,17 +166,24 @@ def poly_factor_sign(kind: str, p: dict):
 def verify_record(rec: dict) -> dict:
     """验证单条记录，返回结论 dict（字段供 bench/report.py 聚合）。"""
     kind, comp = rec["type"], rec["comparison"]
-    power, rational = Fraction(rec["power"]), Fraction(rec["rational"])
     out = {"type": kind, "power": rec["power"], "comparison": comp,
            "rational": rec["rational"], "success": rec.get("success", False)}
     mp.dps = 50
-    lhs = lhs_mpf(kind, comp, power, rational)
-    out["claimed_lhs"] = mp.nstr(lhs, 20)
     if not rec.get("success"):
         out["error"] = rec.get("error", "")
-        out["error_consistent"] = direction_consistent(
-            kind, comp, power, rational, out["error"])
+        try:
+            # 报错记录的 power/rational 可能是站点拒收的非法串
+            # （如 '22/7/2'、'1/0'），方向核对失败记 None 而非崩溃
+            power, rational = Fraction(rec["power"]), Fraction(rec["rational"])
+            out["claimed_lhs"] = mp.nstr(lhs_mpf(kind, comp, power, rational), 20)
+            out["error_consistent"] = direction_consistent(
+                kind, comp, power, rational, out["error"])
+        except (ValueError, ZeroDivisionError):
+            out["error_consistent"] = None
         return out
+    power, rational = Fraction(rec["power"]), Fraction(rec["rational"])
+    lhs = lhs_mpf(kind, comp, power, rational)
+    out["claimed_lhs"] = mp.nstr(lhs, 20)
     f, a, b = reconstruct(kind, comp, power, rec["parameters"])
     for sym, cands, key in ((k_sym, range(GAMMA_K_MAX + 1), "resolved_k"),
                             (s_sym, range(LN_S_MAX + 1), "resolved_s")):
@@ -197,6 +205,9 @@ def verify_record(rec: dict) -> dict:
     out["sign_scan"] = {1: "nonneg", -1: "nonpos", 0: "changes"}[sgn]
     out["sign_exact"] = poly_factor_sign(kind, rec["parameters"])
     out["sign_ok"] = sgn != 0  # 扫描为准；精确层记在 sign_exact 供对照
+    # 恒等式不成立但积分与 lhs 同号且被积函数定号 → 站点声称的不等号
+    # 方向仍然成立（近似解仍构成合法界证明），单独标注
+    out["bound_ok"] = bool(out["sign_ok"] and val * lhs > 0)
     out["verdict"] = (
         "valid" if out["identity_ok"] and out["sign_ok"]
         else "indefinite-sign" if out["identity_ok"]
@@ -298,8 +309,13 @@ def rigorous_recheck(recs, results):
             iv = flint.acb.integral(acb_f, lo, hi, abs_tol=flint.arf(1e-35))
             lhs = lhs_mpf(rec["type"], rec["comparison"],
                           Fraction(rec["power"]), Fraction(rec["rational"]))
-            contains = iv.real.contains(flint.arb(mp.nstr(lhs, 60)))
-            r["acb_interval"], r["acb_contains_lhs"] = str(iv), bool(contains)
+            # 端点代数奇异可能导致 acb 返回 nan 球；nan.contains() 恒真，
+            # 是无信息结果，须显式区分
+            if not iv.real.is_finite():
+                contains = None
+            else:
+                contains = iv.real.contains(flint.arb(mp.nstr(lhs, 60)))
+            r["acb_interval"], r["acb_contains_lhs"] = str(iv), contains
             print(f"acb {rec['type']}: {iv} contains_lhs={contains}")
         except Exception as e:
             r["acb_error"] = repr(e)

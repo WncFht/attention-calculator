@@ -10,9 +10,8 @@
 - f 是 sympy 表达式（变量 x），即站点积分式右端的完整被积函数，
   已含 tan_q 的 1/cos q、varpi 下界的 1/π 等外层因子；
 - (a, b) 为积分区间端点（sympy 对象：0、1、pi/2 或 pi）；
-- gamma 型例外：f 含自由整数符号 k（γ 核前因子 x^k 的指数，
-  同时是 ln 子证明分母 (1+k·x)^n 的系数；站点不返回该值，
-  由验证方枚举 k≥0 数值匹配确定）；
+- gamma 型的核指数 k 即参数 cu_val（渲染式实证 k=cu_val，
+  如 cu_val=16→x^16）；不再是自由符号；
 - ln_q/ln_q_square/artanh_q/arcoth_q 的分母幂 s 站点同样不回传，
   f 含自由符号 s（实测 s=n 高频出现，但 arcoth 已观测到 s≠n），
   由验证方枚举 s≥0 数值匹配确定。
@@ -145,6 +144,12 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
             f /= sp.pi
         return f, *DOMAIN_UNIT
     if kind == "gauss":
+        # 特例（仅观测到 '>' r=0 一条）：a_val=0 时站点改用初等积分
+        # ∫ au·(1-x)·√(1-x⁴)/π dx + b_val，而非 1/√ 核矩空间。
+        if comp == ">" and frac(p["a_val"]) == 0:
+            f = frac(p["au_val"]) * (1 - x) * sp.sqrt(1 - x**4) / sp.pi \
+                + frac(p["b_val"])
+            return f, *DOMAIN_UNIT
         e = 4 * int(p["m"]) + (2 if comp == "<" else 0)
         f = x**e * (1 - x) * polyx4 / sp.sqrt(1 - x**4)
         if comp == ">":
@@ -156,56 +161,65 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
 
 
 def gamma_integrand(comp: str, p: dict):
-    """gamma 型被积函数，含自由符号 k（见模块 docstring）。
+    """gamma 型被积函数（k 即 cu_val，见模块 docstring；无自由符号）。
 
-    下界方向核 L(x)=1/(1-x)+1/ln x-1/2，上界方向核
-    U(x)=(2-x)/2-1/(1-x)-1/ln x；恒等式
-    ∫₀¹ x^{s-1}(1/(1-x)+1/ln x)dx = γ+ln s 使第一段贡献 γ+ln(k+1)，
-    剩余 ln(k+1) 由第二段 ln_{k+1} 子证明吸收（u_val=0 时无第二段）。
+    第一段 x^{cu_val}·K_dir(x)：'<' 用 L=1/(1-x)+1/ln x-1/2，
+    '>' 用 U=(2-x)/2-1/(1-x)-1/ln x；∫x^{s-1}(1/(1-x)+1/ln x)dx=γ+ln s
+    使首段贡献 γ±ln(cu_val+1)。第二段是 ln_{cu_val+1} 子证明
+    x^m(1-x)^n(au+bu·x)/(u·(1+cu·x)^e)，分母幂 e 实测 '<' 取 n、
+    '>' 取 cu_val（后者仅 r=57/100 一单样本）。u_val=0 时无第二段，
+    改为加性常数 a_val（a,b 在 u≠0 时由 au/u,bu/u 等价给出）。
     """
     m, n, u = int(p["m"]), int(p["n"]), int(p["u_val"])
-    a, b = frac(p["a_val"]), frac(p["b_val"])
+    kk = int(p["cu_val"])
+    a = frac(p["a_val"])
+    au, bu = frac(p["au_val"]), frac(p["bu_val"])
     y = 1 - x  # 合并成单分式消去 1/(1-x) 与 1/ln x 在 x→1 的灾难性对消
     if comp == "<":
-        first = x**k * ((y**2 + y - 2) * sp.log(x) - 2 * y) / (2 * y * sp.log(x))
+        first = x**kk * ((y**2 + y - 2) * sp.log(x) - 2 * y) / (2 * y * sp.log(x))
     else:
-        first = x**k * ((2 - y) * sp.log(x) + 2 * y) / (2 * y * sp.log(x))
+        first = x**kk * ((2 - y) * sp.log(x) + 2 * y) / (2 * y * sp.log(x))
     if u == 0:
-        return first
+        return first + sp.Rational(a.numerator, a.denominator)
+    e = n if comp == "<" else kk
     sub = x**m * (1 - x) ** n \
-        * (sp.Rational(a.numerator, a.denominator)
-           + sp.Rational(b.numerator, b.denominator) * x) \
-        / (1 + k * x) ** max(m, n, 1)  # 分母幂同 ln 族 s = max(m,n,1) 约定
+        * (sp.Rational(au.numerator, au.denominator)
+           + sp.Rational(bu.numerator, bu.denominator) * x) \
+        / (u * (1 + kk * x) ** e)
     return first + sub
 
 
 def constant_mpf(kind: str, power: Fraction):
-    """目标常数 C 的 mpmath 值（按当前 mp.dps）。"""
+    """目标常数 C 的 mpmath 值（按当前 mp.dps）。
+
+    惰性查表：字典里是 zero-arg lambda，只算请求的那一项——q=0 时
+    cot/coth/arccot 等倒数常数会 ZeroDivision，惰求值避免无关类型被波及。
+    """
     q = mp.mpf(power.numerator) / power.denominator
     const = {
-        "pi": mp.pi * q,
-        "e": mp.e * q,
-        "pi_n": mp.pi ** q,
-        "e_q": mp.exp(q),
-        "ln_q": mp.log(q),
-        "ln_q_square": mp.log(q) ** 2,
-        "sin_q": mp.sin(q), "cos_q": mp.cos(q),
-        "tan_q": mp.tan(q), "cot_q": 1 / mp.tan(q),
-        "sin_q_degree": mp.sin(mp.pi * q / 180),
-        "cos_q_degree": mp.cos(mp.pi * q / 180),
-        "sin_pi_q": mp.sin(mp.pi * q), "cos_pi_q": mp.cos(mp.pi * q),
-        "arctan_q": mp.atan(q), "arccot_q": mp.atan(1 / q),
-        "sinh_q": mp.sinh(q), "cosh_q": mp.cosh(q),
-        "tanh_q": mp.tanh(q), "coth_q": 1 / mp.tanh(q),
-        "artanh_q": mp.atanh(q), "arcoth_q": mp.atanh(1 / q),
-        "gamma": q * mp.euler,
-        "golden": q * (1 + mp.sqrt(5)) / 2,
-        "catalan": q * mp.catalan,
-        "zeta3": q * mp.zeta(3),
-        "e_pi": q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
-        "varpi": mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
-        "gauss": mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
-    }[kind]
+        "pi": lambda: mp.pi * q,
+        "e": lambda: mp.e * q,
+        "pi_n": lambda: mp.pi ** q,
+        "e_q": lambda: mp.exp(q),
+        "ln_q": lambda: mp.log(q),
+        "ln_q_square": lambda: mp.log(q) ** 2,
+        "sin_q": lambda: mp.sin(q), "cos_q": lambda: mp.cos(q),
+        "tan_q": lambda: mp.tan(q), "cot_q": lambda: 1 / mp.tan(q),
+        "sin_q_degree": lambda: mp.sin(mp.pi * q / 180),
+        "cos_q_degree": lambda: mp.cos(mp.pi * q / 180),
+        "sin_pi_q": lambda: mp.sin(mp.pi * q), "cos_pi_q": lambda: mp.cos(mp.pi * q),
+        "arctan_q": lambda: mp.atan(q), "arccot_q": lambda: mp.atan(1 / q),
+        "sinh_q": lambda: mp.sinh(q), "cosh_q": lambda: mp.cosh(q),
+        "tanh_q": lambda: mp.tanh(q), "coth_q": lambda: 1 / mp.tanh(q),
+        "artanh_q": lambda: mp.atanh(q), "arcoth_q": lambda: mp.atanh(1 / q),
+        "gamma": lambda: q * mp.euler,
+        "golden": lambda: q * (1 + mp.sqrt(5)) / 2,
+        "catalan": lambda: mp.catalan,
+        "zeta3": lambda: mp.zeta(3),
+        "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
+        "varpi": lambda: mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
+        "gauss": lambda: mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
+    }[kind]()
     return const
 
 

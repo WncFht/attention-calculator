@@ -83,12 +83,25 @@ U = ((y²+y−2)·ln x − 2y)/(2y·ln x)，L = ((2−y)·ln x + 2y)/(2y·ln x)�
 - **ln_q / ln_q_square / artanh_q / arcoth_q 的分母幂 s 不回传**。
   多数样本 s=n，但 arcoth_q 3 实测 s=1、n=0 → s 是独立搜索量。
   重建把 s 留作自由符号，verify 枚举 0..15 数值反解。
-- **gamma 的核指数 k 不回传**。被积函数 = x^k·K_dir(x) +
-  x^m(1−x)^n(a+bx)/(1+kx)^n（u_val=0 时无第二项）；k 同时是首项指数
-  与子证明分母系数。verify 枚举 0..60 反解。实测 k：n=0→0（无子项）、
-  n=2→2（ln 3 子证明）、n=4→5（ln 6）、n=6→11（ln 12），
-  即子证明界 ln(k+1)，k+1 取 3·2^j 形态——规律未完全锁定，
-  反解策略不依赖此规律。
+- **gamma 的核指数 k 即参数 cu_val**（全量 golden 渲染式实证：
+  cu_val=4→x⁴、5→x⁵、16→x¹⁶，与早前"ln(k+1) 子证明界"反推一致——
+  k+1 正是子证明要证的 ln 参数）。完整结构：
+  `f = x^{cu}·K_dir + x^m(1−x)^n(au+bu·x)/(u·(1+cu·x)^e)`，
+  分母幂 e：'<' 取 n，'>' 取 cu_val（后者仅 r=57/100 一单样本，
+  残余不确定度在此）；u_val=0 时无子项，改为加性常数 a_val。
+  子证明分子用 au_val,bu_val/u_val 的**原始整数比**——注意
+  a_val≠au/u 普遍成立（如 937/56 vs 2811/168 差了千分位），
+  不能用 a_val 代替。verify 的 k 枚举代码留作兜底但不再触发。
+- **gauss '>' 在 a_val=0 时切换模板**（仅 r=0 一单样本）：
+  `∫₀¹ au·(1−x)·√(1−x⁴)/π dx + b_val`，核是分子 √ 非 1/√，
+  且带加性常数项——与标准模板并存，按 a_val==0 判别。
+- **站点会返回数值不成立的"恒等式"**（全量 golden 实证 34 例）：
+  trig_pi 四型在 m=1,n=8 极限档共 30 例（渲染方程两侧差 ~1e-6~1e-7，
+  如 sin(2π/5) vs 5266/5537 的界证明里积分真值是 lhs 的 ~40 倍），
+  gauss '<' 大系数档 3 例（差 ~4000 倍）。这些记录的 P 系数达
+  ~10^26，推测求解器在高难度实例上给出近似解仍报 success。
+  但界本身仍成立：f 全部定号（sign_exact=+1）、积分>0 且与 lhs
+  同号 → verify 记 verdict=false-identity 而 bound_ok=True。
 - **trig_pi 四型（sin_pi_q、cos_pi_q、sin_q_degree、cos_q_degree）的
   c_val 不是多项式系数**，是核频率：sin 型核 sin((1−2q)x)、
   cos 型核 sin(2qx)。P=a+b·sin x 只用 a,b。
@@ -108,8 +121,10 @@ U = ((y²+y−2)·ln x − 2y)/(2y·ln x)，L = ((2−y)·ln x + 2y)/(2y·ln x)�
 
 ## 残余风险
 
-- 自由参数反解（s、k）依赖枚举上限：k≤60、s≤15，界过紧会误判
-  unresolved-param；观测值远小于上限。
+- 自由参数反解只剩 ln 族的 s（枚举 ≤15，界过紧会误判
+  unresolved-param；观测值 ≤3）；gamma 的 k 已改用 cu_val 直读。
+  gauss '>'/a_val=0 变体与 gamma '>' 子项分母幂=cu_val 均为单样本
+  规则，后续新样本出现偏差时应首先复查这两处。
 - 恒等式判定的 1e-30 相对容差对 |lhs| 极小（紧贴真值的界）可能过紧，
   失败时应看 abs_deviation 数量级人工复核。
 - 扫描层对极端窄变号可能漏检；精确层 + acb 复核缓解。

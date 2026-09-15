@@ -1,4 +1,4 @@
-# ruff: noqa: RUF002  # 中文标点属刻意文体
+# ruff: noqa: RUF002, RUF003  # 中文标点属刻意文体
 """integrand.py 重建器的离线测试：fixture 全部来自 zhuyidao.net 实测返回。
 
 每行 (type, comp, power, rational, m, n, a, b, c, u, s_or_k)：
@@ -38,12 +38,17 @@ CASES = [
     ("e", ">", "1", "8/3", 1, 1, "0", "1/3", "0", "3", None),
     ("e_pi", ">", "1", "23", 2, 5, "182650/112211", "-422240/336633", "0", "336633", None),
     ("e_q", ">", "2", "7", 1, 2, "0", "4", "0", "1", None),
-    ("gamma", ">", "1", "1/2", 0, 0, "0", "0", "1", "0", 0),
-    ("gamma", ">", "1", "4/7", 3, 4, "11/6", "9925/56", "0", "168", 5),
-    ("gamma", ">", "1", "5/9", 1, 2, "0", "4/3", "0", "3", 2),
-    ("gamma", "<", "1", "3/5", 2, 4, "937/56", "4615/42", "0", "168", 5),
-    ("gamma", "<", "1", "7/12", 5, 6, "382287/2", "-104600375/936", "0", "936", 11),
+    ("gamma", ">", "1", "0", 0, 0, "1/2", "0", "1", "0", None),
+    ("gamma", "<", "1", "1", 0, 0, "1/4", "0", "2", "0", None),
+    ("gamma", ">", "1", "57/100", 4, 2, "67", "-304/5", "0", "5",
+     None, "335", "-304", "4"),
+    ("gamma", "<", "1", "3/5", 2, 4, "937/56", "4615/42", "0", "168",
+     None, "2811", "18460", "5"),
+    ("gamma", "<", "1", "29/50", 7, 8, "135299452736339/425425",
+     "-122801520422253/425425", "0", "425425",
+     None, "135299452736339", "-122801520422253", "16"),
     ("gauss", ">", "1", "4/5", 2, 0, "6/5", "44/5", "0", "5", None),
+    ("gauss", ">", "1", "0", 0, 0, "0", "3/8", "0", "1", None, "3", "0", "0"),
     ("gauss", "<", "1", "7/8", 1, 1, "0", "15/4", "0", "4", None),
     ("golden", ">", "1", "8/5", 0, 1, "21/800", "-21/800", "0", "800", None),
     ("ln_q", ">", "2", "2/3", 1, 1, "0", "1/2", "0", "2", 1),
@@ -72,22 +77,25 @@ CASES = [
 ]
 
 
-def params(m, n, a, b, c, u):
-    """打包成站点 parameters 形状。"""
-    return {"m": m, "n": n, "a_val": a, "b_val": b, "c_val": c, "u_val": u}
+def params(m, n, a, b, c, u, au="0", bu="0", cu="0"):
+    """打包成站点 parameters 形状；au/bu/cu 仅 gamma 等少数类型使用。"""
+    return {"m": m, "n": n, "a_val": a, "b_val": b, "c_val": c,
+            "u_val": u, "au_val": au, "bu_val": bu, "cu_val": cu}
 
 
 def test_all_identities_numeric():
     """全部实测参数样本：重建后数值积分须等于恒等式左端。"""
     mp.dps = 35
     fails = []
-    for kind, comp, pw, rat, m, n, av, bv, cv, uv, free in CASES:
+    for row in CASES:
+        kind, comp, pw, rat, m, n, av, bv, cv, uv, *extra = row
+        s_val, au, bu, cu = ([*extra, None, "0", "0", "0"])[:4]
+        au, bu, cu = (v or "0" for v in (au, bu, cu))
         f, a, b = reconstruct(kind, comp, Fraction(pw),
-                              params(m, n, av, bv, cv, uv))
+                              params(m, n, av, bv, cv, uv, au, bu, cu))
         if s in f.free_symbols:
-            f = f.subs(s, free)
-        if k in f.free_symbols:
-            f = f.subs(k, free)
+            f = f.subs(s, s_val)
+        assert k not in f.free_symbols  # gamma 的 k 即 cu_val，无自由符号
         lhs = lhs_mpf(kind, comp, Fraction(pw), Fraction(rat))
         fn = sp.lambdify(x, f, modules="mpmath")
         val = mp.quad(fn, [mp.mpf(sp.N(a, 30)), mp.mpf(sp.N(b, 30))])
@@ -130,10 +138,11 @@ def test_varpi_lower_bound_has_pi_and_inverse_lhs():
 
 
 def test_free_symbols_for_swept_types():
-    """ln 族与 gamma 重建结果含自由符号（s / k），其余类型不含。"""
+    """仅 ln 族重建结果含自由符号 s；gamma 的 k 已确定为 cu_val。"""
     f, _, _ = reconstruct("ln_q", "<", Fraction(3), params(2, 3, "2/15", "8/9", "0", "45"))
     assert s in f.free_symbols
-    f, _, _ = reconstruct("gamma", "<", Fraction(1), params(2, 4, "937/56", "4615/42", "0", "168"))
-    assert k in f.free_symbols
+    f, _, _ = reconstruct("gamma", "<", Fraction(1), params(
+        2, 4, "937/56", "4615/42", "0", "168", "2811", "18460", "5"))
+    assert f.free_symbols == {x}
     f, _, _ = reconstruct("e", ">", Fraction(1), params(1, 1, "0", "1/3", "0", "3"))
     assert f.free_symbols == {x}
