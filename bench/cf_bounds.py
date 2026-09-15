@@ -4,6 +4,7 @@ Site validation requires num,den < 1e16, so sub-ulp bounds must be found by
 Diophantine approximation: enumerate convergents/semiconvergents of each
 constant and keep those within a window of float64(C).
 """
+
 import math
 import sys
 from fractions import Fraction
@@ -76,14 +77,22 @@ def bounds_near(kind, power, maxden=9999999999999999):
 
 
 if __name__ == "__main__":
-    for kind, power in [("pi", "1"), ("e", "1"), ("sin_q", "1"),
-                        ("ln_q", "2"), ("ln_q_square", "2"),
-                        ("cos_q", "1"), ("e_q", "3"), ("zeta3", "1"),
-                        ("arctan_q", "3"), ("pi_n", "5/2")]:
+    for kind, power in [
+        ("pi", "1"),
+        ("e", "1"),
+        ("sin_q", "1"),
+        ("ln_q", "2"),
+        ("ln_q_square", "2"),
+        ("cos_q", "1"),
+        ("e_q", "3"),
+        ("zeta3", "1"),
+        ("arctan_q", "3"),
+        ("pi_n", "5/2"),
+    ]:
         C = constant_mpf(kind, Fraction(power))
         Cf = float(C)
         near = bounds_near(kind, power)
         gap0 = C - mp.mpf(Fraction(Cf).numerator) / Fraction(Cf).denominator
         print(f"== {kind} {power}  Cf={Cf!r} (C-Cf={mp.nstr(gap0, 4)})")
         for gap, r in near[:8]:
-            print(f"   gap={mp.nstr(gap,4):>10s}  r={r}  float_eq={float(r)==Cf}")
+            print(f"   gap={mp.nstr(gap, 4):>10s}  r={r}  float_eq={float(r) == Cf}")

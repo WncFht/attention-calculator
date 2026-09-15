@@ -14,7 +14,7 @@ from fractions import Fraction
 EPS = 1e-9
 
 REASON_INCONCLUSIVE = (
-    "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，" "因此当前证明器无法处理。"
+    "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，因此当前证明器无法处理。"
 )
 REASON_FAILED = "数值最小值未达到证明要求；该不等式可能不成立，或超出当前搜索范围。"
 REASON_NO_LINE = "不等式数值上已通过，但当前情形没有生成中间直线证明。"
@@ -102,11 +102,7 @@ def parse_number(node):
         return parse_number(node.left) / parse_number(node.right)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
         return parse_number(node.left) ** parse_number(node.right)
-    if (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "sqrt"
-    ):
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "sqrt":
         if len(node.args) != 1:
             raise ValueError("sqrt expects one argument")
         return math.sqrt(parse_number(node.args[0]))

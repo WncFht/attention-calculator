@@ -50,11 +50,13 @@ def sin_moments(kmax: int, q: Fraction) -> list[Moment]:
     ]
     for k in range(2, kmax + 1):
         f = Fraction(-k * (k - 1), q * q)
-        s.append({
-            "sin_q": Fraction(k, q * q) + f * s[k - 2].get("sin_q", Fraction(0)),
-            "cos_q": Fraction(-1, q) + f * s[k - 2].get("cos_q", Fraction(0)),
-            "1": f * s[k - 2].get("1", Fraction(0)),
-        })
+        s.append(
+            {
+                "sin_q": Fraction(k, q * q) + f * s[k - 2].get("sin_q", Fraction(0)),
+                "cos_q": Fraction(-1, q) + f * s[k - 2].get("cos_q", Fraction(0)),
+                "1": f * s[k - 2].get("1", Fraction(0)),
+            }
+        )
     return [{k: v for k, v in m.items() if v} for m in s]
 
 
@@ -99,10 +101,7 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
         target = {"cos_q": s, "sin_q": -s * bound}
 
     moments = sin_moments(2 * LIMIT + 2, q)
-    plans = (
-        (m, n, [basis_moment(moments, m, n, j) for j in range(3)])
-        for m, n in mn_order(LIMIT)
-    )
+    plans = ((m, n, [basis_moment(moments, m, n, j) for j in range(3)]) for m, n in mn_order(LIMIT))
     return search(plans, target, True)
 
 
@@ -112,10 +111,16 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     a, b, c = solved.coeffs
     u = lcm(a.denominator, b.denominator, c.denominator)
     params = {
-        "m": solved.m, "n": solved.n,
-        "a_val": str(a), "b_val": str(b), "c_val": str(c),
-        "au_val": str(a * u), "bu_val": str(b * u), "cu_val": str(c * u),
-        "u_val": str(u), "unified_form": {},
+        "m": solved.m,
+        "n": solved.n,
+        "a_val": str(a),
+        "b_val": str(b),
+        "c_val": str(c),
+        "au_val": str(a * u),
+        "bu_val": str(b * u),
+        "cu_val": str(c * u),
+        "u_val": str(u),
+        "unified_form": {},
     }
     return {
         "type": kind,
@@ -177,8 +182,9 @@ def pow_term(expr: sp.Expr, e: int) -> tuple[str, str]:
     return inner, inner
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Reproduce the site's /get_integral_image LaTeX for this family.
 
     ``power``/``bound`` may be the raw request strings (echoed unreduced like

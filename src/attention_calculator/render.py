@@ -82,8 +82,9 @@ def rat_tex(v: Fraction | str) -> str:
         if den == "1":
             return num
         return f"\\dfrac{{{num}}}{{{den}}}" if slash else v
-    return (str(v.numerator) if v.denominator == 1
-            else f"\\dfrac{{{v.numerator}}}{{{v.denominator}}}")
+    return (
+        str(v.numerator) if v.denominator == 1 else f"\\dfrac{{{v.numerator}}}{{{v.denominator}}}"
+    )
 
 
 def coef_tex(v: Fraction | str) -> str:
@@ -107,7 +108,10 @@ def coerce_params(query: dict) -> dict:
 
 
 def render_equation(
-    params: dict, kind: str, power: Fraction | str, comp: str,
+    params: dict,
+    kind: str,
+    power: Fraction | str,
+    comp: str,
     bound: Fraction | str,
 ) -> str:
     """Render the proof-equation LaTeX for a solved case.

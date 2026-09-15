@@ -55,18 +55,18 @@ def angle_moment(j: int, alpha: Fraction) -> Moment:
     if j % 2:
         for i in range((j + 1) // 2):
             k = j - 2 * i
-            c = Fraction((-1) ** ((j - 1) // 2 - i) * comb(j, i), 2 ** j)
+            c = Fraction((-1) ** ((j - 1) // 2 - i) * comb(j, i), 2**j)
             for s, sign in ((-1, 1), (1, -1)):
                 # int cos((alpha+s*k)x) -> sin(theta + s*k*pi/2)/(alpha+s*k);
                 # odd k: sin(theta + s*k*pi/2) = s*(-1)^{(k-1)/2} cos(theta)
                 addto("C", sign * c * s * (-1) ** ((k - 1) // 2) / (alpha + s * k))
     else:
-        c0 = Fraction(comb(j, j // 2), 2 ** j)
+        c0 = Fraction(comb(j, j // 2), 2**j)
         addto("1", c0 / alpha)
         addto("C", -c0 / alpha)
         for i in range(j // 2):
             k = j - 2 * i
-            c = Fraction((-1) ** (j // 2 - i) * comb(j, i), 2 ** j)
+            c = Fraction((-1) ** (j // 2 - i) * comb(j, i), 2**j)
             for s in (1, -1):
                 # int sin((alpha+s*k)x) -> (1 - cos(theta + s*k*pi/2))/(alpha+s*k);
                 # even k: cos(theta + s*k*pi/2) = (-1)^{k/2} cos(theta)
@@ -93,10 +93,23 @@ def basis_moment(t: list[Moment], m: int, n: int, j: int) -> Moment:
 # sign check: bounds where the biased solve goes nonnegative emit a false
 # identity at (1, 8); where it goes nonpositive the plan is skipped.
 BIAS18_NUM = (
-    8393, 30548, -2295970, -8426378, 249909164, 928663806, -13829413586,
-    -52408975814, 410416416763, 1608379190294, -6230112405308,
-    -26062947629208, 39020672969280, 192843476410752, -20544307623936,
-    -376544377036800, 33710564966400,
+    8393,
+    30548,
+    -2295970,
+    -8426378,
+    249909164,
+    928663806,
+    -13829413586,
+    -52408975814,
+    410416416763,
+    1608379190294,
+    -6230112405308,
+    -26062947629208,
+    39020672969280,
+    192843476410752,
+    -20544307623936,
+    -376544377036800,
+    33710564966400,
 )
 
 
@@ -155,18 +168,13 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
     # even a corrupted-formula hit cannot emit when bound ~ C fails. Exact
     # equality is impossible here -- Niven cases were caught by check_input.
     with mp.workdps(50):
-        const = mp.cos(
-            mp.pi * mp.mpf(alpha.numerator) / mp.mpf(alpha.denominator) / 2
-        )
+        const = mp.cos(mp.pi * mp.mpf(alpha.numerator) / mp.mpf(alpha.denominator) / 2)
         gap = mp.mpf(bound.numerator) / mp.mpf(bound.denominator) - const
     if (comp == "<") == (gap <= 0):
         raise WrongDirection
     t = [angle_moment(j, alpha) for j in range(2 * LIMIT + 2)]
     bias = bias_18(alpha)
-    plans = (
-        (m, n, site_basis(t, m, n, bias))
-        for m, n in mn_order(LIMIT)
-    )
+    plans = ((m, n, site_basis(t, m, n, bias)) for m, n in mn_order(LIMIT))
     return search(plans, target, True, defer=True), alpha
 
 
@@ -176,10 +184,16 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     a, b = solved.coeffs
     u = lcm(a.denominator, b.denominator)
     params = {
-        "m": solved.m, "n": solved.n,
-        "a_val": str(a), "b_val": str(b), "c_val": str(alpha),
-        "au_val": str(a * u), "bu_val": str(b * u), "cu_val": "0",
-        "u_val": str(u), "unified_form": {},
+        "m": solved.m,
+        "n": solved.n,
+        "a_val": str(a),
+        "b_val": str(b),
+        "c_val": str(alpha),
+        "au_val": str(a * u),
+        "bu_val": str(b * u),
+        "cu_val": "0",
+        "u_val": str(u),
+        "unified_form": {},
     }
     is_sin = kind.startswith("sin")
     return {
@@ -189,8 +203,9 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     }
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Reproduce the site's /get_integral_image LaTeX for this family.
 
     ``power``/``bound`` may be the raw request strings (echoed unreduced like
@@ -210,6 +225,6 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     # digit-leading parenthesized factor following a number or a power
     # (\d or }), a space elsewhere -- e.g. "(1-s)^8 \cdot (a+b s)" but
     # "... ^{3} \left(-1465926 ..." (a negative group gets no cdot).
-    integrand = (au + bu * s) * (1 - s) ** n * sp.sin(alpha * x) * s ** m / u
+    integrand = (au + bu * s) * (1 - s) ** n * sp.sin(alpha * x) * s**m / u
     body = re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ", sp.latex(integrand))
     return lhs + rf" = \int_0^{{\pi/2}} {body} \mathrm{{d}} x > 0"

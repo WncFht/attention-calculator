@@ -8,13 +8,25 @@ benchmark 是本项目一切结论的依据。**任何实现决策（核族参�
 
 ```json
 {
-  "type": "pi", "power": "1", "comparison": "<", "rational": "22/7",
-  "success": true,
-  "parameters": {"m": 3, "n": 3, "a_val": "47/120", "b_val": "-13/120",
-                 "c_val": "0", "au_val": 47, "bu_val": -13, "cu_val": 0, "u_val": 120},
-  "equations": {"solution": "a = 47/120, b = -13/120"},
-  "equation": "\\dfrac{22}{7} - \\pi = \\int_0^1 ... > 0",
-  "elapsed_ms": 12.3
+    "type": "pi",
+    "power": "1",
+    "comparison": "<",
+    "rational": "22/7",
+    "success": true,
+    "parameters": {
+        "m": 3,
+        "n": 3,
+        "a_val": "47/120",
+        "b_val": "-13/120",
+        "c_val": "0",
+        "au_val": 47,
+        "bu_val": -13,
+        "cu_val": 0,
+        "u_val": 120
+    },
+    "equations": { "solution": "a = 47/120, b = -13/120" },
+    "equation": "\\dfrac{22}{7} - \\pi = \\int_0^1 ... > 0",
+    "elapsed_ms": 12.3
 }
 ```
 

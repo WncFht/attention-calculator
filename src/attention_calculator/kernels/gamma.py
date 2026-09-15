@@ -61,12 +61,21 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     upper = comp == "<"
     n0_const = r - Fraction(3, 4) if upper else Fraction(1, 2) - r
     if n0_const >= 0:
-        return {"parameters": {
-            "m": 0, "n": 0, "a_val": str(n0_const), "b_val": "0",
-            "c_val": "2" if upper else "1",
-            "au_val": "0", "bu_val": "0", "cu_val": "0", "u_val": "0",
-            "unified_form": {},
-        }, "solution": "a = 0, b = 0"}
+        return {
+            "parameters": {
+                "m": 0,
+                "n": 0,
+                "a_val": str(n0_const),
+                "b_val": "0",
+                "c_val": "2" if upper else "1",
+                "au_val": "0",
+                "bu_val": "0",
+                "cu_val": "0",
+                "u_val": "0",
+                "unified_form": {},
+            },
+            "solution": "a = 0, b = 0",
+        }
 
     h = Fraction(0)
     for n in range(1, N_LIMIT + 1):
@@ -75,30 +84,39 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
             s = h + Fraction(1, n + 1) - Fraction(1, 2 * n + 4)  # s_N
             hit = float(s) - log(n + 1) <= (float(r) + EULER_F) / 2
         else:
-            s = h + Fraction(1, 2 * n + 2)                       # r_N
+            s = h + Fraction(1, 2 * n + 2)  # r_N
             hit = float(s) - log(n + 1) >= (float(r) + EULER_F) / 2
         if not hit:
             continue
         try:
-            sub = ln_bound_proof(Fraction(n + 1),
-                                 ">" if upper else "<", s - r)
+            sub = ln_bound_proof(Fraction(n + 1), ">" if upper else "<", s - r)
         except (NoSolution, WrongDirection):
             continue
         sp = sub["parameters"]
-        return {"parameters": {
-            "m": sp["m"], "n": sp["n"],
-            "a_val": sp["a_val"], "b_val": sp["b_val"], "c_val": "0",
-            "au_val": sp["au_val"], "bu_val": sp["bu_val"],
-            "cu_val": str(n), "u_val": sp["u_val"], "unified_form": {},
-        }, "solution": sub["solution"]}
+        return {
+            "parameters": {
+                "m": sp["m"],
+                "n": sp["n"],
+                "a_val": sp["a_val"],
+                "b_val": sp["b_val"],
+                "c_val": "0",
+                "au_val": sp["au_val"],
+                "bu_val": sp["bu_val"],
+                "cu_val": str(n),
+                "u_val": sp["u_val"],
+                "unified_form": {},
+            },
+            "solution": sub["solution"],
+        }
     raise NoSolution
 
 
 # ------------------------------------------------------------------- rendering
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     u = int(params["u_val"])
     n = int(params["cu_val"])  # main-kernel exponent and sub denominator coef
@@ -110,8 +128,11 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     btex = rat_tex(bound)
     lhs = f"{btex} - {ctex}" if comp == "<" else f"{ctex} - {btex}"
 
-    kern = ("\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}" if comp == "<"
-            else "\\dfrac{1}{1-x}+\\dfrac{1}{\\ln(x)}-\\dfrac{1}{2}")
+    kern = (
+        "\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}"
+        if comp == "<"
+        else "\\dfrac{1}{1-x}+\\dfrac{1}{\\ln(x)}-\\dfrac{1}{2}"
+    )
     x = sp.symbols("x")
     # coef·x^N goes through sympy when N > 0 ('1/2' -> \frac{x^{5}}{2});
     # the bare N = 0 multiplier keeps the request text ('3/2' -> \dfrac{3}{2})
@@ -124,13 +145,12 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
         if au == 0 and bu == 0:
             # N = 0: leftover is the bare constant a_val * coef
             const = Fraction(params["a_val"]) * cf
-            body = (main if const == 0
-                    else f"\\left[{main}+{rat_tex(const)}\\right]")
+            body = main if const == 0 else f"\\left[{main}+{rat_tex(const)}\\right]"
         else:
             # u = 0 denominator collapses the sub-fraction to sympy's
             # zoo * numerator (site shows \tilde{\infty} times the factors)
             s = max(m, nn, 1)
-            expr = cf * x**m * (1 - x)**nn * (au + bu * x) / (u * (1 + n * x)**s)
+            expr = cf * x**m * (1 - x) ** nn * (au + bu * x) / (u * (1 + n * x) ** s)
             body = f"\\left[{main}+{factors_tex(expr)}\\right]"
     else:
         m, nn = int(params["m"]), int(params["n"])

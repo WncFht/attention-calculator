@@ -38,15 +38,19 @@ def plans_for(kind, power, comp):
         cfg = quadlog.spec(kind, power)
         q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
         if sym == "arctan":
+
             def term(k):
                 return quadlog.atan_moment(k, q)
         else:
             factor = cfg["factor"]
+
             def term(k):
                 cc, rat = quadlog.ln_moment(k, r, odd)
                 return cc * factor, rat
-        plans = ((m, n, quadlog.basis_moments(m, n, odd, sym, term))
-                 for m, n in mn_order(cfg["limit"]))
+
+        plans = (
+            (m, n, quadlog.basis_moments(m, n, odd, sym, term)) for m, n in mn_order(cfg["limit"])
+        )
         sign = 1 if comp == ">" else -1
         return plans, cfg, sign
     raise ValueError(kind)
@@ -57,13 +61,16 @@ def trace_quadlog(kind, power_s, comp, bound_s, maxplans=400):
     cfg = quadlog.spec(kind, power)
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
     if sym == "arctan":
+
         def term(k):
             return quadlog.atan_moment(k, q)
     else:
         factor = cfg["factor"]
+
         def term(k):
             cc, rat = quadlog.ln_moment(k, r, odd)
             return cc * factor, rat
+
     sign = 1 if comp == ">" else -1
     bb = bound ** cfg.get("pd", 1)
     target = {sym: sign * cfg["coef"], "1": -sign * bb}
@@ -90,8 +97,10 @@ def trace_exp(kind, power_s, comp, bound_s, maxplans=2000):
         sym, coef, q, limit = "e_q", Fraction(1), power, exp_family.LIMIT_OTHER
     else:
         sym, coef, q, limit = "e", power, Fraction(1), exp_family.LIMIT_E
+
     def mk(m, n):
         return [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
+
     sign = 1 if comp == ">" else -1
     target = {sym: sign * coef, "1": -sign * bound}
     print(f"== {kind} {power_s} {comp} {bound_s}  (limit {limit})")
@@ -119,8 +128,10 @@ def trace_log(kind, power_s, comp, bound_s, maxplans=300):
     target = {"ln2": sign, "1": -sign * bound} if square else {"ln": sign, "1": -sign * bound}
     print(f"== {kind} {power_s} {comp} {bound_s}  (limit 10)")
     for m, n in mn_order(10):
-        basis = [log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
-                 for j in range(3 if square else 2)]
+        basis = [
+            log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
+            for j in range(3 if square else 2)
+        ]
         try:
             coeffs = solve_moment(basis, target)
         except ValueError:
@@ -128,8 +139,9 @@ def trace_log(kind, power_s, comp, bound_s, maxplans=300):
         e, f = verdict(coeffs)
         if e != "indef" or f != "indef":
             mark = "" if e == f else "   <-- DIVERGES"
-            print(f"  ({m},{n}) exact={e:7s} float={f:7s} "
-                  f"coeffs={[str(c2) for c2 in coeffs]}{mark}")
+            print(
+                f"  ({m},{n}) exact={e:7s} float={f:7s} coeffs={[str(c2) for c2 in coeffs]}{mark}"
+            )
 
 
 def trace_trig(kind, power_s, comp, bound_s):
@@ -150,8 +162,9 @@ def trace_trig(kind, power_s, comp, bound_s):
         e, f = verdict(coeffs)
         if e != "indef" or f != "indef":
             mark = "" if e == f else "   <-- DIVERGES"
-            print(f"  ({m},{n}) exact={e:7s} float={f:7s} "
-                  f"coeffs={[str(c2) for c2 in coeffs]}{mark}")
+            print(
+                f"  ({m},{n}) exact={e:7s} float={f:7s} coeffs={[str(c2) for c2 in coeffs]}{mark}"
+            )
 
 
 if __name__ == "__main__":

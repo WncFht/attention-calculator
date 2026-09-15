@@ -55,8 +55,7 @@ def check(client, rec: dict) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--out", type=Path,
-                   default=Path("bench/out/parity_convex.jsonl"))
+    p.add_argument("--out", type=Path, default=Path("bench/out/parity_convex.jsonl"))
     p.add_argument("--probes", type=Path, default=DATA / "convex-probes.jsonl")
     args = p.parse_args()
 

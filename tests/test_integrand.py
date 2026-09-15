@@ -40,13 +40,24 @@ CASES = [
     ("e_q", ">", "2", "7", 1, 2, "0", "4", "0", "1", None),
     ("gamma", ">", "1", "0", 0, 0, "1/2", "0", "1", "0", None),
     ("gamma", "<", "1", "1", 0, 0, "1/4", "0", "2", "0", None),
-    ("gamma", ">", "1", "57/100", 4, 2, "67", "-304/5", "0", "5",
-     None, "335", "-304", "4"),
-    ("gamma", "<", "1", "3/5", 2, 4, "937/56", "4615/42", "0", "168",
-     None, "2811", "18460", "5"),
-    ("gamma", "<", "1", "29/50", 7, 8, "135299452736339/425425",
-     "-122801520422253/425425", "0", "425425",
-     None, "135299452736339", "-122801520422253", "16"),
+    ("gamma", ">", "1", "57/100", 4, 2, "67", "-304/5", "0", "5", None, "335", "-304", "4"),
+    ("gamma", "<", "1", "3/5", 2, 4, "937/56", "4615/42", "0", "168", None, "2811", "18460", "5"),
+    (
+        "gamma",
+        "<",
+        "1",
+        "29/50",
+        7,
+        8,
+        "135299452736339/425425",
+        "-122801520422253/425425",
+        "0",
+        "425425",
+        None,
+        "135299452736339",
+        "-122801520422253",
+        "16",
+    ),
     ("gauss", ">", "1", "4/5", 2, 0, "6/5", "44/5", "0", "5", None),
     # '>' 兜底（cu=1）：∫au(1-x)√(1-x⁴)/π + b_val
     ("gauss", ">", "1", "0", 0, 0, "0", "3/8", "0", "1", None, "3", "0", "1"),
@@ -63,8 +74,19 @@ CASES = [
     ("pi", "<", "1", "22/7", 3, 3, "47/120", "-13/120", "0", "120", None),
     ("pi_n", ">", "2", "49/5", 1, 2, "36/65", "816/65", "0", "65", None),
     ("pi_n", ">", "2", "9", 1, 0, "0", "48", "0", "1", None),
-    ("pi_n", ">", "3", "31", 2, 3, "338003449/217788864",
-     "-97574279/217788864", "0", "217788864", None),
+    (
+        "pi_n",
+        ">",
+        "3",
+        "31",
+        2,
+        3,
+        "338003449/217788864",
+        "-97574279/217788864",
+        "0",
+        "217788864",
+        None,
+    ),
     ("sin_pi_q", "<", "1/3", "9/10", 0, 0, "3/10", "-4/15", "1/3", "30", None),
     ("sin_pi_q", ">", "1/5", "1/2", 0, 1, "1/6", "637/750", "3/5", "750", None),
     ("sin_q", ">", "1", "4/5", 0, 1, "2/5", "-2/5", "1/5", "5", None),
@@ -85,8 +107,17 @@ CASES = [
 
 def params(m, n, a, b, c, u, au="0", bu="0", cu="0"):
     """打包成站点 parameters 形状；au/bu/cu 仅 gamma 等少数类型使用。"""
-    return {"m": m, "n": n, "a_val": a, "b_val": b, "c_val": c,
-            "u_val": u, "au_val": au, "bu_val": bu, "cu_val": cu}
+    return {
+        "m": m,
+        "n": n,
+        "a_val": a,
+        "b_val": b,
+        "c_val": c,
+        "u_val": u,
+        "au_val": au,
+        "bu_val": bu,
+        "cu_val": cu,
+    }
 
 
 def test_all_identities_numeric():
@@ -97,8 +128,7 @@ def test_all_identities_numeric():
         kind, comp, pw, rat, m, n, av, bv, cv, uv, *extra = row
         s_val, au, bu, cu = ([*extra, None, "0", "0", "0"])[:4]
         au, bu, cu = (v or "0" for v in (au, bu, cu))
-        f, a, b = reconstruct(kind, comp, Fraction(pw),
-                              params(m, n, av, bv, cv, uv, au, bu, cu))
+        f, a, b = reconstruct(kind, comp, Fraction(pw), params(m, n, av, bv, cv, uv, au, bu, cu))
         if s in f.free_symbols:
             f = f.subs(s, s_val)
         assert k not in f.free_symbols  # gamma 的 k 即 cu_val，无自由符号
@@ -112,8 +142,7 @@ def test_all_identities_numeric():
 
 def test_pi_canonical_form():
     """m=3,n=3 → x⁶(1-x²)³(47-13x²)/(120(1+x²))（结构级断言）。"""
-    f, a, b = reconstruct("pi", "<", Fraction(1), params(
-        3, 3, "47/120", "-13/120", "0", "120"))
+    f, a, b = reconstruct("pi", "<", Fraction(1), params(3, 3, "47/120", "-13/120", "0", "120"))
     expected = x**6 * (1 - x**2) ** 3 * (47 - 13 * x**2) / (120 * (1 + x**2))
     assert sp.simplify(f - expected) == 0
     assert (a, b) == (0, 1)
@@ -121,34 +150,46 @@ def test_pi_canonical_form():
 
 def test_trig_pi_uses_cval_as_kernel_frequency():
     """sin_pi_q 的 c_val 是核频率 1-2q 而非多项式系数。"""
-    f, a, b = reconstruct("sin_pi_q", ">", Fraction(1, 5), params(
-        0, 1, "1/6", "637/750", "3/5", "750"))
-    expected = (1 - sp.sin(x)) * (sp.Rational(1, 6) + sp.Rational(637, 750) * sp.sin(x)) \
+    f, a, b = reconstruct(
+        "sin_pi_q", ">", Fraction(1, 5), params(0, 1, "1/6", "637/750", "3/5", "750")
+    )
+    expected = (
+        (1 - sp.sin(x))
+        * (sp.Rational(1, 6) + sp.Rational(637, 750) * sp.sin(x))
         * sp.sin(sp.Rational(3, 5) * x)
+    )
     assert sp.simplify(f - expected) == 0
     assert (a, b) == (0, sp.pi / 2)
 
 
 def test_varpi_lower_bound_has_pi_and_inverse_lhs():
     """varpi '>'：核含 1/π，左端形式为 1−r·ϖ⁻¹。"""
-    f, a, b = reconstruct("varpi", ">", Fraction(1), params(
-        2, 0, "53/7", "26/7", "0", "7"))
-    expected = x**9 * (1 - x) * (sp.Rational(53, 7) + sp.Rational(26, 7) * x**4) \
+    f, a, b = reconstruct("varpi", ">", Fraction(1), params(2, 0, "53/7", "26/7", "0", "7"))
+    expected = (
+        x**9
+        * (1 - x)
+        * (sp.Rational(53, 7) + sp.Rational(26, 7) * x**4)
         / (sp.pi * sp.sqrt(1 - x**4))
+    )
     assert sp.simplify(f - expected) == 0
     assert (a, b) == (0, 1)
     mp.dps = 30
     varpi = mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi))
-    assert abs(lhs_mpf("varpi", ">", Fraction(1), Fraction(5, 2))
-               - (1 - mp.mpf(5) / 2 / varpi)) < mp.mpf("1e-25")
+    assert abs(
+        lhs_mpf("varpi", ">", Fraction(1), Fraction(5, 2)) - (1 - mp.mpf(5) / 2 / varpi)
+    ) < mp.mpf("1e-25")
 
 
 def test_free_symbols_for_swept_types():
     """仅 ln 族重建结果含自由符号 s；gamma 的 k 已确定为 cu_val。"""
     f, _, _ = reconstruct("ln_q", "<", Fraction(3), params(2, 3, "2/15", "8/9", "0", "45"))
     assert s in f.free_symbols
-    f, _, _ = reconstruct("gamma", "<", Fraction(1), params(
-        2, 4, "937/56", "4615/42", "0", "168", "2811", "18460", "5"))
+    f, _, _ = reconstruct(
+        "gamma",
+        "<",
+        Fraction(1),
+        params(2, 4, "937/56", "4615/42", "0", "168", "2811", "18460", "5"),
+    )
     assert f.free_symbols == {x}
     f, _, _ = reconstruct("e", ">", Fraction(1), params(1, 1, "0", "1/3", "0", "3"))
     assert f.free_symbols == {x}

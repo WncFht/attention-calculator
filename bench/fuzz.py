@@ -17,6 +17,7 @@ comparison 偶发非法，偶发缺字段、query 代替 form、GET 方法。
 用法：.venv/bin/python bench/fuzz.py [--seed 1] [--calculate 750] [--image 150]
                                    [--max-minutes 45]
 """
+
 import argparse
 import concurrent.futures
 import json
@@ -39,7 +40,7 @@ DATA_DIR = Path(__file__).parent / "data"
 OUT_PATH = DATA_DIR / "fuzz-probes.jsonl"
 MIN_INTERVAL = 1.0
 TIMEOUT = 90
-RETRIES = 2          # 仅 -1 与 502/503/504 重试；500 是站端业务语义
+RETRIES = 2  # 仅 -1 与 502/503/504 重试；500 是站端业务语义
 LOCAL_TIMEOUT = 240  # 本机单次调用上限（秒），超时记 ours_status=-2
 
 SESSION = requests.Session()
@@ -52,26 +53,154 @@ EXEC = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 # 数字字段畸形/边界写法池。Unicode 数字（٣、３、½）在 Python 里 \d 可匹配、
 # int() 可解析，站端正则若按 ASCII 写就是分歧点；1_0 在 int() 下合法同理。
 GARBAGE_NUM = [
-    "", " ", "abc", "/", "//", "1/2/3", "1/", "/2", "1.5", ".5", "1.", "0.5",
-    "1e3", "1E-2", "-1", "-3/2", "1/-2", "-1/2", "+1", "++2", "--1", "1_0",
-    "0x10", "007", "01/02", " 3/4 ", "3 /4", "3/ 4", "\t1", "1\n", "1 2",
-    "π", "pi", "e", "３", "٣", "٣/٤", "１２/３", "½", "²", "NaN", "nan",
-    "inf", "∞", "-inf", "1,000", "1a", "a/1", "50%", "%", "0b1", "2..3",
-    "3/2.5", "0/0", "1/0", "-0", "-0/1", "00", "000/000", "9" * 17,
-    "1/" + "9" * 17, "9" * 17 + "/1", "10/" + "9" * 16, "1e-3", "\\frac{1}{2}",
-    "1//2", "3.14", "x", "None", "null", "0x1F/2", "1 / 2", "  7  ",
+    "",
+    " ",
+    "abc",
+    "/",
+    "//",
+    "1/2/3",
+    "1/",
+    "/2",
+    "1.5",
+    ".5",
+    "1.",
+    "0.5",
+    "1e3",
+    "1E-2",
+    "-1",
+    "-3/2",
+    "1/-2",
+    "-1/2",
+    "+1",
+    "++2",
+    "--1",
+    "1_0",
+    "0x10",
+    "007",
+    "01/02",
+    " 3/4 ",
+    "3 /4",
+    "3/ 4",
+    "\t1",
+    "1\n",
+    "1 2",
+    "π",
+    "pi",
+    "e",
+    "３",
+    "٣",
+    "٣/٤",
+    "１２/３",
+    "½",
+    "²",
+    "NaN",
+    "nan",
+    "inf",
+    "∞",
+    "-inf",
+    "1,000",
+    "1a",
+    "a/1",
+    "50%",
+    "%",
+    "0b1",
+    "2..3",
+    "3/2.5",
+    "0/0",
+    "1/0",
+    "-0",
+    "-0/1",
+    "00",
+    "000/000",
+    "9" * 17,
+    "1/" + "9" * 17,
+    "9" * 17 + "/1",
+    "10/" + "9" * 16,
+    "1e-3",
+    "\\frac{1}{2}",
+    "1//2",
+    "3.14",
+    "x",
+    "None",
+    "null",
+    "0x1F/2",
+    "1 / 2",
+    "  7  ",
 ]
 GARBAGE_COMP = [
-    "", " ", "=", "==", "!=", ">=", "<=", "=>", "=<", "≥", "≤", "＞", "＜",
-    "><", ">>", "<<", "&gt;", "&lt;", "0", "1", "gt", "lt", "GT", "None",
-    ">\t", " >", "> ", "< ", "≥ ", "\n>",
+    "",
+    " ",
+    "=",
+    "==",
+    "!=",
+    ">=",
+    "<=",
+    "=>",
+    "=<",
+    "≥",
+    "≤",
+    "＞",
+    "＜",
+    "><",
+    ">>",
+    "<<",
+    "&gt;",
+    "&lt;",
+    "0",
+    "1",
+    "gt",
+    "lt",
+    "GT",
+    "None",
+    ">\t",
+    " >",
+    "> ",
+    "< ",
+    "≥ ",
+    "\n>",
 ]
 GARBAGE_TYPE = [
-    "", " ", "PI", "Pi", "pI", " pi", "pi ", " pi ", "π", "pi_n ", "e_q ",
-    "sin", "cos", "tan", "ln", "lnq", "ln_q2", "ln_q_squares", "sin_pi",
-    "foo", "bar", "0", "1", "null", "None", "true", "pi,e", "pi;e", "Gamma",
-    "GAMMA", "zeta", "zeta_3", "arctan", "arcoth", "sinq", "-pi", "pi\n",
-    "𝜋", "e_pi ", "golden2", "gauss ",
+    "",
+    " ",
+    "PI",
+    "Pi",
+    "pI",
+    " pi",
+    "pi ",
+    " pi ",
+    "π",
+    "pi_n ",
+    "e_q ",
+    "sin",
+    "cos",
+    "tan",
+    "ln",
+    "lnq",
+    "ln_q2",
+    "ln_q_squares",
+    "sin_pi",
+    "foo",
+    "bar",
+    "0",
+    "1",
+    "null",
+    "None",
+    "true",
+    "pi,e",
+    "pi;e",
+    "Gamma",
+    "GAMMA",
+    "zeta",
+    "zeta_3",
+    "arctan",
+    "arcoth",
+    "sinq",
+    "-pi",
+    "pi\n",
+    "𝜋",
+    "e_pi ",
+    "golden2",
+    "gauss ",
 ]
 FIELDS = ("type", "power", "comparison", "rational")
 
@@ -132,8 +261,16 @@ def rand_num(rng):
         n, d = rng.randint(0, 10**4), rng.randint(1, 10**4)
         return f"{n}/{d}" if rng.random() < 0.7 else str(n)
     if r < 0.68:
-        n = rng.choice([10**15, 10**16 - 1, 10**16, 10**16 + 7,
-                        rng.randint(10**16, 10**20), rng.randint(0, 10**17)])
+        n = rng.choice(
+            [
+                10**15,
+                10**16 - 1,
+                10**16,
+                10**16 + 7,
+                rng.randint(10**16, 10**20),
+                rng.randint(0, 10**17),
+            ]
+        )
         d = rng.choice([1, 3, 10**16 - 1, 10**16, rng.randint(1, 10**12)])
         return f"{n}/{d}"
     if r < 0.74:
@@ -198,12 +335,17 @@ def load_golden_pool():
         if not rec.get("success"):
             continue
         params = {
-            k: json.dumps(v, ensure_ascii=False)
-            if isinstance(v, (dict, list)) else str(v)
+            k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v)
             for k, v in rec["parameters"].items()
         }
-        params.update({"type": rec["type"], "coef": rec["power"],
-                       "comparison": rec["comparison"], "rational": rec["rational"]})
+        params.update(
+            {
+                "type": rec["type"],
+                "coef": rec["power"],
+                "comparison": rec["comparison"],
+                "rational": rec["rational"],
+            }
+        )
         pool.append(params)
     return pool
 
@@ -218,9 +360,21 @@ def mutate_image(rng, params):
             p[k] = rng.choice(GARBAGE_NUM)
         return p, ["scramble"]
     for _ in range(rng.choices([0, 1, 2, 3], weights=[15, 55, 20, 10])[0]):
-        op = rng.choice(["drop", "corrupt", "neg", "huge", "zero_u",
-                         "latex_coef", "latex_rat", "badtype", "badcomp",
-                         "swap", "empty"])
+        op = rng.choice(
+            [
+                "drop",
+                "corrupt",
+                "neg",
+                "huge",
+                "zero_u",
+                "latex_coef",
+                "latex_rat",
+                "badtype",
+                "badcomp",
+                "swap",
+                "empty",
+            ]
+        )
         keys = list(p)
         if op == "drop" and keys:
             k = rng.choice(keys)
@@ -243,12 +397,14 @@ def mutate_image(rng, params):
             p["u_val"] = "0"
             applied.append("zero_u")
         elif op == "latex_coef":
-            p["coef"] = f"\\{rng.choice(['frac', 'dfrac'])}" \
-                        f"{{{rng.randint(-9, 9)}}}{{{rng.randint(-9, 9)}}}"
+            p["coef"] = (
+                f"\\{rng.choice(['frac', 'dfrac'])}{{{rng.randint(-9, 9)}}}{{{rng.randint(-9, 9)}}}"
+            )
             applied.append(f"latex_coef={p['coef']}")
         elif op == "latex_rat":
-            p["rational"] = f"\\{rng.choice(['frac', 'dfrac'])}" \
-                            f"{{{rng.randint(-9, 9)}}}{{{rng.randint(-9, 9)}}}"
+            p["rational"] = (
+                f"\\{rng.choice(['frac', 'dfrac'])}{{{rng.randint(-9, 9)}}}{{{rng.randint(-9, 9)}}}"
+            )
             applied.append(f"latex_rat={p['rational']}")
         elif op == "badtype":
             p["type"] = rng.choice(GARBAGE_TYPE)
@@ -311,8 +467,7 @@ def compare(site_status, site_body, ours_status, ours_body):
         return False, f"non-json site={site_body[:80]!r} ours={ours_body[:80]!r}"
     if sp == op:
         return True, "exact"
-    diff = {k: [sp.get(k), op.get(k)] for k in set(sp) | set(op)
-            if sp.get(k) != op.get(k)}
+    diff = {k: [sp.get(k), op.get(k)] for k in set(sp) | set(op) if sp.get(k) != op.get(k)}
     return False, f"json diff {json.dumps(diff, ensure_ascii=False)[:300]}"
 
 
@@ -327,8 +482,7 @@ def seen_keys():
                 rec = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            keys.add((rec.get("endpoint"),
-                      json.dumps(rec.get("request"), sort_keys=True)))
+            keys.add((rec.get("endpoint"), json.dumps(rec.get("request"), sort_keys=True)))
     return keys
 
 
@@ -344,10 +498,17 @@ def run_probe(endpoint, request, ours_fn, site_args):
     status, body, ms = site_request(**site_args)
     ours_status, ours_body = collect(fut)
     match, detail = compare(status, body, ours_status, ours_body)
-    rec = {"endpoint": endpoint, "request": request,
-           "site_status": status, "site_body": body,
-           "ours_status": ours_status, "ours_body": ours_body,
-           "match": match, "detail": detail, "site_ms": round(ms, 1)}
+    rec = {
+        "endpoint": endpoint,
+        "request": request,
+        "site_status": status,
+        "site_body": body,
+        "ours_status": ours_status,
+        "ours_body": ours_body,
+        "match": match,
+        "detail": detail,
+        "site_ms": round(ms, 1),
+    }
     emit(rec)
     return match
 
@@ -355,8 +516,7 @@ def run_probe(endpoint, request, ours_fn, site_args):
 def calc_site_args(req):
     """把 {method, via, form} 转成 site_request 的调用参数。"""
     kwargs = {"method": req["method"], "path": "/calculate"}
-    kwargs["params" if req["via"] == "query" or req["method"] == "GET"
-           else "data"] = req["form"]
+    kwargs["params" if req["via"] == "query" or req["method"] == "GET" else "data"] = req["form"]
     return kwargs
 
 
@@ -390,18 +550,14 @@ def main():
         if key not in done:
             done.add(key)
             img_reqs.append(req)
-    log(f"plan: {len(calc_reqs)} calculate + {len(img_reqs)} image, "
-        f"deadline {args.max_minutes}min")
+    log(f"plan: {len(calc_reqs)} calculate + {len(img_reqs)} image, deadline {args.max_minutes}min")
 
     img_i = 0
     for i, req in enumerate(calc_reqs, 1):
         if time.time() > deadline:
             log("time budget exhausted")
             break
-        ok = run_probe(
-            "/calculate", req,
-            lambda req=req: ours_calculate(req),
-            calc_site_args(req))
+        ok = run_probe("/calculate", req, lambda req=req: ours_calculate(req), calc_site_args(req))
         stats["calc"] += 1
         stats["div"] += not ok
         # 每 5 条 calculate 插 1 条 image 探针
@@ -409,25 +565,26 @@ def main():
             ireq = img_reqs[img_i]
             img_i += 1
             ok = run_probe(
-                "/get_integral_image", ireq,
+                "/get_integral_image",
+                ireq,
                 lambda ireq=ireq: ours_image(ireq["params"]),
-                {"method": "GET", "path": "/get_integral_image",
-                 "params": ireq["params"]})
+                {"method": "GET", "path": "/get_integral_image", "params": ireq["params"]},
+            )
             stats["img"] += 1
             stats["div"] += not ok
         if i % 25 == 0 or i == len(calc_reqs):
-            log(f"progress: calc={stats['calc']} img={stats['img']} "
-                f"divergences={stats['div']}")
+            log(f"progress: calc={stats['calc']} img={stats['img']} divergences={stats['div']}")
 
     # 剩余 image 探针补跑
     while img_i < len(img_reqs) and time.time() <= deadline:
         ireq = img_reqs[img_i]
         img_i += 1
         ok = run_probe(
-            "/get_integral_image", ireq,
+            "/get_integral_image",
+            ireq,
             lambda ireq=ireq: ours_image(ireq["params"]),
-            {"method": "GET", "path": "/get_integral_image",
-             "params": ireq["params"]})
+            {"method": "GET", "path": "/get_integral_image", "params": ireq["params"]},
+        )
         stats["img"] += 1
         stats["div"] += not ok
     log(f"done: calc={stats['calc']} img={stats['img']} divergences={stats['div']}")

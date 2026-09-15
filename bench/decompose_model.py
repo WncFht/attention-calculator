@@ -32,6 +32,7 @@ Reciprocal products (a negative-power factor): '>' gives the numerator a
 smallest floor record > R*denom_true and the denominator a largest upper
 record STRICTLY < num_b/R; both are records.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,17 +48,34 @@ GAUSS = sp.Symbol("gauss")
 # undefined functions so arctan(1)/ln(1) don't auto-evaluate to pi/4 / 0
 LN = sp.Function("ln")
 ATAN = sp.Function("arctan")
-LOC = {"varpi": VARPI, "gauss": GAUSS, "ln": LN, "e": sp.E, "pi": sp.pi,
-       "phi": sp.GoldenRatio, "zeta": sp.zeta, "catalan": sp.Catalan,
-       "gamma": sp.EulerGamma, "arctan": ATAN, "atan": ATAN,
-       "sinh": sp.sinh, "tanh": sp.tanh, "sin": sp.sin, "cos": sp.cos,
-       "tan": sp.tan}
+LOC = {
+    "varpi": VARPI,
+    "gauss": GAUSS,
+    "ln": LN,
+    "e": sp.E,
+    "pi": sp.pi,
+    "phi": sp.GoldenRatio,
+    "zeta": sp.zeta,
+    "catalan": sp.Catalan,
+    "gamma": sp.EulerGamma,
+    "arctan": ATAN,
+    "atan": ATAN,
+    "sinh": sp.sinh,
+    "tanh": sp.tanh,
+    "sin": sp.sin,
+    "cos": sp.cos,
+    "tan": sp.tan,
+}
 
-BASE = {sp.pi: ("pi", Fraction(1)), sp.E: ("e", Fraction(1)),
-        sp.EulerGamma: ("gamma", Fraction(1)),
-        sp.GoldenRatio: ("golden", Fraction(1)),
-        sp.Catalan: ("catalan", Fraction(1)), sp.zeta(3): ("zeta3", Fraction(1)),
-        sp.exp(sp.pi): ("e_pi", Fraction(1))}
+BASE = {
+    sp.pi: ("pi", Fraction(1)),
+    sp.E: ("e", Fraction(1)),
+    sp.EulerGamma: ("gamma", Fraction(1)),
+    sp.GoldenRatio: ("golden", Fraction(1)),
+    sp.Catalan: ("catalan", Fraction(1)),
+    sp.zeta(3): ("zeta3", Fraction(1)),
+    sp.exp(sp.pi): ("e_pi", Fraction(1)),
+}
 
 
 def parse_atom(expr):
@@ -86,9 +104,17 @@ def parse_atom(expr):
                 return "e_q", Fraction(a.p, a.q)
         if a.is_Rational:
             arg = Fraction(a.p, a.q)
-            table = {"ln": "ln_q", "log": "ln_q", "sin": "sin_q",
-                     "cos": "cos_q", "tan": "tan_q", "atan": "arctan_q",
-                     "arctan": "arctan_q", "sinh": "sinh_q", "tanh": "tanh_q"}
+            table = {
+                "ln": "ln_q",
+                "log": "ln_q",
+                "sin": "sin_q",
+                "cos": "cos_q",
+                "tan": "tan_q",
+                "atan": "arctan_q",
+                "arctan": "arctan_q",
+                "sinh": "sinh_q",
+                "tanh": "tanh_q",
+            }
             if name in table:
                 return table[name], arg
         raise ValueError(f"bad arg {expr!r}")
@@ -100,8 +126,7 @@ def merge_atoms(atoms):
     fam = {"pi": "pi", "pi_n": "pi", "e": "e", "e_q": "e"}
     out = []
     for kind, arg in atoms:
-        if out and fam.get(out[-1][0]) == fam.get(kind) == "pi" \
-                and kind != "e_pi":
+        if out and fam.get(out[-1][0]) == fam.get(kind) == "pi" and kind != "e_pi":
             a = out.pop()[1]
             out.append(("pi_n", a + arg))
         elif out and fam.get(out[-1][0]) == fam.get(kind) == "e":
@@ -154,10 +179,8 @@ def parse_problem(problem: str):
 
 # --------------------------------------------------------------- true values
 
-VARPI_V = float((sp.gamma(sp.Rational(1, 4)) ** 2
-                 / (2 * sp.sqrt(2 * sp.pi))).evalf(40))
-GAUSS_V = float((sp.gamma(sp.Rational(1, 4)) ** 2
-                 / (2 * sp.sqrt(2 * sp.pi ** 3))).evalf(40))
+VARPI_V = float((sp.gamma(sp.Rational(1, 4)) ** 2 / (2 * sp.sqrt(2 * sp.pi))).evalf(40))
+GAUSS_V = float((sp.gamma(sp.Rational(1, 4)) ** 2 / (2 * sp.sqrt(2 * sp.pi**3))).evalf(40))
 
 
 def atom_value(kind: str, arg: Fraction) -> float:
@@ -165,9 +188,9 @@ def atom_value(kind: str, arg: Fraction) -> float:
     return {
         "pi": lambda: math.pi * f,
         "e": lambda: math.e * f,
-        "pi_n": lambda: math.pi ** f,
+        "pi_n": lambda: math.pi**f,
         "e_q": lambda: math.exp(f),
-        "e_pi": lambda: math.e ** math.pi * f,
+        "e_pi": lambda: math.e**math.pi * f,
         "ln_q": lambda: math.log(f),
         "sin_q": lambda: math.sin(f),
         "cos_q": lambda: math.cos(f),
@@ -192,6 +215,7 @@ def term_true(coef, atoms) -> float:
 
 
 # ------------------------------------------------------------- bound chains
+
 
 class Chain:
     """Record bounds of a value: upper = running min of ceil(vK)/K,
@@ -233,10 +257,26 @@ class Chain:
         return ok[0] if ok else None
 
 
-K_MIN_UP = {"pi": 2, "e": 1, "gamma": 3, "golden": 3, "ln_q": 4, "sin_q": 1,
-            "cos_q": 5, "tan_q": 3, "arctan_q": 5, "zeta3": 9, "catalan": 1,
-            "sinh_q": 1, "tanh_q": 1, "varpi": 1, "gauss": 1, "e_q": 1,
-            "pi_n": 1, "e_pi": 1}
+K_MIN_UP = {
+    "pi": 2,
+    "e": 1,
+    "gamma": 3,
+    "golden": 3,
+    "ln_q": 4,
+    "sin_q": 1,
+    "cos_q": 5,
+    "tan_q": 3,
+    "arctan_q": 5,
+    "zeta3": 9,
+    "catalan": 1,
+    "sinh_q": 1,
+    "tanh_q": 1,
+    "varpi": 1,
+    "gauss": 1,
+    "e_q": 1,
+    "pi_n": 1,
+    "e_pi": 1,
+}
 # lower-record chains may start earlier (gamma floor 1/2 needs K=2)
 K_MIN_LO = dict(K_MIN_UP, gamma=2)
 CHAINS: dict = {}
@@ -261,10 +301,26 @@ def val_chain(value: float, side: str) -> Chain:
 # ------------------------------------------------------------------ the model
 
 # record-factor priority inside products: e-family first, then pi, golden, pi_n
-FACTOR_RANK = {"e": 0, "e_q": 0, "e_pi": 0, "pi": 1, "golden": 2,
-               "gamma": 4, "ln_q": 5, "pi_n": 3, "zeta3": 9, "catalan": 8,
-               "sin_q": 6, "cos_q": 6, "tan_q": 7, "arctan_q": 7,
-               "sinh_q": 7, "tanh_q": 7, "varpi": 10, "gauss": 10}
+FACTOR_RANK = {
+    "e": 0,
+    "e_q": 0,
+    "e_pi": 0,
+    "pi": 1,
+    "golden": 2,
+    "gamma": 4,
+    "ln_q": 5,
+    "pi_n": 3,
+    "zeta3": 9,
+    "catalan": 8,
+    "sin_q": 6,
+    "cos_q": 6,
+    "tan_q": 7,
+    "arctan_q": 7,
+    "sinh_q": 7,
+    "tanh_q": 7,
+    "varpi": 10,
+    "gauss": 10,
+}
 
 
 def pick_processed(terms, ti, share, comp, done, flat_done):
@@ -320,8 +376,7 @@ def resid_bound(terms, ti, resid, comp, has_product):
             if len(atoms) == 1 and coef == 1:
                 b = chain(atoms[0][0], atoms[0][1], "up").largest_upper(resid)
             else:
-                b = val_chain(abs(term_true(coef, atoms)),
-                              "up").largest_upper(resid)
+                b = val_chain(abs(term_true(coef, atoms)), "up").largest_upper(resid)
             if b is not None:
                 return b
         return resid
@@ -331,8 +386,7 @@ def resid_bound(terms, ti, resid, comp, has_product):
         if len(atoms) == 1 and coef == -1:
             b = chain(atoms[0][0], atoms[0][1], "up").largest_upper(-resid)
         else:
-            b = val_chain(abs(term_true(coef, atoms)),
-                          "up").largest_upper(-resid)
+            b = val_chain(abs(term_true(coef, atoms)), "up").largest_upper(-resid)
         if b is not None:
             return -b
         return resid
@@ -355,8 +409,7 @@ def factor_split(terms, ti, bound_signed, comp):
         for k in range(n):
             if k == j:
                 continue
-            prod_others *= (out[k] if k in out
-                            else Fraction(str(trues[k])))
+            prod_others *= out[k] if k in out else Fraction(str(trues[k]))
         cap = bound_signed / (abs(coef) * prod_others)
         if pos < n - 1:
             if comp == "<":
@@ -391,21 +444,17 @@ def reciprocal_split(terms, ti, comp, R, first_j):
     if comp == ">":
         if first_j == num_j:
             nb = chain(nk, na, "lo").smallest_lower(R * den_true / abs(coef))
-            db = chain(dk, -da, "up").largest_upper_strict(
-                nb * abs(coef) / R) if nb else None
+            db = chain(dk, -da, "up").largest_upper_strict(nb * abs(coef) / R) if nb else None
         else:
             db = chain(dk, -da, "up").largest_upper(num_true * abs(coef) / R)
-            nb = chain(nk, na, "lo").smallest_lower(
-                R * db / abs(coef)) if db else None
+            nb = chain(nk, na, "lo").smallest_lower(R * db / abs(coef)) if db else None
     else:
         if first_j == num_j:
             nb = chain(nk, na, "up").largest_upper(R * den_true / abs(coef))
-            db = chain(dk, -da, "lo").smallest_lower(
-                nb * abs(coef) / R) if nb else None
+            db = chain(dk, -da, "lo").smallest_lower(nb * abs(coef) / R) if nb else None
         else:
             db = chain(dk, -da, "lo").smallest_lower(num_true * abs(coef) / R)
-            nb = chain(nk, na, "up").largest_upper(
-                R * db / abs(coef)) if db else None
+            nb = chain(nk, na, "up").largest_upper(R * db / abs(coef)) if db else None
     if nb is None or db is None:
         return None
     out[num_j], out[den_j] = nb, db
@@ -463,24 +512,29 @@ def predict(problem, resp_steps, verbose=False):
     used = [False] * len(flat)
     order_flat = []
     import re
+
     for s in resp_steps:
-        m = re.search(r"left\((-?\d+(?:/\d+)?)\\right\)|\\l?n?\((\d+)\)",
-                      s["label"])
+        m = re.search(r"left\((-?\d+(?:/\d+)?)\\right\)|\\l?n?\((\d+)\)", s["label"])
         arg_hint = Fraction(m.group(1) or m.group(2)) if m else None
-        cand = [i for i in range(len(flat)) if not used[i]
-                and match_atom(terms[flat[i][0]][1][flat[i][1]][0],
-                               terms[flat[i][0]][1][flat[i][1]][1],
-                               terms[flat[i][0]][0], s,
-                               len(terms[flat[i][0]][1]) > 1)
-                and (arg_hint is None
-                     or abs(terms[flat[i][0]][1][flat[i][1]][1])
-                     == arg_hint)]
+        cand = [
+            i
+            for i in range(len(flat))
+            if not used[i]
+            and match_atom(
+                terms[flat[i][0]][1][flat[i][1]][0],
+                terms[flat[i][0]][1][flat[i][1]][1],
+                terms[flat[i][0]][0],
+                s,
+                len(terms[flat[i][0]][1]) > 1,
+            )
+            and (arg_hint is None or abs(terms[flat[i][0]][1][flat[i][1]][1]) == arg_hint)
+        ]
         if not cand:
-            return None, [("NOMATCH", s["type"], s["coefficient"],
-                           s["label"])]
+            return None, [("NOMATCH", s["type"], s["coefficient"], s["label"])]
         # ambiguous same-type atoms: site lists product factors first
-        cand.sort(key=lambda i: (len(terms[flat[i][0]][1]) == 1,
-                                 abs(terms[flat[i][0]][1][flat[i][1]][1])))
+        cand.sort(
+            key=lambda i: (len(terms[flat[i][0]][1]) == 1, abs(terms[flat[i][0]][1][flat[i][1]][1]))
+        )
         used[cand[0]] = True
         order_flat.append(cand[0])
     term_order = list(dict.fromkeys(flat[i][0] for i in order_flat))
@@ -501,7 +555,7 @@ def predict(problem, resp_steps, verbose=False):
         resid_ti = term_order[resid_pos]
         has_product = any(len(terms[t][1]) > 1 for t in range(n))
         # processing order = steps order with the resid slot removed
-        proc = term_order[:resid_pos] + term_order[resid_pos + 1:]
+        proc = term_order[:resid_pos] + term_order[resid_pos + 1 :]
         done = {}
 
         def contrib(tj):
@@ -518,10 +572,8 @@ def predict(problem, resp_steps, verbose=False):
                 break
             done[ti] = b
         if ok:
-            share_r = R - sum(contrib(tj) for tj in range(n)
-                              if tj != resid_ti)
-            done[resid_ti] = resid_bound(terms, resid_ti, share_r, comp,
-                                         has_product)
+            share_r = R - sum(contrib(tj) for tj in range(n) if tj != resid_ti)
+            done[resid_ti] = resid_bound(terms, resid_ti, share_r, comp, has_product)
         if not ok:
             return False, [("INVALID",)]
 
@@ -539,8 +591,7 @@ def predict(problem, resp_steps, verbose=False):
                     pred[idx] = b_atom
         else:
             if is_reciprocal(atoms):
-                first_j = next(flat[fi][1] for fi in order_flat
-                               if flat[fi][0] == ti)
+                first_j = next(flat[fi][1] for fi in order_flat if flat[fi][0] == ti)
                 fsplit = reciprocal_split(terms, ti, comp, R, first_j)
             elif done[ti] is None:
                 fsplit = None
@@ -555,9 +606,10 @@ def predict(problem, resp_steps, verbose=False):
     site = [Fraction(s["bound"]) for s in resp_steps]
     matched = pred == site
     if verbose or not matched:
-        detail = [(terms[flat[order_flat[i]][0]][1][flat[order_flat[i]][1]][0],
-                   str(p), str(s))
-                  for i, (p, s) in enumerate(zip(pred, site, strict=False))]
+        detail = [
+            (terms[flat[order_flat[i]][0]][1][flat[order_flat[i]][1]][0], str(p), str(s))
+            for i, (p, s) in enumerate(zip(pred, site, strict=False))
+        ]
         return matched, detail
     return matched, pred
 

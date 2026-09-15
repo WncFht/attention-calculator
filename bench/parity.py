@@ -41,9 +41,15 @@ def compare_record(client, rec: dict) -> dict:
     }
     t0 = time.time()
     try:
-        resp = client.post("/calculate", data={
-            "type": rec["type"], "power": rec["power"],
-            "comparison": rec["comparison"], "rational": rec["rational"]})
+        resp = client.post(
+            "/calculate",
+            data={
+                "type": rec["type"],
+                "power": rec["power"],
+                "comparison": rec["comparison"],
+                "rational": rec["rational"],
+            },
+        )
         body = resp.get_json(silent=True) or {}
     except Exception as exc:  # harness-level failure — record loudly
         out["ours_success"] = False
@@ -66,14 +72,20 @@ def compare_record(client, rec: dict) -> dict:
             if isinstance(rc, str):
                 rc = json.loads(rc)
             out["param_match"] = body["parameters"] == rc.get("parameters")
-            out["solution_match"] = (
-                body.get("equations", {}).get("solution")
-                == rc.get("equations", {}).get("solution"))
+            out["solution_match"] = body.get("equations", {}).get("solution") == rc.get(
+                "equations", {}
+            ).get("solution")
             if rec.get("equation"):
-                img = client.get("/get_integral_image", query_string={
-                    **{k: str(body["parameters"][k]) for k in IMAGE_KEYS},
-                    "type": rec["type"], "comparison": rec["comparison"],
-                    "coef": rec["power"], "rational": rec["rational"]})
+                img = client.get(
+                    "/get_integral_image",
+                    query_string={
+                        **{k: str(body["parameters"][k]) for k in IMAGE_KEYS},
+                        "type": rec["type"],
+                        "comparison": rec["comparison"],
+                        "coef": rec["power"],
+                        "rational": rec["rational"],
+                    },
+                )
                 eq = (img.get_json(silent=True) or {}).get("equation")
                 if eq is None:
                     out["equation_match"] = None
@@ -112,12 +124,8 @@ def main() -> None:
 
     n = len(results)
     both_ok = sum(1 for r in results if r["site_success"] and r.get("ours_success"))
-    site_ok_ours_fail = [
-        r for r in results if r["site_success"] and not r.get("ours_success")
-    ]
-    site_fail_ours_ok = [
-        r for r in results if not r["site_success"] and r.get("ours_success")
-    ]
+    site_ok_ours_fail = [r for r in results if r["site_success"] and not r.get("ours_success")]
+    site_fail_ours_ok = [r for r in results if not r["site_success"] and r.get("ours_success")]
     exact = sum(1 for r in results if r.get("param_match"))
     sol = sum(1 for r in results if r.get("solution_match"))
     stat = sum(1 for r in results if r.get("status_match"))
@@ -129,11 +137,13 @@ def main() -> None:
     err_match = sum(1 for r in both_fail if r.get("error_match"))
     body_exact = sum(1 for r in results if r.get("body_match"))
     body_total = sum(1 for r in results if "body_match" in r)
-    print(f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
-          f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
-          f"solution_match={sol} status_match={stat} body_exact={body_exact}/{body_total} "
-          f"eq_match={eq_match}/{eq_total} both_fail={len(both_fail)} "
-          f"err_match={err_match} crashes={len(crashes)}")
+    print(
+        f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
+        f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
+        f"solution_match={sol} status_match={stat} body_exact={body_exact}/{body_total} "
+        f"eq_match={eq_match}/{eq_total} both_fail={len(both_fail)} "
+        f"err_match={err_match} crashes={len(crashes)}"
+    )
     body_diff = [r for r in results if r.get("body_match") is False]
     if body_diff:
         print("response body byte diffs:")
@@ -143,8 +153,10 @@ def main() -> None:
     if err_diff:
         print("both fail but error text differs:")
         for r in err_diff[:15]:
-            print(f"  {r['type']} {r['power']} {r['comparison']} {r['rational']}: "
-                  f"site={r.get('site_error','?')!r} ours={r.get('ours_error')!r}")
+            print(
+                f"  {r['type']} {r['power']} {r['comparison']} {r['rational']}: "
+                f"site={r.get('site_error', '?')!r} ours={r.get('ours_error')!r}"
+            )
     if crashes:
         print("CRASHES (fix first):")
         for r in crashes[:20]:

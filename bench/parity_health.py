@@ -42,8 +42,9 @@ def replay(client, rec: dict) -> tuple[int, str]:
     if method in ("GET", "OPTIONS", "HEAD"):
         resp = client.open(path, method=method)
     elif rec.get("raw") is not None:
-        resp = client.open(path, method=method, data=rec["raw"],
-                           content_type=rec.get("content_type"))
+        resp = client.open(
+            path, method=method, data=rec["raw"], content_type=rec.get("content_type")
+        )
     else:
         resp = client.open(path, method=method, json=rec.get("json"))
     return resp.status_code, resp.get_data(as_text=True)
@@ -66,8 +67,7 @@ def check(client, rec: dict) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--out", type=Path,
-                   default=Path("bench/out/parity_health.jsonl"))
+    p.add_argument("--out", type=Path, default=Path("bench/out/parity_health.jsonl"))
     p.add_argument("--probes", type=Path, default=DATA / "health-probes.jsonl")
     args = p.parse_args()
 

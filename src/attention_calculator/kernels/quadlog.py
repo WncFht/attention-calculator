@@ -34,11 +34,21 @@ from ..moment import Moment
 from ..render import coef_tex, rat_tex, wire_or, wire_pair
 
 # β(k)/pi^k for odd k (Euler numbers: β(2j+1) = (-1)^j E_{2j} pi^{2j+1}/(4^{j+1}(2j)!))
-BETA_PI = {1: Fraction(1, 4), 3: Fraction(1, 32), 5: Fraction(5, 1536),
-           7: Fraction(61, 184320), 9: Fraction(277, 8257536)}
+BETA_PI = {
+    1: Fraction(1, 4),
+    3: Fraction(1, 32),
+    5: Fraction(5, 1536),
+    7: Fraction(61, 184320),
+    9: Fraction(277, 8257536),
+}
 # η(k)/pi^k for even k (η(k) = (1-2^{1-k})·ζ(k))
-ETA_PI = {2: Fraction(1, 12), 4: Fraction(7, 720), 6: Fraction(31, 30240),
-          8: Fraction(127, 1209600), 10: Fraction(73, 6842880)}
+ETA_PI = {
+    2: Fraction(1, 12),
+    4: Fraction(7, 720),
+    6: Fraction(31, 30240),
+    8: Fraction(127, 1209600),
+    10: Fraction(73, 6842880),
+}
 
 
 @cache
@@ -67,8 +77,7 @@ def atan_moment(k: int, q: Fraction) -> tuple[Fraction, Fraction]:
     return cc, rat
 
 
-def basis_moments(m: int, n: int, odd: bool, sym: str,
-                  term) -> list[Moment]:
+def basis_moments(m: int, n: int, odd: bool, sym: str, term) -> list[Moment]:
     """Moments of x^{2m+odd}(1-x^2)^n·{1, x^2}·K for the unknowns (a, b).
 
     ``term(k)`` returns (coef_of_symbol, rational) for the x^{2k+odd} power.
@@ -90,22 +99,32 @@ def basis_moments(m: int, n: int, odd: bool, sym: str,
 def spec(kind: str, power: Fraction) -> dict:
     """Per-type kernel configuration shared by prove() and render_equation()."""
     if kind == "pi":
-        return dict(r=0, odd=False, factor=Fraction(1, 4), sym="pi",
-                    coef=power, q=Fraction(1), limit=30)
+        return dict(
+            r=0, odd=False, factor=Fraction(1, 4), sym="pi", coef=power, q=Fraction(1), limit=30
+        )
     if kind == "pi_n":
         # power p/q is reduced to pi^p vs bound^q; the kernel uses ln^{p-1}.
         # no range guard — the site lets the table lookup crash (KeyError ->
         # 500) for exponents outside [1, 10]
         k, pd = power.numerator, power.denominator
-        return dict(r=k - 1, odd=k % 2 == 0, sym="pi", coef=Fraction(1),
-                    factor=BETA_PI[k] if k % 2 else ETA_PI[k],
-                    q=Fraction(1), limit=10, pd=pd)
+        return dict(
+            r=k - 1,
+            odd=k % 2 == 0,
+            sym="pi",
+            coef=Fraction(1),
+            factor=BETA_PI[k] if k % 2 else ETA_PI[k],
+            q=Fraction(1),
+            limit=10,
+            pd=pd,
+        )
     if kind == "catalan":
-        return dict(r=1, odd=False, factor=Fraction(1), sym="catalan",
-                    coef=power, q=Fraction(1), limit=10)
+        return dict(
+            r=1, odd=False, factor=Fraction(1), sym="catalan", coef=power, q=Fraction(1), limit=10
+        )
     if kind == "zeta3":
-        return dict(r=2, odd=True, factor=Fraction(3, 4), sym="zeta3",
-                    coef=power, q=Fraction(1), limit=10)
+        return dict(
+            r=2, odd=True, factor=Fraction(3, 4), sym="zeta3", coef=power, q=Fraction(1), limit=10
+        )
     q = power if kind == "arctan_q" else 1 / power  # arccot_q -> arctan(1/q)
     return dict(r=0, odd=False, sym="arctan", coef=Fraction(1), q=q, limit=10)
 
@@ -114,8 +133,11 @@ def spec(kind: str, power: Fraction) -> dict:
 # evaluates the claimed constant before the search and rejects strictly-false
 # inequalities with 方向反了. Only the types whose kernel can crash need it —
 # arctan/arccot divide by q and pi_n's spec() dies on out-of-range exponents.
-PRE_F = {"arctan_q": math.atan, "arccot_q": lambda v: math.atan(1 / v),
-         "pi_n": lambda v: math.pi ** v}
+PRE_F = {
+    "arctan_q": math.atan,
+    "arccot_q": lambda v: math.atan(1 / v),
+    "pi_n": lambda v: math.pi**v,
+}
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
@@ -128,16 +150,17 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 
     if sym == "arctan":
+
         def term(k: int) -> tuple[Fraction, Fraction]:
             return atan_moment(k, q)
     else:
         factor = cfg["factor"]
+
         def term(k: int) -> tuple[Fraction, Fraction]:
             cc, rat = ln_moment(k, r, odd)
             return cc * factor, rat
 
-    plans = ((m, n, basis_moments(m, n, odd, sym, term))
-             for m, n in mn_order(cfg["limit"]))
+    plans = ((m, n, basis_moments(m, n, odd, sym, term)) for m, n in mn_order(cfg["limit"]))
     sign = 1 if comp == ">" else -1
     bound = bound ** cfg.get("pd", 1)  # pi_n p/q: solve pi^p vs bound^q
     target = {sym: sign * cfg["coef"], "1": -sign * bound}
@@ -147,16 +170,23 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     u = lcm(a.denominator, b.denominator)
     return {
         "parameters": {
-            "m": solved.m, "n": solved.n,
-            "a_val": str(a), "b_val": str(b), "c_val": "0",
-            "au_val": str(a * u), "bu_val": str(b * u), "cu_val": "0",
-            "u_val": str(u), "unified_form": {},
+            "m": solved.m,
+            "n": solved.n,
+            "a_val": str(a),
+            "b_val": str(b),
+            "c_val": "0",
+            "au_val": str(a * u),
+            "bu_val": str(b * u),
+            "cu_val": "0",
+            "u_val": str(u),
+            "unified_form": {},
         },
         "solution": f"a = {a}, b = {b}",
     }
 
 
 # ---------------------------------------------------------------- LaTeX render
+
 
 def const_tex(kind: str, power: Fraction | str) -> str:
     """The target constant as printed on the equation's left-hand side."""
@@ -193,11 +223,11 @@ def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
     if 2 * m + odd:
         pieces.append(x ** (2 * m + odd))
     if n:
-        pieces.append((1 - x ** 2) ** n)
+        pieces.append((1 - x**2) ** n)
     # the polynomial factor multiplies in even when au == bu == 0, so the
     # degenerate params collapse the whole product to a literal 0 (site
     # renders `0\ln^2(x)` for zeta3 0-vs-0, not x/(x²+1))
-    pieces.append(au + bu * x ** 2)
+    pieces.append(au + bu * x**2)
     pieces[0] = t * pieces[0]
     return sp.Mul(*pieces)
 
@@ -211,19 +241,23 @@ def factors_tex(num: sp.Expr) -> str:
     """
     args = num.as_ordered_factors()
     wrap = len(args) > 1
-    tex = [f"\\left({sp.latex(a)}\\right)" if a.is_Add and wrap else sp.latex(a)
-           for a in args]
+    tex = [f"\\left({sp.latex(a)}\\right)" if a.is_Add and wrap else sp.latex(a) for a in args]
     out = tex[0]
     for prev, cur in pairwise(tex):
-        cdot = (prev.endswith("}") and cur.startswith("\\left(")
-                and cur[6].isdigit() and cur.endswith("\\right)"))
+        cdot = (
+            prev.endswith("}")
+            and cur.startswith("\\left(")
+            and cur[6].isdigit()
+            and cur.endswith("\\right)")
+        )
         out += " \\cdot " if cdot else " "
         out += cur
     return out
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Reproduce the site's /get_integral_image LaTeX string for this family."""
     # coef 原文进 spec：pi/catalan/zeta3 只用显示位，垃圾串也能渲染；
     # arctan/arccot 需要真值，不可解析时 None 自然崩进站端 500；pi_n 的
@@ -239,8 +273,11 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     au, bu, u = int(params["au_val"]), int(params["bu_val"]), int(params["u_val"])
 
     btex = rat_tex(bound)  # raw 字符串原样回显数位（不约分）
-    lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"
-           else f"{btex} - {const_tex(kind, power)}")
+    lhs = (
+        f"{const_tex(kind, power)} - {btex}"
+        if comp == ">"
+        else f"{btex} - {const_tex(kind, power)}"
+    )
     eq_sep = " = "
     if kind == "pi_n" and pden != 1:
         # fractional power p/q: LHS shows (pi^{p/q})^q - (bound)^q literally;
@@ -256,7 +293,7 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     x = sp.symbols("x")
     qq = sp.Rational(q.numerator, q.denominator)
     num = numerator(m, n, odd, au, bu, t)
-    den = u * t * (qq * qq * x ** 2 + 1)
+    den = u * t * (qq * qq * x**2 + 1)
 
     # the site feeds the assembled fraction through sympy: literally identical
     # num/den factors auto-cancel (pi 0 < 1 -> 1) but a merely proportional

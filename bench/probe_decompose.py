@@ -136,8 +136,11 @@ def main() -> None:
     """Run the probe list serially and record every response."""
     ap = argparse.ArgumentParser()
     ap.add_argument("problems", nargs="*", help="override built-in list")
-    ap.add_argument("--skip-existing", action="store_true",
-                    help="skip problems already present in decompose.jsonl")
+    ap.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="skip problems already present in decompose.jsonl",
+    )
     ap.add_argument("--max", type=int, default=120, help="request budget cap")
     args = ap.parse_args()
 
@@ -167,11 +170,14 @@ def main() -> None:
             log.write(json.dumps(rec, ensure_ascii=False) + "\n")
             log.flush()
             (outdir / f"{slug(problem, idx)}.json").write_text(
-                json.dumps(rec, ensure_ascii=False, indent=2))
+                json.dumps(rec, ensure_ascii=False, indent=2)
+            )
             bounds = [s.get("bound") for s in res.get("steps", [])] if res.get("steps") else None
-            print(f"[{sent + 1}] {problem} -> success={res.get('success')} "
-                  f"direct={res.get('direct_basic')} bounds={bounds} "
-                  f"err={res.get('error') or res.get('transport_error')}")
+            print(
+                f"[{sent + 1}] {problem} -> success={res.get('success')} "
+                f"direct={res.get('direct_basic')} bounds={bounds} "
+                f"err={res.get('error') or res.get('transport_error')}"
+            )
             sent += 1
             time.sleep(INTERVAL)
     print(f"done, {sent} requests")

@@ -6,6 +6,7 @@
 
 kind=form-dup 的记录 request 是 list-of-pairs，用原始 urlencoded body 重放。
 """
+
 import json
 import sys
 from pathlib import Path
@@ -21,8 +22,8 @@ def ours_request(client, p):
     if kind == "form-dup":
         body = "&".join(f"{k}={quote(str(v), safe='')}" for k, v in req)
         resp = client.post(
-            p["endpoint"], data=body,
-            content_type="application/x-www-form-urlencoded")
+            p["endpoint"], data=body, content_type="application/x-www-form-urlencoded"
+        )
     elif method == "GET":
         resp = client.get(p["endpoint"], query_string=req or None)
     elif method == "PUT":
@@ -50,10 +51,10 @@ def bodies_equal(site_raw, ours_raw):
 
 def main():
     from attention_calculator.server import app
+
     client = app.test_client()
 
-    recs = [json.loads(line) for line in OUT.read_text().splitlines()
-            if line.strip()]
+    recs = [json.loads(line) for line in OUT.read_text().splitlines() if line.strip()]
     n_match = n_mismatch = n_skip = 0
     for r in recs:
         if r["http_status"] in (-1,):
@@ -66,20 +67,17 @@ def main():
         r["ours_status"] = ostatus
         r["ours_body"] = obody
         r["byte_match"] = r["raw"] == obody
-        r["match"] = (r["http_status"] == ostatus
-                      and bodies_equal(r["raw"], obody))
+        r["match"] = r["http_status"] == ostatus and bodies_equal(r["raw"], obody)
         if r["match"]:
             n_match += 1
         else:
             n_mismatch += 1
-            print(f"MISMATCH {r['id']}: site={r['http_status']} "
-                  f"ours={ostatus}", flush=True)
+            print(f"MISMATCH {r['id']}: site={r['http_status']} ours={ostatus}", flush=True)
 
     with OUT.open("w") as f:
         for r in recs:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"replayed {len(recs)}: match={n_match} mismatch={n_mismatch} "
-          f"skipped={n_skip}")
+    print(f"replayed {len(recs)}: match={n_match} mismatch={n_mismatch} skipped={n_skip}")
 
 
 if __name__ == "__main__":

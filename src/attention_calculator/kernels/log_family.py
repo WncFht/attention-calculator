@@ -35,7 +35,6 @@ from ..render import rat_tex, wire_pair
 LIMIT = 10
 
 
-
 def iota(c: Fraction, s: int, k: int) -> Moment:
     """Moment of ``x^k/(1+cx)^s``: ``{"ln": a, "1": b}`` means a*ln(1+c)+b.
 
@@ -50,7 +49,7 @@ def iota(c: Fraction, s: int, k: int) -> Moment:
             ln += w / c
         else:
             rat += w * ((1 + c) ** (p + 1) - 1) / (c * (p + 1))
-    ck = c ** k
+    ck = c**k
     return {sym: v / ck for sym, v in (("ln", ln), ("1", rat)) if v}
 
 
@@ -71,7 +70,7 @@ def kappa(c: Fraction, s: int, k: int) -> Moment:
             qp = q ** (p + 1)
             l1 += w * qp / (c * (p + 1))
             rat -= w * (qp - 1) / (c * (p + 1) ** 2)
-    ck = c ** k
+    ck = c**k
     return {sym: v / ck for sym, v in (("ln2", l2), ("ln", l1), ("1", rat)) if v}
 
 
@@ -119,9 +118,10 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     qt = qtilde(kind, power)
     c = qt - 1
     square = kind == "ln_q_square"
-    plans = ((m, n, [basis_moment(c, max(m, n, 1), m, n, j, square)
-                     for j in range(3 if square else 2)])
-             for m, n in mn_order(LIMIT))
+    plans = (
+        (m, n, [basis_moment(c, max(m, n, 1), m, n, j, square) for j in range(3 if square else 2)])
+        for m, n in mn_order(LIMIT)
+    )
     sign = Fraction(1 if comp == ">" else -1)
     if square:
         target = {"ln2": sign, "1": -sign * bound}
@@ -135,12 +135,17 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     cc = solved.coeffs[2] if square else Fraction(0)
     u = lcm(a.denominator, b.denominator, cc.denominator)
     params = {
-        "m": solved.m, "n": solved.n,
-        "a_val": str(a), "b_val": str(b),
+        "m": solved.m,
+        "n": solved.n,
+        "a_val": str(a),
+        "b_val": str(b),
         # c_val doubles as the reduced q~ for artanh/arcoth (renderer needs it)
         "c_val": str(cc) if square else ("0" if kind == "ln_q" else str(qt)),
-        "au_val": str(a * u), "bu_val": str(b * u), "cu_val": str(cc * u),
-        "u_val": str(u), "unified_form": {},
+        "au_val": str(a * u),
+        "bu_val": str(b * u),
+        "cu_val": str(cc * u),
+        "u_val": str(u),
+        "unified_form": {},
     }
     solution = f"a = {a}, b = {b}" + (f", c= {cc}" if square else "")
     return {"parameters": params, "solution": solution}
@@ -171,8 +176,9 @@ def poly_latex(au: int, bu: int, cu: int) -> str:
     return sp.latex(au + bu * x + cu * x**2)
 
 
-def numerator_latex(m: int, n: int, au: int, bu: int, cu: int,
-                    t: int, c: Fraction, square: bool) -> str:
+def numerator_latex(
+    m: int, n: int, au: int, bu: int, cu: int, t: int, c: Fraction, square: bool
+) -> str:
     """Site LaTeX of ``t * x^m (1-x)^n (au+bu*x+cu*x^2/u-free) [log]``.
 
     The scale ``t`` folds into the first surviving factor (x-part, then the
@@ -205,8 +211,7 @@ def numerator_latex(m: int, n: int, au: int, bu: int, cu: int,
             base = f"\\left(1 - x\\right)^{{{n}}}"
             pieces.append((f"{t} {base}" if scaled else base, False))
     if len(nz) >= 2:
-        pieces.append((poly_latex(*(v * (t if not pieces else 1)
-                                    for v in p)), True))
+        pieces.append((poly_latex(*(v * (t if not pieces else 1) for v in p)), True))
     elif mono == 0:  # constant P prints as a bare scalar; 1 vanishes
         v = au * (t if not pieces else 1)
         if v != 1 or not pieces:
@@ -218,15 +223,20 @@ def numerator_latex(m: int, n: int, au: int, bu: int, cu: int,
     tex = [f"\\left({s}\\right)" if is_add and wrap else s for s, is_add in pieces]
     out = tex[0]
     for prev, cur in itertools.pairwise(tex):
-        cdot = (prev.endswith("}") and cur.startswith("\\left(")
-                and cur[6].isdigit() and cur.endswith("\\right)"))
+        cdot = (
+            prev.endswith("}")
+            and cur.startswith("\\left(")
+            and cur[6].isdigit()
+            and cur.endswith("\\right)")
+        )
         out += " \\cdot " if cdot else " "
         out += cur
     return out
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     m, n = int(params["m"]), int(params["n"])
     au, bu, cu = (int(params[k]) for k in ("au_val", "bu_val", "cu_val"))
@@ -243,8 +253,8 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
         d, e = wn - wd, wd
         c = Fraction(d, e)
     s = max(m, n, 1)
-    g = gcd(u, e ** s)
-    t = e ** s // g
+    g = gcd(u, e**s)
+    t = e**s // g
     up = u // g
 
     # denominator: s == 1 prints the expanded ``A x + B``; s >= 2 prints
@@ -262,4 +272,4 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     const = const_latex(kind, power)
     r = rat_tex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
-    return (f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{den}}} \\mathrm{{d}} x > 0")
+    return f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{den}}} \\mathrm{{d}} x > 0"

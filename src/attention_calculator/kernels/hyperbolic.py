@@ -67,8 +67,12 @@ def target_for(kind: str, comp: str, bound: Fraction) -> Moment:
 # a strictly-false inequality is 方向反了 without ever touching the moment
 # machinery (q=0 would crash it); equality or truth proceeds. math.* overflow
 # (sinh 711, cosh 1e15) and the coth 1/tanh(0) division surface as 500.
-CONST_F = {"sinh_q": math.sinh, "cosh_q": math.cosh, "tanh_q": math.tanh,
-           "coth_q": lambda v: 1 / math.tanh(v)}
+CONST_F = {
+    "sinh_q": math.sinh,
+    "cosh_q": math.cosh,
+    "tanh_q": math.tanh,
+    "coth_q": lambda v: 1 / math.tanh(v),
+}
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
@@ -81,14 +85,14 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     c = CONST_F[kind](float(power))
     if (float(bound) > c) if comp == ">" else (float(bound) < c):
         raise WrongDirection
-    plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)])
-             for m, n in mn_order(LIMIT))
+    plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)]) for m, n in mn_order(LIMIT))
     solved = search(plans, target_for(kind, comp, bound), True)
     return emit(kind, solved.m, solved.n, solved.coeffs)
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     x = sp.symbols("x")
     m, n = params["m"], params["n"]

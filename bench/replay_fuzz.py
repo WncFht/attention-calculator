@@ -52,8 +52,7 @@ def main() -> None:
     for rec in recs:
         status, body = ours_request(client, rec)
         rec["ours_status"], rec["ours_body"] = status, body
-        rec["match"] = status == rec["site_status"] and bodies_equal(
-            rec["site_body"], body)
+        rec["match"] = status == rec["site_status"] and bodies_equal(rec["site_body"], body)
         rec["detail"] = "exact" if rec["match"] else "replayed-diff"
         if rec["match"]:
             n_match += 1

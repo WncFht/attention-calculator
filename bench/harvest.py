@@ -9,6 +9,7 @@ combo 每条 problem：POST /decompose_inequality。
 
 用法：python bench/harvest.py [--only golden|combo] [--limit N]
 """
+
 import argparse
 import json
 import sys
@@ -66,10 +67,14 @@ def image_params(case, parameters):
         k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v)
         for k, v in parameters.items()
     }
-    params.update({
-        "type": case["type"], "coef": case["power"],
-        "comparison": case["comparison"], "rational": case["rational"],
-    })
+    params.update(
+        {
+            "type": case["type"],
+            "coef": case["power"],
+            "comparison": case["comparison"],
+            "rational": case["rational"],
+        }
+    )
     return params
 
 
@@ -92,7 +97,8 @@ def fetch_case(case):
     if not rec["success"]:
         return rec
     status2, body2, elapsed2 = request(
-        "GET", "/get_integral_image", params=image_params(case, payload["parameters"]))
+        "GET", "/get_integral_image", params=image_params(case, payload["parameters"])
+    )
     rec["image_elapsed_ms"] = round(elapsed2, 1)
     rec["image_http_status"] = status2
     rec["raw_image"] = body2
@@ -123,8 +129,11 @@ def harvest_golden(limit=None):
     """采集 /calculate 全量 case，追加写 golden.jsonl。"""
     out_path = DATA_DIR / "golden.jsonl"
     done = load_keys(out_path, ("type", "power", "comparison", "rational"))
-    cases = [c for c in generate_cases()
-             if (c["type"], c["power"], c["comparison"], c["rational"]) not in done]
+    cases = [
+        c
+        for c in generate_cases()
+        if (c["type"], c["power"], c["comparison"], c["rational"]) not in done
+    ]
     if limit:
         cases = cases[:limit]
     log(f"golden: {len(done)} done, {len(cases)} to fetch")
@@ -145,8 +154,7 @@ def harvest_combo():
     log(f"combo: {len(done)} done, {len(problems)} to fetch")
     for i, problem in enumerate(problems, 1):
         rec = {"problem": problem}
-        status, body, elapsed = request(
-            "POST", "/decompose_inequality", data={"problem": problem})
+        status, body, elapsed = request("POST", "/decompose_inequality", data={"problem": problem})
         rec["elapsed_ms"] = round(elapsed, 1)
         rec["http_status"] = status
         rec["raw"] = body

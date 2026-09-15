@@ -51,9 +51,11 @@ def frac(v) -> Fraction:
 def poly(p, t):
     """待定多项式因子 a+b·t+c·t²（t 取 x、x²、x⁴ 或 sin x）。"""
     a, b, c = frac(p["a_val"]), frac(p["b_val"]), frac(p["c_val"])
-    return sp.Rational(a.numerator, a.denominator) \
-        + sp.Rational(b.numerator, b.denominator) * t \
+    return (
+        sp.Rational(a.numerator, a.denominator)
+        + sp.Rational(b.numerator, b.denominator) * t
         + sp.Rational(c.numerator, c.denominator) * t**2
+    )
 
 
 def base01(p):
@@ -79,10 +81,12 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
     polyx2 = poly(p, x**2)
     # sin 基与 x⁴ 基的 P 都只有两项（a+b·t）；c_val 在这些类型里被复用或恒零
     a_, b_ = frac(p["a_val"]), frac(p["b_val"])
-    polysin = sp.Rational(a_.numerator, a_.denominator) \
-        + sp.Rational(b_.numerator, b_.denominator) * sp.sin(x)
-    polyx4 = sp.Rational(a_.numerator, a_.denominator) \
-        + sp.Rational(b_.numerator, b_.denominator) * x**4
+    polysin = sp.Rational(a_.numerator, a_.denominator) + sp.Rational(
+        b_.numerator, b_.denominator
+    ) * sp.sin(x)
+    polyx4 = (
+        sp.Rational(a_.numerator, a_.denominator) + sp.Rational(b_.numerator, b_.denominator) * x**4
+    )
 
     if kind == "pi":
         return base_quad(p) * polyx2 / (1 + x**2), *DOMAIN_UNIT
@@ -91,8 +95,7 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
         # 矩空间要求基指数奇偶与 u 相反（偶 u 用奇指数取 η(u)）。
         u = power.numerator
         e = 2 * int(p["m"]) + (1 if u % 2 == 0 else 0)
-        f = x**e * (1 - x**2) ** int(p["n"]) * polyx2 \
-            * sp.log(1 / x) ** (u - 1) / (1 + x**2)
+        f = x**e * (1 - x**2) ** int(p["n"]) * polyx2 * sp.log(1 / x) ** (u - 1) / (1 + x**2)
         return f, *DOMAIN_UNIT
     if kind == "e":
         # e 型的 power 是系数（k·e），核恒为 e^x；e_q 的 power 才是指数
@@ -125,25 +128,36 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
     if kind in ("artanh_q", "arcoth_q"):
         # c_val 复用为归约后的 ln 参数 q'，不是多项式系数
         qq = frac(p["c_val"])
-        f = base * (sp.Rational(frac(p["a_val"]).numerator, frac(p["a_val"]).denominator)
-                    + sp.Rational(frac(p["b_val"]).numerator, frac(p["b_val"]).denominator) * x) \
+        f = (
+            base
+            * (
+                sp.Rational(frac(p["a_val"]).numerator, frac(p["a_val"]).denominator)
+                + sp.Rational(frac(p["b_val"]).numerator, frac(p["b_val"]).denominator) * x
+            )
             / (1 + (qq - 1) * x) ** s
+        )
         return f, *DOMAIN_UNIT
     if kind == "golden":
         return base * polyx * sp.sqrt(4 + x), *DOMAIN_UNIT
     if kind == "catalan":
         return base_quad(p) * polyx2 * sp.log(1 / x) / (1 + x**2), *DOMAIN_UNIT
     if kind == "zeta3":
-        f = x ** (2 * int(p["m"]) + 1) * (1 - x**2) ** int(p["n"]) \
-            * polyx2 * sp.log(x) ** 2 / (1 + x**2)
+        f = (
+            x ** (2 * int(p["m"]) + 1)
+            * (1 - x**2) ** int(p["n"])
+            * polyx2
+            * sp.log(x) ** 2
+            / (1 + x**2)
+        )
         return f, *DOMAIN_UNIT
     if kind == "varpi":
         # '>' 兜底（cu_val=1 标记）：∫ (au/u)·x(1-x)·√(1-x⁴)/π dx + b_val，
         # 而非 1/√ 核矩空间；正常路径即使 a_val=0（如 varpi>0 的 (0,1)）
         # 也走下方矩空间核。
         if comp == ">" and int(p["cu_val"]) != 0:
-            f = frac(p["au_val"]) / frac(p["u_val"]) * x * (1 - x) \
-                * sp.sqrt(1 - x**4) / sp.pi + frac(p["b_val"])
+            f = frac(p["au_val"]) / frac(p["u_val"]) * x * (1 - x) * sp.sqrt(
+                1 - x**4
+            ) / sp.pi + frac(p["b_val"])
             return f, *DOMAIN_UNIT
         e = 4 * int(p["m"]) + (3 if comp == "<" else 1)
         f = x**e * (1 - x) * polyx4 / sp.sqrt(1 - x**4)
@@ -154,8 +168,7 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
         # 同上 '>' 兜底：∫ au·(1-x)·√(1-x⁴)/π dx + b_val；正常路径
         # a_val=0 的记录（如 gauss>3/4 的 (0,6)）cu_val=0，不受影响。
         if comp == ">" and int(p["cu_val"]) != 0:
-            f = frac(p["au_val"]) * (1 - x) * sp.sqrt(1 - x**4) / sp.pi \
-                + frac(p["b_val"])
+            f = frac(p["au_val"]) * (1 - x) * sp.sqrt(1 - x**4) / sp.pi + frac(p["b_val"])
             return f, *DOMAIN_UNIT
         e = 4 * int(p["m"]) + (2 if comp == "<" else 0)
         f = x**e * (1 - x) * polyx4 / sp.sqrt(1 - x**4)
@@ -189,10 +202,15 @@ def gamma_integrand(comp: str, p: dict):
     if u == 0:
         return first + sp.Rational(a.numerator, a.denominator)
     e = n if comp == "<" else kk
-    sub = x**m * (1 - x) ** n \
-        * (sp.Rational(au.numerator, au.denominator)
-           + sp.Rational(bu.numerator, bu.denominator) * x) \
+    sub = (
+        x**m
+        * (1 - x) ** n
+        * (
+            sp.Rational(au.numerator, au.denominator)
+            + sp.Rational(bu.numerator, bu.denominator) * x
+        )
         / (u * (1 + kk * x) ** e)
+    )
     return first + sub
 
 
@@ -206,19 +224,26 @@ def constant_mpf(kind: str, power: Fraction):
     const = {
         "pi": lambda: mp.pi * q,
         "e": lambda: mp.e * q,
-        "pi_n": lambda: mp.pi ** q,
+        "pi_n": lambda: mp.pi**q,
         "e_q": lambda: mp.exp(q),
         "ln_q": lambda: mp.log(q),
         "ln_q_square": lambda: mp.log(q) ** 2,
-        "sin_q": lambda: mp.sin(q), "cos_q": lambda: mp.cos(q),
-        "tan_q": lambda: mp.tan(q), "cot_q": lambda: 1 / mp.tan(q),
+        "sin_q": lambda: mp.sin(q),
+        "cos_q": lambda: mp.cos(q),
+        "tan_q": lambda: mp.tan(q),
+        "cot_q": lambda: 1 / mp.tan(q),
         "sin_q_degree": lambda: mp.sin(mp.pi * q / 180),
         "cos_q_degree": lambda: mp.cos(mp.pi * q / 180),
-        "sin_pi_q": lambda: mp.sin(mp.pi * q), "cos_pi_q": lambda: mp.cos(mp.pi * q),
-        "arctan_q": lambda: mp.atan(q), "arccot_q": lambda: mp.atan(1 / q),
-        "sinh_q": lambda: mp.sinh(q), "cosh_q": lambda: mp.cosh(q),
-        "tanh_q": lambda: mp.tanh(q), "coth_q": lambda: 1 / mp.tanh(q),
-        "artanh_q": lambda: mp.atanh(q), "arcoth_q": lambda: mp.atanh(1 / q),
+        "sin_pi_q": lambda: mp.sin(mp.pi * q),
+        "cos_pi_q": lambda: mp.cos(mp.pi * q),
+        "arctan_q": lambda: mp.atan(q),
+        "arccot_q": lambda: mp.atan(1 / q),
+        "sinh_q": lambda: mp.sinh(q),
+        "cosh_q": lambda: mp.cosh(q),
+        "tanh_q": lambda: mp.tanh(q),
+        "coth_q": lambda: 1 / mp.tanh(q),
+        "artanh_q": lambda: mp.atanh(q),
+        "arcoth_q": lambda: mp.atanh(1 / q),
         "gamma": lambda: q * mp.euler,
         "golden": lambda: q * (1 + mp.sqrt(5)) / 2,
         "catalan": lambda: mp.catalan,
@@ -227,7 +252,7 @@ def constant_mpf(kind: str, power: Fraction):
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。
         "varpi": lambda: q * mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
-        "gauss": lambda: q * mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
+        "gauss": lambda: q * mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi**3)),
     }[kind]()
     return const
 
@@ -243,7 +268,7 @@ def lhs_mpf(kind: str, comp: str, power: Fraction, rational: Fraction):
     if kind == "pi_n" and power.denominator != 1:
         # 分数幂升幂后比较 C^v 与 r^v
         v = power.denominator
-        c, r = c ** v, r ** v
+        c, r = c**v, r**v
     if kind == "varpi" and comp == ">":
         return 1 - r / c
     if kind == "gauss" and comp == "<":

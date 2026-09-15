@@ -33,9 +33,11 @@ def detn(M):
     if n == 2:
         return M[0][0] * M[1][1] - M[0][1] * M[1][0]
     if n == 3:
-        return (M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
-                - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
-                + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]))
+        return (
+            M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
+            - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
+            + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0])
+        )
 
 
 def cramer_terms(M, t0, t1):
@@ -67,8 +69,7 @@ def inverse_rows(M):
         row = []
         for j in range(n):
             # cofactor (j,i): det of minor removing row j col i
-            minor = [[M[r2][c2] for c2 in range(n) if c2 != i]
-                     for r2 in range(n) if r2 != j]
+            minor = [[M[r2][c2] for c2 in range(n) if c2 != i] for r2 in range(n) if r2 != j]
             sign = -1 if (i + j) % 2 else 1
             row.append(sign * detn(minor) if n > 1 else Fraction(1))
         adj.append(row)
@@ -76,6 +77,7 @@ def inverse_rows(M):
 
 
 # --- evaluators: each takes (keys, M, t0, t1, Bf) -> list[float] or None ---
+
 
 def ev_cramer_f64_formula(keys, M, t0, t1, Bf):
     """u_j = (P_j + Q_j*Bf)/D_f : stored (P,Q,D) ints, float eval."""
@@ -102,13 +104,17 @@ def ev_cramer_allfloat(keys, M, t0, t1, Bf):
     Mf = [[float(v) for v in row] for row in M]
     tf = [(t0[i] + t1[i] * Fraction(Bf)) for i in range(n)]
     tf = [float(v) for v in tf]
+
     def detf(A):
         if n == 2:
             return A[0][0] * A[1][1] - A[0][1] * A[1][0]
         if n == 3:
-            return (A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
-                    - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
-                    + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]))
+            return (
+                A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
+                - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
+                + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0])
+            )
+
     Df = detf(Mf)
     if Df == 0.0:
         return None
@@ -140,8 +146,9 @@ def ev_exact_f64coeff(keys, M, t0, t1, Bf):
     tgt = {k: t0[i] + t1[i] * Fraction(Bf) for i, k in enumerate(keys)}
     # Bf is float; Fraction(Bf) is the exact dyadic — fine, equals bound intent
     try:
-        u = solve_moment([{k: M[i][j] for k in keys for j in [keys.index(k)]}
-                          for i in range(0)], tgt)  # placeholder
+        u = solve_moment(
+            [{k: M[i][j] for k in keys for j in [keys.index(k)]} for i in range(0)], tgt
+        )  # placeholder
     except Exception:
         return None
     return [float(v) for v in u]
@@ -202,7 +209,7 @@ CASES = [
 
 
 def predict(evname, kind, pw, comp, rs):
-    mid_nonpos = comp == ">"   # only '>' scan aborts on nonpos
+    mid_nonpos = comp == ">"  # only '>' scan aborts on nonpos
     ev = EVALS[evname]
     try:
         res = scan_eval(kind, pw, comp, rs, ev, mid_nonpos)
@@ -223,9 +230,11 @@ if __name__ == "__main__":
         row = f"{name:12s} {want:10s}"
         for ev in EVALS:
             got = predict(ev, k, p, c, r)
-            ok = (want.startswith("OK") and got.startswith("OK")) or \
-                 (want == "WD" and got.startswith("WD")) or \
-                 (want == "NS" and got == "NS")
+            ok = (
+                (want.startswith("OK") and got.startswith("OK"))
+                or (want == "WD" and got.startswith("WD"))
+                or (want == "NS" and got == "NS")
+            )
             if ok:
                 score[ev] += 1
             row += f"{got:>14s}"

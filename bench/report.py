@@ -46,11 +46,16 @@ def parity_table(rows: list[dict]) -> str:
         exact = sum(1 for r in rs if r.get("param_match"))
         crash = sum(1 for r in rs if str(r.get("ours_error", "")).startswith("crash"))
         lines.append(f"| {t} | {n} | {site_ok} | {both} | {s_o_f} | {s_f_o} | {exact} | {crash} |")
-        for k, v in zip(("n", "site_ok", "both", "s_o_f", "s_f_o", "exact", "crash"),
-                        (n, site_ok, both, s_o_f, s_f_o, exact, crash), strict=True):
+        for k, v in zip(
+            ("n", "site_ok", "both", "s_o_f", "s_f_o", "exact", "crash"),
+            (n, site_ok, both, s_o_f, s_f_o, exact, crash),
+            strict=True,
+        ):
             tot[k] += v
-    lines.append(f"| **合计** | {tot['n']} | {tot['site_ok']} | {tot['both']} | "
-                 f"{tot['s_o_f']} | {tot['s_f_o']} | {tot['exact']} | {tot['crash']} |")
+    lines.append(
+        f"| **合计** | {tot['n']} | {tot['site_ok']} | {tot['both']} | "
+        f"{tot['s_o_f']} | {tot['s_f_o']} | {tot['exact']} | {tot['crash']} |"
+    )
     return "\n".join(lines)
 
 
@@ -87,12 +92,14 @@ def main() -> None:
     parts = ["# benchmark 报告\n"]
     if parity_rows:
         parts += ["## 与线上一致性（parity）\n", parity_table(parity_rows), ""]
-        bad = [r for r in parity_rows
-               if r["site_success"] and not r.get("ours_success")]
+        bad = [r for r in parity_rows if r["site_success"] and not r.get("ours_success")]
         if bad:
             parts.append(f"## 本站可证而本方未证（{len(bad)} 条，前 30）\n")
-            parts += [f"- `{r['type']}` {r['power']} {r['comparison']} {r['rational']}"
-                      f" → {r.get('ours_error')}" for r in bad[:30]]
+            parts += [
+                f"- `{r['type']}` {r['power']} {r['comparison']} {r['rational']}"
+                f" → {r.get('ours_error')}"
+                for r in bad[:30]
+            ]
             parts.append("")
     parts += ["## 恒等式有效性（verify）\n", verify_table(verify_rows), ""]
 

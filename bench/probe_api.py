@@ -106,15 +106,28 @@ def run_batch(cases):
 def mn_order():
     """(m,n) growth vs bound tightness; grid-shape images for exotic types."""
     pi = [
-        ("3/1", ">"), ("4/1", "<"), ("31/10", ">"), ("32/10", "<"),
-        ("22/7", "<"), ("223/71", ">"), ("314159/100000", ">"), ("355/113", "<"),
+        ("3/1", ">"),
+        ("4/1", "<"),
+        ("31/10", ">"),
+        ("32/10", "<"),
+        ("22/7", "<"),
+        ("223/71", ">"),
+        ("314159/100000", ">"),
+        ("355/113", "<"),
     ]
     e = [
-        ("2/1", ">"), ("3/1", "<"), ("5/2", ">"), ("11/4", "<"),
-        ("27/10", ">"), ("271828/100000", ">"),
+        ("2/1", ">"),
+        ("3/1", "<"),
+        ("5/2", ">"),
+        ("11/4", "<"),
+        ("27/10", ">"),
+        ("271828/100000", ">"),
     ]
     ln2 = [
-        ("3/5", ">"), ("7/10", "<"), ("694/1000", "<"), ("6931/10000", ">"),
+        ("3/5", ">"),
+        ("7/10", "<"),
+        ("694/1000", "<"),
+        ("6931/10000", ">"),
     ]
     cases = [calc("pi", "1", c, r, "mn_order:pi") for r, c in pi]
     cases += [calc("e", "1", c, r, "mn_order:e") for r, c in e]
@@ -270,8 +283,12 @@ def main():
     p.add_argument("--all", action="store_true", help="run every batch in order")
     p.add_argument("--list", action="store_true")
     p.add_argument("--delay", type=float, default=DELAY)
-    p.add_argument("--images-for", nargs="*", metavar="TAG",
-                   help="refetch /get_integral_image for successful calculates with these tags")
+    p.add_argument(
+        "--images-for",
+        nargs="*",
+        metavar="TAG",
+        help="refetch /get_integral_image for successful calculates with these tags",
+    )
     args = p.parse_args()
     if args.list:
         for name, f in BATCHES.items():
@@ -283,8 +300,12 @@ def main():
         latest = {}
         for line in OUT.open():
             r = json.loads(line)
-            if r["endpoint"] == "/calculate" and r["tag"] in wanted and \
-                    isinstance(r["response"], dict) and r["response"].get("success"):
+            if (
+                r["endpoint"] == "/calculate"
+                and r["tag"] in wanted
+                and isinstance(r["response"], dict)
+                and r["response"].get("success")
+            ):
                 latest[r["tag"]] = r
         for tag, rec in latest.items():
             send_image(rec, rec["form"], tag)

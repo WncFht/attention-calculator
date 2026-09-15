@@ -58,7 +58,7 @@ def golden_moment(k: int) -> Moment:
     a = b = Fraction(0)
     for j in range(k + 1):
         w = Fraction(2 * comb(k, j) * (-4) ** (k - j), 2 * j + 3)
-        a -= w * 8 * 4 ** j
+        a -= w * 8 * 4**j
         b += w * 5 ** (j + 1)
     return {"1": a - b, "phi": 2 * b}
 
@@ -101,42 +101,38 @@ DIV_PI = {"varpi": "gauss", "pi": "1", "gauss_inv": "varpi_inv"}
 
 def lemniscate_basis(kind: str, comp: str, m: int, i: int) -> Moment:
     """Moment of ``x^{4m+res+4i} (1-x) / (pi^e sqrt(1-x^4))``, i in (a, b)."""
-    res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {
-        "varpi": 3, "gauss": 2}[kind]
+    res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {"varpi": 3, "gauss": 2}[kind]
     p, c, q, d = lemniscate_table(m + 2)  # j index reaches m+2 for slot b
-    base = combine([Fraction(1), Fraction(-1)],
-                   [j_moment(4 * m + res + 4 * i, p, c, q, d),
-                    j_moment(4 * m + res + 4 * i + 1, p, c, q, d)])
+    base = combine(
+        [Fraction(1), Fraction(-1)],
+        [j_moment(4 * m + res + 4 * i, p, c, q, d), j_moment(4 * m + res + 4 * i + 1, p, c, q, d)],
+    )
     if comp == ">":  # the '>' kernels carry an outer 1/pi
         base = {DIV_PI[sym]: v for sym, v in base.items()}
     return base
 
 
-def lemniscate_target(kind: str, comp: str, power: Fraction,
-                      bound: Fraction) -> Moment:
+def lemniscate_target(kind: str, comp: str, power: Fraction, bound: Fraction) -> Moment:
     """Target vector: ``power*C - bound`` arranged per the family's identity."""
     if kind == "varpi":
-        return ({"1": power, "varpi_inv": -bound} if comp == ">"
-                else {"1": bound, "varpi": -power})
-    return ({"gauss": power, "1": -bound} if comp == ">"
-            else {"gauss_inv": bound, "1": -power})
+        return {"1": power, "varpi_inv": -bound} if comp == ">" else {"1": bound, "varpi": -power}
+    return {"gauss": power, "1": -bound} if comp == ">" else {"gauss_inv": bound, "1": -power}
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     if kind == "golden":
-        plans = ((m, n, [golden_basis(m, n, 0), golden_basis(m, n, 1)])
-                 for m, n in mn_order(LIMIT))
+        plans = ((m, n, [golden_basis(m, n, 0), golden_basis(m, n, 1)]) for m, n in mn_order(LIMIT))
         sign = Fraction(1 if comp == ">" else -1)
         target = {"phi": sign * power, "1": -sign * bound}
         solved = search(plans, target, True)
     else:
         # n is a direction flag here: 0 proves '>', 1 proves '<'
         flag = 0 if comp == ">" else 1
-        plans = ((m, flag, [lemniscate_basis(kind, comp, m, 0),
-                            lemniscate_basis(kind, comp, m, 1)])
-                 for m in range(LT_M_LIMIT[kind] + 1
-                                if comp == "<" else LIMIT + 1))
+        plans = (
+            (m, flag, [lemniscate_basis(kind, comp, m, 0), lemniscate_basis(kind, comp, m, 1)])
+            for m in range(LT_M_LIMIT[kind] + 1 if comp == "<" else LIMIT + 1)
+        )
         target = lemniscate_target(kind, comp, power, bound)
         try:
             solved = search(plans, target, True)
@@ -155,17 +151,22 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     u = lcm(a.denominator, b.denominator)
     return {
         "parameters": {
-            "m": solved.m, "n": solved.n,
-            "a_val": str(a), "b_val": str(b), "c_val": "0",
-            "au_val": str(a * u), "bu_val": str(b * u), "cu_val": "0",
-            "u_val": str(u), "unified_form": {},
+            "m": solved.m,
+            "n": solved.n,
+            "a_val": str(a),
+            "b_val": str(b),
+            "c_val": "0",
+            "au_val": str(a * u),
+            "bu_val": str(b * u),
+            "cu_val": "0",
+            "u_val": str(u),
+            "unified_form": {},
         },
         "solution": f"a = {a}, b = {b}",
     }
 
 
-def transposed_lt_proof(kind: str, power: Fraction, bound: Fraction,
-                        target: Moment) -> Solved:
+def transposed_lt_proof(kind: str, power: Fraction, bound: Fraction, target: Moment) -> Solved:
     """The site's '<' last resort: a single solve at m = LT_M_LIMIT[kind] + 1
     whose rows are the two basis-moment vectors themselves, rhs = target in
     [symbol, "1"] order — i.e. the transpose of the correct system.
@@ -212,9 +213,16 @@ def sqrt_bound_proof(kind: str, target: Moment) -> dict:
         raise NoSolution
     return {
         "parameters": {
-            "m": 0, "n": 0, "a_val": "0", "b_val": str(b), "c_val": "0",
-            "au_val": str(t.numerator), "bu_val": "0", "cu_val": "1",
-            "u_val": str(t.denominator), "unified_form": {},
+            "m": 0,
+            "n": 0,
+            "a_val": "0",
+            "b_val": str(b),
+            "c_val": "0",
+            "au_val": str(t.numerator),
+            "bu_val": "0",
+            "cu_val": "1",
+            "u_val": str(t.denominator),
+            "unified_form": {},
         },
         "solution": "a = 0, b = 0",
     }
@@ -245,9 +253,16 @@ def lt_bound_proof(kind: str, target: Moment) -> dict:
         raise NoSolution
     return {
         "parameters": {
-            "m": 0, "n": 0, "a_val": "0", "b_val": str(b), "c_val": "0",
-            "au_val": str(t.numerator), "bu_val": "0", "cu_val": "2",
-            "u_val": str(t.denominator), "unified_form": {},
+            "m": 0,
+            "n": 0,
+            "a_val": "0",
+            "b_val": str(b),
+            "c_val": "0",
+            "au_val": str(t.numerator),
+            "bu_val": "0",
+            "cu_val": "2",
+            "u_val": str(t.denominator),
+            "unified_form": {},
         },
         "solution": "a = 0, b = 0",
     }
@@ -261,8 +276,12 @@ def join_cdot(pieces: list[str]) -> str:
     ends in '}' and the right is a '\\left(<digit>...\\right)' group."""
     out = pieces[0]
     for prev, cur in pairwise(pieces):
-        cdot = (prev.endswith("}") and cur.startswith("\\left(")
-                and cur[6].isdigit() and cur.endswith("\\right)"))
+        cdot = (
+            prev.endswith("}")
+            and cur.startswith("\\left(")
+            and cur[6].isdigit()
+            and cur.endswith("\\right)")
+        )
         out += " \\cdot " if cdot else " "
         out += cur
     return out
@@ -279,8 +298,7 @@ def golden_numerator(m: int, n: int, au: int, bu: int) -> str:
     if m:
         pieces.append("x" if m == 1 else f"x^{{{m}}}")
     if n:
-        pieces.append("\\left(1 - x\\right)" if n == 1
-                      else f"\\left(1 - x\\right)^{{{n}}}")
+        pieces.append("\\left(1 - x\\right)" if n == 1 else f"\\left(1 - x\\right)^{{{n}}}")
     p = f"\\left({poly1_tex(au, bu)}\\right)"
     if bu < 0:
         pieces += [p, "\\sqrt{x + 4}"]
@@ -297,23 +315,23 @@ def lemniscate_numerator(e: int, au: int, bu: int, u: int) -> str:
     """
     x = sp.symbols("x")
     if e == 0:
-        return sp.latex(sp.Rational(au, u) + sp.Rational(bu, u) * x ** 4)
+        return sp.latex(sp.Rational(au, u) + sp.Rational(bu, u) * x**4)
     if au == 0 or bu == 0:
         coef, deg = (bu, e + 4) if au == 0 else (au, e)
-        return sp.latex(sp.Rational(coef, u) * x ** deg)
+        return sp.latex(sp.Rational(coef, u) * x**deg)
     xp = "x" if e == 1 else f"x^{{{e}}}"
-    num = join_cdot([xp, f"\\left({sp.latex(au + bu * x ** 4)}\\right)"])
+    num = join_cdot([xp, f"\\left({sp.latex(au + bu * x**4)}\\right)"])
     return num if u == 1 else f"\\frac{{{num}}}{{{u}}}"
 
 
 def const_tex(kind: str, power: Fraction | str) -> str:
     """The constant side as printed: '2\\phi', '\\varpi', '3G', '1\\phi'..."""
-    return coef_tex(power) + {"golden": "\\phi", "varpi": "\\varpi",
-                              "gauss": "G"}[kind]
+    return coef_tex(power) + {"golden": "\\phi", "varpi": "\\varpi", "gauss": "G"}[kind]
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     m = int(params["m"])
     au, bu, u = (int(params[k]) for k in ("au_val", "bu_val", "u_val"))
@@ -321,15 +339,17 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     bound_v = wire_or(bound)
 
     if kind == "golden":
-        lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"
-               else f"{btex} - {const_tex(kind, power)}")
+        lhs = (
+            f"{const_tex(kind, power)} - {btex}"
+            if comp == ">"
+            else f"{btex} - {const_tex(kind, power)}"
+        )
         if au == 0 and bu == 0:
             # the a+bx factor is literally 0: sympy reduces the whole
             # numerator/u to the bare '0' the site prints (golden 0-vs-0)
             return f"{lhs} = \\int_0^1 0 \\mathrm{{d}} x > 0"
         num = golden_numerator(m, int(params["n"]), au, bu)
-        return (f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{u}}}"
-                " \\mathrm{d} x > 0")
+        return f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{u}}} \\mathrm{{d}} x > 0"
 
     # varpi '>' shows power - bound*varpi^{-1}; gauss '<' shows bound*G^{-1} -
     # power, both printed with the coefficient on the matching side. gauss
@@ -337,32 +357,32 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     ctex = const_tex(kind, power)
     if kind == "varpi":
         inv = "\\varpi^{-1}" if bound_v == 1 else f"{btex}\\varpi^{{-1}}"
-        lhs = (f"{rat_tex(power)} - {inv}" if comp == ">"
-               else f"{btex} - {ctex}")
+        lhs = f"{rat_tex(power)} - {inv}" if comp == ">" else f"{btex} - {ctex}"
     else:
         ginv = "G^{-1}" if bound_v == 1 else f"{btex}G^{{-1}}"
-        lhs = (f"{ctex}-{btex}" if comp == ">" else f"{ginv}-{rat_tex(power)}")
+        lhs = f"{ctex}-{btex}" if comp == ">" else f"{ginv}-{rat_tex(power)}"
 
-    res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {
-        "varpi": 3, "gauss": 2}[kind]
+    res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {"varpi": 3, "gauss": 2}[kind]
     if int(params["cu_val"]):
         # last-resort template: (au/u)·x^res(1-x)·sqrt(1-x^4)[/pi] + b_val.
         # '>' keeps the /pi denominator, '<' drops it; gauss wraps the product
         # in \left(\right), varpi leaves it bare; the space after \int_0^1 is
         # reversed between the two kinds across directions (probed bytes).
         x = sp.symbols("x")
-        inner = re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ",
-                       sp.latex(sp.Rational(au, u) * x**res * (1 - x)))
+        inner = re.sub(
+            r"(?<=[0-9}]) (?=\\left\(\d)",
+            r" \\cdot ",
+            sp.latex(sp.Rational(au, u) * x**res * (1 - x)),
+        )
         if kind == "gauss":
             inner = f"\\left({inner}\\right)"
-        gap, tail = (("  ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">"
-                     else (" ", "\\sqrt{1-x^4}")) if kind == "gauss" else (
-                     (" ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">"
-                     else ("  ", "\\sqrt{1-x^4}"))
-        return (f"{lhs} = \\int_0^1{gap}{inner}{tail} \\mathrm{{d}} x"
-                f"+{rat_tex(params['b_val'])} > 0")
+        gap, tail = (
+            (("  ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">" else (" ", "\\sqrt{1-x^4}"))
+            if kind == "gauss"
+            else ((" ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">" else ("  ", "\\sqrt{1-x^4}"))
+        )
+        return f"{lhs} = \\int_0^1{gap}{inner}{tail} \\mathrm{{d}} x+{rat_tex(params['b_val'])} > 0"
     num = lemniscate_numerator(4 * m + res, au, bu, u)
-    tail = ("\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}}" if comp == ">"
-            else "\\dfrac{(1-x)}{\\sqrt{1-x^4}}")
+    tail = "\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}}" if comp == ">" else "\\dfrac{(1-x)}{\\sqrt{1-x^4}}"
     gap = "  " if comp == ">" else " "
     return f"{lhs} = \\int_0^1{gap}{num}{tail} \\mathrm{{d}} x > 0"

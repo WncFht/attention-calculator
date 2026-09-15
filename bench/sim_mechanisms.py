@@ -32,13 +32,16 @@ def basis_and_target(kind, power_s, comp, bound_s):
         cfg = quadlog.spec(kind, power)
         q, rr, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
         if sym == "arctan":
+
             def term(k):
                 return quadlog.atan_moment(k, q)
         else:
             factor = cfg["factor"]
+
             def term(k):
                 cc, rat = quadlog.ln_moment(k, rr, odd)
                 return cc * factor, rat
+
         sign = 1 if comp == ">" else -1
         bb = bound ** cfg.get("pd", 1)
         target = {sym: sign * cfg["coef"], "1": -sign * bb}
@@ -50,27 +53,33 @@ def basis_and_target(kind, power_s, comp, bound_s):
             sym, coef, q, limit = "e", power, Fraction(1), 30
         sign = 1 if comp == ">" else -1
         target = {sym: sign * coef, "1": -sign * bound}
+
         def mk(m, n):
             return [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
+
         return limit, mk, target, bound
     if kind in ("ln_q", "ln_q_square"):
         qt = log_family.qtilde(kind, power)
         c = qt - 1
         square = kind == "ln_q_square"
         sign = Fraction(1 if comp == ">" else -1)
-        target = ({"ln2": sign, "1": -sign * bound} if square
-                  else {"ln": sign, "1": -sign * bound})
+        target = {"ln2": sign, "1": -sign * bound} if square else {"ln": sign, "1": -sign * bound}
+
         def mk(m, n):
-            return [log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
-                    for j in range(3 if square else 2)]
+            return [
+                log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
+                for j in range(3 if square else 2)
+            ]
+
         return 10, mk, target, bound
     if kind in ("sin_q", "cos_q"):
         s = Fraction(1 if comp == ">" else -1)
-        target = ({"sin_q": s, "1": -s * bound} if kind == "sin_q"
-                  else {"cos_q": s, "1": -s * bound})
+        target = {"sin_q": s, "1": -s * bound} if kind == "sin_q" else {"cos_q": s, "1": -s * bound}
         moments = trig_q.sin_moments(22, power)
+
         def mk(m, n):
             return [trig_q.basis_moment(moments, m, n, j) for j in range(3)]
+
         return 10, mk, target, bound
     raise ValueError(kind)
 
@@ -113,8 +122,10 @@ def mech_mp(basis, target, rf, dps):
     mp.dps = dps
     keys = sorted(set(target) | {k for m in basis for k in m})
     n = len(keys)
-    t2 = {k: (mp.mpf(v.numerator) / v.denominator if isinstance(v, Fraction) else mp.mpf(v))
-          for k, v in target.items()}
+    t2 = {
+        k: (mp.mpf(v.numerator) / v.denominator if isinstance(v, Fraction) else mp.mpf(v))
+        for k, v in target.items()
+    }
     if "1" in t2:  # bound component must use rf (float64) — same value anyway
         pass
     A = mp.matrix(n, n)
@@ -140,8 +151,9 @@ def mech_exact_then_sample(basis, target, rf):
     cf = [float(c) for c in u]
     vals = []
     for t in (0.0, 0.25, 0.5, 0.75, 1.0):
-        vals.append(cf[0] + (cf[1] * t if len(cf) > 1 else 0)
-                    + (cf[2] * t * t if len(cf) > 2 else 0))
+        vals.append(
+            cf[0] + (cf[1] * t if len(cf) > 1 else 0) + (cf[2] * t * t if len(cf) > 2 else 0)
+        )
     if all(v >= 0 for v in vals):
         return ("nonneg", u)
     if all(v <= 0 for v in vals):

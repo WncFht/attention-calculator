@@ -27,9 +27,7 @@ def test_mn_order_shape():
 
 
 def test_gauss_solve():
-    assert gauss_solve(
-        [[F(1), F(2)], [F(3), F(-1)]], [F(5), F(1)]
-    ) == [F(1), F(2)]
+    assert gauss_solve([[F(1), F(2)], [F(3), F(-1)]], [F(5), F(1)]) == [F(1), F(2)]
     with pytest.raises(ValueError):
         gauss_solve([[F(1), F(1)], [F(2), F(2)]], [F(1), F(2)])
 

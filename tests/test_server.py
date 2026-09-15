@@ -49,6 +49,7 @@ def test_index_served(client):
 
 def test_routes_and_error_envelope(client, monkeypatch):
     """Site-surface details: JSON error bodies, /en/ 404, /attention mount."""
+
     def fake(*a):
         return {"parameters": dict(PARAMS), "solution": "a = 47/120, b = -13/120"}
 
@@ -68,8 +69,12 @@ def test_routes_and_error_envelope(client, monkeypatch):
 
     # every non-2xx is JSON: unknown path 404, wrong method -> 500
     assert client.get("/no-such-path").get_json() == {"error": "请求的页面不存在"}
-    for method, path in [("get", "/calculate"), ("post", "/get_integral_image"),
-                         ("post", "/"), ("post", "/en")]:
+    for method, path in [
+        ("get", "/calculate"),
+        ("post", "/get_integral_image"),
+        ("post", "/"),
+        ("post", "/en"),
+    ]:
         resp = getattr(client, method)(path)
         assert resp.status_code == 500, (method, path)
         assert resp.get_json() == {"error": INTERNAL_ERROR}
@@ -80,6 +85,7 @@ def test_routes_and_error_envelope(client, monkeypatch):
 
 def test_calculate_success(client, monkeypatch):
     """Successful prove -> site envelope; type echoes the request verbatim."""
+
     def fake(*a):
         return {"parameters": dict(PARAMS), "solution": "a = 47/120, b = -13/120"}
 
@@ -100,6 +106,7 @@ def test_calculate_success(client, monkeypatch):
 
 def test_calculate_wrong_direction(client, monkeypatch):
     """WrongDirection -> 404 with the site's '方向反了' message."""
+
     def fake(*a):
         raise engine.WrongDirection
 
@@ -111,6 +118,7 @@ def test_calculate_wrong_direction(client, monkeypatch):
 
 def test_calculate_no_solution_limits(client, monkeypatch):
     """NoSolution -> 404, message carries the per-type exponent budget."""
+
     def fake(*a):
         raise engine.NoSolution
 
@@ -135,6 +143,7 @@ INTERNAL_ERROR = "服务器内部错误，请稍后再试"
 
 def test_calculate_format_errors(client):
     """Malformed input -> 400 with the site's probed texts."""
+
     def form(power="1", rational="1/2", **kw):
         return {"type": "pi", "power": power, "comparison": ">", "rational": rational, **kw}
 
@@ -196,6 +205,7 @@ def test_calculate_domain_errors(client):
 
 def test_calculate_kernel_value_error(client, monkeypatch):
     """Kernel-side ValueError -> 400 with the kernel's message."""
+
     def fake(*a):
         raise ValueError("左侧系数格式无效")
 
@@ -210,9 +220,7 @@ def test_get_integral_image(client, monkeypatch):
     seen = {}
 
     def fake_render(params, kind, power, comp, bound):
-        seen.update(
-            {"params": params, "kind": kind, "power": power, "comp": comp, "bound": bound}
-        )
+        seen.update({"params": params, "kind": kind, "power": power, "comp": comp, "bound": bound})
         return "\\dfrac{22}{7} - \\pi = \\int_0^1 f(x) \\mathrm{d} x > 0"
 
     fake = types.ModuleType("attention_calculator.kernels.quadlog")
@@ -250,18 +258,19 @@ def test_get_integral_image_echoes_raw(client):
         "coef": "1",
         **{k: str(PARAMS[k]) for k in server.IMG_INT_KEYS + server.IMG_FRAC_KEYS},
     }
-    resp = client.get("/get_integral_image",
-                      query_string={**base, "rational": "3140/1000"})
+    resp = client.get("/get_integral_image", query_string={**base, "rational": "3140/1000"})
     assert "\\dfrac{3140}{1000}" in resp.get_json()["equation"]
 
-    resp = client.get("/get_integral_image",
-                      query_string={**base, "rational": "\\frac{3140}{1000}"})
+    resp = client.get(
+        "/get_integral_image", query_string={**base, "rational": "\\frac{3140}{1000}"}
+    )
     eq = resp.get_json()["equation"]
     assert "\\frac{3140}{1000}" in eq and "dfrac{3140" not in eq
 
-    resp = client.get("/get_integral_image",
-                      query_string={**base, "rational": "3",
-                                    "coef": "2/4", "comparison": ">"})
+    resp = client.get(
+        "/get_integral_image",
+        query_string={**base, "rational": "3", "coef": "2/4", "comparison": ">"},
+    )
     assert "\\dfrac{2}{4}\\pi" in resp.get_json()["equation"]
 
 
@@ -317,8 +326,15 @@ def test_get_integral_image_errors(client, monkeypatch):
     ]:
         resp = get(**over)
         assert resp.status_code == 400 and resp.get_json() == {"error": err}, over
-    for ok in ({"m": "30"}, {"n": "30"}, {"m": " 3 "}, {"m": "\t3\n"},
-               {"au_val": "-5"}, {"cu_val": "9"}, {"u_val": "10" + "0" * 16}):
+    for ok in (
+        {"m": "30"},
+        {"n": "30"},
+        {"m": " 3 "},
+        {"m": "\t3\n"},
+        {"au_val": "-5"},
+        {"cu_val": "9"},
+        {"u_val": "10" + "0" * 16},
+    ):
         assert get(**ok).status_code == 200, ok
 
     # fraction fields: format + denominator-0, no numerator cap

@@ -131,24 +131,26 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
         if (float(bound) > c) if comp == ">" else (float(bound) < c):
             raise WrongDirection
         sym, coef, q, limit = "e_q", Fraction(1), power, LIMIT_OTHER
-        plans = ((m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)])
-                 for m, n in mn_order(limit))
+        plans = (
+            (m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)]) for m, n in mn_order(limit)
+        )
     elif kind == "e":
         sym, coef, q, limit = "e", power, Fraction(1), LIMIT_E
-        plans = ((m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)])
-                 for m, n in mn_order(limit))
+        plans = (
+            (m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)]) for m, n in mn_order(limit)
+        )
     else:  # e_pi
         sym, coef, limit = "e_pi", power, LIMIT_OTHER
-        plans = ((m, n, [basis_sin_moment(m, n, j) for j in (0, 1)])
-                 for m, n in mn_order(limit))
+        plans = ((m, n, [basis_sin_moment(m, n, j) for j in (0, 1)]) for m, n in mn_order(limit))
     sign = 1 if comp == ">" else -1
     target = {sym: sign * coef, "1": -sign * bound}
     solved = search(plans, target, True)
     return emit(kind, solved.m, solved.n, solved.coeffs)
 
 
-def render_equation(params: dict, kind: str, power: Fraction | str,
-                    comp: str, bound: Fraction | str) -> str:
+def render_equation(
+    params: dict, kind: str, power: Fraction | str, comp: str, bound: Fraction | str
+) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     x = sp.symbols("x")
     m, n = params["m"], params["n"]

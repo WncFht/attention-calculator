@@ -55,7 +55,7 @@ with mp.workdps(60):
     ZETA3_F = float(mp.zeta(3))
     E_PI_F = float(mp.exp(mp.pi))
     VARPI_F = float(mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)))
-    GAUSS_F = float(mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)))
+    GAUSS_F = float(mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi**3)))
 EULER_F = 0.5772156649015329  # 与 kernels.gamma 的站端字面量一致
 
 
@@ -64,8 +64,7 @@ def trig_in_domain(kind: str, q: Fraction) -> bool:
     if q <= 0:
         return False
     with mp.workdps(60):
-        return mp.mpf(q.numerator) / q.denominator < (
-            mp.pi if kind == "sin_q" else mp.pi / 2)
+        return mp.mpf(q.numerator) / q.denominator < (mp.pi if kind == "sin_q" else mp.pi / 2)
 
 
 def direction_f(kind: str, q: Fraction):
@@ -96,19 +95,27 @@ def direction_f(kind: str, q: Fraction):
     if kind == "e_q":
         return math.exp(f)
     if kind == "pi_n":
-        return math.pi ** f
+        return math.pi**f
     if kind == "arctan_q":
         return math.atan(f)
     if kind == "arccot_q":
         return math.atan(1 / f)
     if kind in ("sinh_q", "cosh_q", "tanh_q", "coth_q"):
-        return {"sinh_q": math.sinh, "cosh_q": math.cosh, "tanh_q": math.tanh,
-                "coth_q": lambda v: 1 / math.tanh(v)}[kind](f)
+        return {
+            "sinh_q": math.sinh,
+            "cosh_q": math.cosh,
+            "tanh_q": math.tanh,
+            "coth_q": lambda v: 1 / math.tanh(v),
+        }[kind](f)
     if kind in ("sin_q", "cos_q", "tan_q", "cot_q"):
         if not trig_in_domain(kind, q):
             return None
-        return {"sin_q": math.sin, "cos_q": math.cos, "tan_q": math.tan,
-                "cot_q": lambda v: 1 / math.tan(v)}[kind](f)
+        return {
+            "sin_q": math.sin,
+            "cos_q": math.cos,
+            "tan_q": math.tan,
+            "cot_q": lambda v: 1 / math.tan(v),
+        }[kind](f)
     if kind == "ln_q":
         return math.log(f) if q > 1 else None
     if kind == "ln_q_square":
@@ -156,6 +163,7 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
         # 判定精度是 float64：zeta3 '>' 对 float 相等但方向为假的界仍报
         # "未找到解"（float 差为 0 → 放行进入搜索 → 耗尽），故用 float 比较差。
         from .integrand import constant_mpf
+
         diff = float(constant_mpf(kind, q)) - float(r)
         claim_false = (diff < 0) if comp == ">" else (diff > 0)
         if claim_false:

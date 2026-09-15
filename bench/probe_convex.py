@@ -34,14 +34,26 @@ def prove(inequality, tag, line=None, extra=None):
         form["line"] = line
     if extra:
         form.update(extra)
-    return {"tag": tag, "method": "POST", "endpoint": "/convex/prove",
-            "encode": "form", "form": form}
+    return {
+        "tag": tag,
+        "method": "POST",
+        "endpoint": "/convex/prove",
+        "encode": "form",
+        "form": form,
+    }
 
 
 def raw_case(tag, method, endpoint, form=None, encode="form", body=None, json_body=None):
     """Arbitrary request shape for transport/malformed probing."""
-    return {"tag": tag, "method": method, "endpoint": endpoint, "encode": encode,
-            "form": form or {}, "body": body, "json": json_body}
+    return {
+        "tag": tag,
+        "method": method,
+        "endpoint": endpoint,
+        "encode": encode,
+        "form": form or {},
+        "body": body,
+        "json": json_body,
+    }
 
 
 def send_once(case):
@@ -61,8 +73,9 @@ def send_once(case):
     if case["encode"] == "json":
         return requests.post(url, json=case["json"], timeout=60)
     if case["encode"] == "raw":
-        return requests.post(url, data=case["body"],
-                             headers={"Content-Type": "text/plain"}, timeout=60)
+        return requests.post(
+            url, data=case["body"], headers={"Content-Type": "text/plain"}, timeout=60
+        )
     return requests.post(url, data=case["form"], timeout=60)
 
 
@@ -82,10 +95,18 @@ def send(case):
             print(f"  retry {attempt + 1} after {type(e).__name__}", flush=True)
             time.sleep(5 * (attempt + 1))
     if r is None:
-        rec = {"ts": datetime.now(UTC).isoformat(), "tag": case["tag"],
-               "method": case["method"], "endpoint": case["endpoint"],
-               "encode": case["encode"], "form": case["form"], "http": None,
-               "elapsed_ms": None, "raw": None, "response": None}
+        rec = {
+            "ts": datetime.now(UTC).isoformat(),
+            "tag": case["tag"],
+            "method": case["method"],
+            "endpoint": case["endpoint"],
+            "encode": case["encode"],
+            "form": case["form"],
+            "http": None,
+            "elapsed_ms": None,
+            "raw": None,
+            "response": None,
+        }
         with OUT.open("a") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         return rec
@@ -377,10 +398,35 @@ def tangents():
     # article example: exp(x) - 2x - ln x > 1/sqrt(2)
     cases.append(prove("exp(x)-2*x-log(x)-1/sqrt(2)>0", "tan:article"))
     # sweep c in exp(x) - ln x > c ; cliff near f_min ~= 2.33
-    for c in ["-2", "-1", "-0.5", "0", "0.5", "1", "1.5", "1.8", "2", "2.1",
-              "2.2", "2.25", "2.28", "2.29", "2.3", "2.31", "2.32", "2.325",
-              "2.33", "2.3301", "2.331", "2.332", "2.335", "2.34", "2.35",
-              "2.4", "3"]:
+    for c in [
+        "-2",
+        "-1",
+        "-0.5",
+        "0",
+        "0.5",
+        "1",
+        "1.5",
+        "1.8",
+        "2",
+        "2.1",
+        "2.2",
+        "2.25",
+        "2.28",
+        "2.29",
+        "2.3",
+        "2.31",
+        "2.32",
+        "2.325",
+        "2.33",
+        "2.3301",
+        "2.331",
+        "2.332",
+        "2.335",
+        "2.34",
+        "2.35",
+        "2.4",
+        "3",
+    ]:
         cases.append(prove(f"exp(x)-log(x)-{c}>0", f"tan:explog:c={c}"))
     # x^2 + c > ln x ; argmin near 1/sqrt(2) ~= 0.7071
     for c in ["-0.84", "-0.8", "-0.5", "0", "0.5", "1"]:
@@ -430,8 +476,7 @@ def provided_line():
         prove("x^2+1>0", "line:neg", line="-x+1"),
         prove("x^2+1>0", "line:frac", line="1/2*x+3/4"),
         prove("x^2+1>0", "line:group", line="2*(x+1)"),
-        prove("exp(x)-2*x-log(x)-1/sqrt(2)>0", "line:article",
-              line="41/14*(x-12/161)"),
+        prove("exp(x)-2*x-log(x)-1/sqrt(2)>0", "line:article", line="41/14*(x-12/161)"),
         prove("x^2+1>0", "line:xx", line="x+x"),
         prove("x^2+1>0", "line:space", line="  x + 1  "),
     ]
@@ -442,37 +487,39 @@ def http_edges():
     """Transport-level: methods, encodings, stray params, routing."""
     return [
         raw_case("http:get", "GET", "/convex/prove"),
-        raw_case("http:get-params", "GET", "/convex/prove",
-                 form={"inequality": "x>0"}),
+        raw_case("http:get-params", "GET", "/convex/prove", form={"inequality": "x>0"}),
         raw_case("http:options", "OPTIONS", "/convex/prove"),
         raw_case("http:head", "HEAD", "/convex/prove"),
         raw_case("http:put", "PUT", "/convex/prove", form={"inequality": "x>0"}),
-        raw_case("http:trailing", "POST", "/convex/prove/",
-                 form={"inequality": "x>0"}),
-        raw_case("http:case", "POST", "/convex/Prove",
-                 form={"inequality": "x>0"}),
-        raw_case("http:root-post", "POST", "/convex/",
-                 form={"inequality": "x>0"}),
-        raw_case("http:json", "POST", "/convex/prove", encode="json",
-                 json_body={"inequality": "x>0"}),
-        raw_case("http:textplain", "POST", "/convex/prove", encode="raw",
-                 body="inequality=x%3E0"),
-        raw_case("http:multipart", "POST", "/convex/prove", encode="multipart",
-                 form={"inequality": "x^2+1>0", "line": "x"}),
-        raw_case("http:urlenc-line", "POST", "/convex/prove",
-                 form={"inequality": "x^2+1>0", "line": "x"}),
-        raw_case("http:line-only", "POST", "/convex/prove",
-                 form={"line": "x"}),
-        raw_case("http:extra", "POST", "/convex/prove",
-                 form={"inequality": "x>0", "foo": "bar"}),
-        raw_case("http:domain", "POST", "/convex/prove",
-                 form={"inequality": "x^2>x", "domain": "0,10"}),
-        raw_case("http:domain-bad", "POST", "/convex/prove",
-                 form={"inequality": "x>0", "domain": "abc"}),
-        raw_case("http:no_line", "POST", "/convex/prove",
-                 form={"inequality": "x^2+1>0", "no_line": "1"}),
-        raw_case("http:lang", "POST", "/convex/prove",
-                 form={"inequality": "x>0", "lang": "en"}),
+        raw_case("http:trailing", "POST", "/convex/prove/", form={"inequality": "x>0"}),
+        raw_case("http:case", "POST", "/convex/Prove", form={"inequality": "x>0"}),
+        raw_case("http:root-post", "POST", "/convex/", form={"inequality": "x>0"}),
+        raw_case(
+            "http:json", "POST", "/convex/prove", encode="json", json_body={"inequality": "x>0"}
+        ),
+        raw_case("http:textplain", "POST", "/convex/prove", encode="raw", body="inequality=x%3E0"),
+        raw_case(
+            "http:multipart",
+            "POST",
+            "/convex/prove",
+            encode="multipart",
+            form={"inequality": "x^2+1>0", "line": "x"},
+        ),
+        raw_case(
+            "http:urlenc-line", "POST", "/convex/prove", form={"inequality": "x^2+1>0", "line": "x"}
+        ),
+        raw_case("http:line-only", "POST", "/convex/prove", form={"line": "x"}),
+        raw_case("http:extra", "POST", "/convex/prove", form={"inequality": "x>0", "foo": "bar"}),
+        raw_case(
+            "http:domain", "POST", "/convex/prove", form={"inequality": "x^2>x", "domain": "0,10"}
+        ),
+        raw_case(
+            "http:domain-bad", "POST", "/convex/prove", form={"inequality": "x>0", "domain": "abc"}
+        ),
+        raw_case(
+            "http:no_line", "POST", "/convex/prove", form={"inequality": "x^2+1>0", "no_line": "1"}
+        ),
+        raw_case("http:lang", "POST", "/convex/prove", form={"inequality": "x>0", "lang": "en"}),
         raw_case("http:get-en", "GET", "/convex/en"),
     ]
 
@@ -552,8 +599,9 @@ def main():
     p.add_argument("--all", action="store_true", help="run every batch in order")
     p.add_argument("--list", action="store_true")
     p.add_argument("--delay", type=float, default=DELAY)
-    p.add_argument("--skip-done", action="store_true",
-                   help="skip tags already present in the output file")
+    p.add_argument(
+        "--skip-done", action="store_true", help="skip tags already present in the output file"
+    )
     args = p.parse_args()
     if args.list:
         total = 0
@@ -570,6 +618,7 @@ def main():
     for name in names:
         run_batch(BATCHES[name](), skip_done=args.skip_done)
 
+
 def followup3():
     """Length-guard threshold search + deep-recursion attempt under the cap."""
     cases = [
@@ -584,7 +633,8 @@ def followup3():
     return cases
 
 
-BATCHES['followup3'] = followup3
+BATCHES["followup3"] = followup3
+
 
 def followup4():
     """Pin down the length cap and test length/recursion on the line param."""
@@ -598,7 +648,8 @@ def followup4():
     ]
 
 
-BATCHES['followup4'] = followup4
+BATCHES["followup4"] = followup4
+
 
 def followup5():
     """Pin the inequality length cap: total chars in (400, 502]."""
@@ -610,7 +661,8 @@ def followup5():
     ]
 
 
-BATCHES['followup5'] = followup5
+BATCHES["followup5"] = followup5
+
 
 def followup6():
     """Exact cap: 482 chars ok, 501 rejected. Probe 500 and 490."""
@@ -621,7 +673,8 @@ def followup6():
     ]
 
 
-BATCHES['followup6'] = followup6
+BATCHES["followup6"] = followup6
+
 
 def followup7():
     """Check order of length-guard vs blank-guard, and line-length guard edge."""
@@ -632,14 +685,15 @@ def followup7():
     ]
 
 
-BATCHES['followup7'] = followup7
+BATCHES["followup7"] = followup7
+
 
 def followup8():
     """501 raw chars that strip to 500: raw-length check -> 输入过长."""
     return [prove("x" * 500 + " ", "len:raw501")]
 
 
-BATCHES['followup8'] = followup8
+BATCHES["followup8"] = followup8
 
 
 if __name__ == "__main__":

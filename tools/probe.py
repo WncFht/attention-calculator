@@ -31,11 +31,19 @@ def integral_image(resp: dict, kind: str, power: str, comp: str, rational: str) 
     """GET /get_integral_image for a successful /calculate response."""
     p = resp["parameters"]
     query = {
-        "m": p["m"], "n": p["n"],
-        "a_val": p["a_val"], "b_val": p["b_val"], "c_val": p["c_val"],
-        "au_val": p["au_val"], "bu_val": p["bu_val"], "cu_val": p["cu_val"],
+        "m": p["m"],
+        "n": p["n"],
+        "a_val": p["a_val"],
+        "b_val": p["b_val"],
+        "c_val": p["c_val"],
+        "au_val": p["au_val"],
+        "bu_val": p["bu_val"],
+        "cu_val": p["cu_val"],
         "u_val": p["u_val"],
-        "comparison": comp, "rational": rational, "coef": power, "type": kind,
+        "comparison": comp,
+        "rational": rational,
+        "coef": power,
+        "type": kind,
     }
     r = requests.get(f"{BASE}/get_integral_image?{urllib.parse.urlencode(query)}", timeout=30)
     return r.json()["equation"]
@@ -66,15 +74,17 @@ def main(cases_file: str, outdir: str) -> None:
             except Exception as e:
                 out["equation_error"] = str(e)
         name = "{}_{}_{}_{}.json".format(
-            kind, power.replace("/", "d"),
-            "lt" if comp == "<" else "gt", rational.replace("/", "d"))
+            kind, power.replace("/", "d"), "lt" if comp == "<" else "gt", rational.replace("/", "d")
+        )
         with open(f"{outdir}/{name}", "w") as f:
             json.dump(out, f, ensure_ascii=False, indent=1)
         p = resp.get("parameters") or {}
-        print(f"{kind:>14} {power:>4} {comp} {rational:>8}: ok={resp.get('success')} "
-              f"m={p.get('m')} n={p.get('n')} u={p.get('u_val')} "
-              f"a={p.get('a_val')} b={p.get('b_val')} c={p.get('c_val')} "
-              f"err={resp.get('error', '')}")
+        print(
+            f"{kind:>14} {power:>4} {comp} {rational:>8}: ok={resp.get('success')} "
+            f"m={p.get('m')} n={p.get('n')} u={p.get('u_val')} "
+            f"a={p.get('a_val')} b={p.get('b_val')} c={p.get('c_val')} "
+            f"err={resp.get('error', '')}"
+        )
 
 
 if __name__ == "__main__":

@@ -90,10 +90,12 @@ def main() -> None:
         print(f"{name}: total={len(rs)} status_match={stat} body_match={body}")
         for r in rs:
             if not (r["status_match"] and r["body_match"]):
-                print(f"  DIFF {r['problem']}: site={r.get('site_status','?')} "
-                      f"ours={r['ours_status']}")
-                print(f"    ours: {r.get('ours_body','')[:300]}")
-                print(f"    site: {r.get('site_body','')[:300]}")
+                print(
+                    f"  DIFF {r['problem']}: site={r.get('site_status', '?')} "
+                    f"ours={r['ours_status']}"
+                )
+                print(f"    ours: {r.get('ours_body', '')[:300]}")
+                print(f"    site: {r.get('site_body', '')[:300]}")
 
 
 if __name__ == "__main__":

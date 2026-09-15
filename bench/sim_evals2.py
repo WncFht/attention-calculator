@@ -156,9 +156,11 @@ if __name__ == "__main__":
         row = f"{name:12s} {want:10s}"
         for mech in names:
             got = predict(mech, k, p, c, r)
-            ok = ((want.startswith("OK") and got.startswith("OK"))
-                  or (want == "WD" and got.startswith("WD"))
-                  or (want == "NS" and got == "NS"))
+            ok = (
+                (want.startswith("OK") and got.startswith("OK"))
+                or (want == "WD" and got.startswith("WD"))
+                or (want == "NS" and got == "NS")
+            )
             score[mech] += ok
             row += f"{got:>12s}"
         print(row, flush=True)

@@ -13,17 +13,28 @@ mp.mp.dps = 50
 ROOT = Path(__file__).resolve().parent.parent
 
 VALUES = {
-    "pi": mp.pi, "e": mp.e, "golden": mp.phi, "gamma": mp.euler,
-    "catalan": mp.catalan, "zeta3": mp.zeta(3),
+    "pi": mp.pi,
+    "e": mp.e,
+    "golden": mp.phi,
+    "gamma": mp.euler,
+    "catalan": mp.catalan,
+    "zeta3": mp.zeta(3),
     "varpi": mp.mpf("2.6220575542921198104648395898911194136827549514316"),
     "gauss": mp.mpf("0.83462684167407318630142973337359360395562655639648"),
 }
 FUNC = {
-    "sin_q": mp.sin, "cos_q": mp.cos, "tan_q": mp.tan, "cot_q": mp.cot,
-    "sinh_q": mp.sinh, "cosh_q": mp.cosh, "tanh_q": mp.tanh,
-    "coth_q": mp.coth, "arctan_q": mp.atan,
+    "sin_q": mp.sin,
+    "cos_q": mp.cos,
+    "tan_q": mp.tan,
+    "cot_q": mp.cot,
+    "sinh_q": mp.sinh,
+    "cosh_q": mp.cosh,
+    "tanh_q": mp.tanh,
+    "coth_q": mp.coth,
+    "arctan_q": mp.atan,
     "arccot_q": lambda a: mp.pi / 2 - mp.atan(a),
-    "artanh_q": mp.atanh, "arcoth_q": lambda a: mp.atanh(1 / a),
+    "artanh_q": mp.atanh,
+    "arcoth_q": lambda a: mp.atanh(1 / a),
     "ln_q": mp.log,
 }
 
@@ -92,11 +103,9 @@ def run_order(ts, R, resid_pos, rule):
     for j, i in enumerate(order):
         later = [order[x] for x in range(j + 1, k)]
         rest_true = sum(ts[x] for x in later)
-        prev = sum(mp.mpf(b.numerator) / b.denominator
-                   for b in bounds if b is not None)
+        prev = sum(mp.mpf(b.numerator) / b.denominator for b in bounds if b is not None)
         if i == resid_pos:
-            resid = R - sum(Fraction(b.numerator, b.denominator)
-                            for b in bounds if b is not None)
+            resid = R - sum(Fraction(b.numerator, b.denominator) for b in bounds if b is not None)
             b = resid_bound(ts[i], resid, rule)
         else:
             limit = mp.mpf(R.numerator) / R.denominator - prev - rest_true
@@ -125,18 +134,24 @@ def main():
         if not m:
             continue
         R = Fraction(m.group(3))
-        cases.append({
-            "problem": prob, "comp": m.group(2), "R": R,
-            "steps": steps,
-            "ts": [step_value(s) for s in steps],
-            "bounds": [Fraction(s["bound"]) for s in steps],
-            "comps": [s["comparison"] for s in steps],
-        })
+        cases.append(
+            {
+                "problem": prob,
+                "comp": m.group(2),
+                "R": R,
+                "steps": steps,
+                "ts": [step_value(s) for s in steps],
+                "bounds": [Fraction(s["bound"]) for s in steps],
+                "comps": [s["comparison"] for s in steps],
+            }
+        )
     print(f"{len(cases)} multi-step cases\n")
     for c in cases:
         lhs = sum(c["ts"])
-        print(f"{c['problem']:28s} R={c['R']!s:>8} lhs={mp.nstr(lhs,12)} "
-              f"bounds={[str(b) for b in c['bounds']]} comps={c['comps']}")
+        print(
+            f"{c['problem']:28s} R={c['R']!s:>8} lhs={mp.nstr(lhs, 12)} "
+            f"bounds={[str(b) for b in c['bounds']]} comps={c['comps']}"
+        )
 
 
 if __name__ == "__main__":

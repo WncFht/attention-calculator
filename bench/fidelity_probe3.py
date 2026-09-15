@@ -12,6 +12,7 @@ semiconvergent below). Predictions from the exact solver are in the notes.
 
 Appends to bench/data/fidelity-probes.jsonl; resumable via id skip.
 """
+
 import contextlib
 import json
 import math
@@ -38,8 +39,16 @@ PROBES: list[dict] = []
 
 def calc(pid, note, **form):
     fields = {k: v for k, v in form.items() if v is not None}
-    PROBES.append({"id": pid, "endpoint": "/calculate", "method": "POST",
-                   "kind": "form", "request": fields, "note": note})
+    PROBES.append(
+        {
+            "id": pid,
+            "endpoint": "/calculate",
+            "method": "POST",
+            "kind": "form",
+            "request": fields,
+            "note": note,
+        }
+    )
 
 
 def dyadic(kind, power, j):
@@ -54,14 +63,24 @@ def ulp_sweep(tag, kind, power, gt_js, lt_js):
     """'>' probes at gt_js offsets, '<' probes at lt_js offsets from Cf."""
     for j in gt_js:
         r = dyadic(kind, power, j)
-        calc(f"fid3:{tag}-gt-{j:+d}", f"{kind}({power})> Cf{j:+d}ulp r-Cf={j}ulp",
-             type=kind, power=power, comparison=">",
-             rational=f"{r.numerator}/{r.denominator}")
+        calc(
+            f"fid3:{tag}-gt-{j:+d}",
+            f"{kind}({power})> Cf{j:+d}ulp r-Cf={j}ulp",
+            type=kind,
+            power=power,
+            comparison=">",
+            rational=f"{r.numerator}/{r.denominator}",
+        )
     for j in lt_js:
         r = dyadic(kind, power, j)
-        calc(f"fid3:{tag}-lt-{j:+d}", f"{kind}({power})< Cf{j:+d}ulp r-Cf={j}ulp",
-             type=kind, power=power, comparison="<",
-             rational=f"{r.numerator}/{r.denominator}")
+        calc(
+            f"fid3:{tag}-lt-{j:+d}",
+            f"{kind}({power})< Cf{j:+d}ulp r-Cf={j}ulp",
+            type=kind,
+            power=power,
+            comparison="<",
+            rational=f"{r.numerator}/{r.denominator}",
+        )
 
 
 # ---- e: C' in (Cf-1ulp, C-6.5e-32); test Cf exactly ----
@@ -95,17 +114,28 @@ for tag, gapnote, r in [
     ("g3e-19", "r=C-2.75e-19", "706105721/1469666545"),
     ("g2e-20", "r=C-2.99e-20", "2664916069/5546673643"),
 ]:
-    calc(f"fid3:lnsq-gt-cf{tag}", f"lnsq> {gapnote}", type="ln_q_square",
-         power="2", comparison=">", rational=r)
+    calc(
+        f"fid3:lnsq-gt-cf{tag}",
+        f"lnsq> {gapnote}",
+        type="ln_q_square",
+        power="2",
+        comparison=">",
+        rational=r,
+    )
 
 # ---- pi_n(5/2): C' < C-4.06e-30; watch for r^v-vs-C^v compare ----
 ulp_sweep("pin", "pi_n", "5/2", gt_js=(0, 1), lt_js=(-1, 0))
 
 # ---- generic spot checks on remaining types: '>' and '<' at Cf ----
 for tag, kind, power in [
-    ("cat", "catalan", "1"), ("gam", "gamma", "1"), ("gol", "golden", "1"),
-    ("epi", "e_pi", "1"), ("var", "varpi", "1"), ("gau", "gauss", "1"),
-    ("sin2", "sin_q", "1/2"), ("ln3", "ln_q", "3"),
+    ("cat", "catalan", "1"),
+    ("gam", "gamma", "1"),
+    ("gol", "golden", "1"),
+    ("epi", "e_pi", "1"),
+    ("var", "varpi", "1"),
+    ("gau", "gauss", "1"),
+    ("sin2", "sin_q", "1/2"),
+    ("ln3", "ln_q", "3"),
 ]:
     ulp_sweep(tag, kind, power, gt_js=(0,), lt_js=(0,))
 
@@ -126,16 +156,14 @@ def main():
             time.sleep(wait)
         t0 = time.monotonic()
         try:
-            resp = SESSION.post(BASE + p["endpoint"], data=p["request"],
-                                timeout=TIMEOUT)
+            resp = SESSION.post(BASE + p["endpoint"], data=p["request"], timeout=TIMEOUT)
             status, raw_body = resp.status_code, resp.text
         except (OSError, requests.RequestException) as exc:
             status, raw_body = -1, f"REQUEST_FAILED: {exc}"
         elapsed = time.monotonic() - t0
         last = time.monotonic()
         rec = dict(p)
-        rec.update({"http_status": status, "raw": raw_body,
-                    "elapsed_ms": round(elapsed * 1000, 1)})
+        rec.update({"http_status": status, "raw": raw_body, "elapsed_ms": round(elapsed * 1000, 1)})
         try:
             body = json.loads(raw_body)
             rec["err"] = body.get("error", "")
@@ -147,8 +175,9 @@ def main():
         with OUT.open("a") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
         short = (rec.get("err") or (f"200 mn={rec.get('mn')}")).strip()
-        print(f"[{i}/{len(todo)}] {p['id']}: {status} ({rec['elapsed_ms']:.0f}ms) {short}",
-              flush=True)
+        print(
+            f"[{i}/{len(todo)}] {p['id']}: {status} ({rec['elapsed_ms']:.0f}ms) {short}", flush=True
+        )
 
 
 if __name__ == "__main__":

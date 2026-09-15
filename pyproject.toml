@@ -4,19 +4,15 @@ version = "0.1.0"
 description = "Reproduction of zhuyidao.net 注意力计算器: automatic integral proofs for constant-vs-rational inequalities"
 requires-python = ">=3.11"
 dependencies = [
-    "sympy>=1.13",
-    "mpmath>=1.3",
-    "flask>=3.0",
-    "waitress>=3.0",
-    "scipy>=1.17.1",
+  "sympy>=1.13",
+  "mpmath>=1.3",
+  "flask>=3.0",
+  "waitress>=3.0",
+  "scipy>=1.17.1",
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=8.0",
-    "ruff>=0.8",
-    "requests>=2.32",
-]
+dev = ["pytest>=8.0", "ruff>=0.8", "requests>=2.32"]
 
 [build-system]
 requires = ["hatchling"]

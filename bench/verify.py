@@ -43,12 +43,12 @@ from mpmath import mp
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from attention_calculator.integrand import constant_mpf, lhs_mpf, reconstruct
 
-TOL_REL = mp.mpf("1e-30")     # 恒等式相对容差
-SWEEP_TOL = mp.mpf("1e-15")   # 自由参数反解的粗筛容差
-GAMMA_K_MAX = 60              # gamma 核指数搜索上限
-LN_S_MAX = 15                 # ln 族分母幂搜索上限
-GRID_N = 200                  # 符号扫描初始网格点数
-ZERO_REL = mp.mpf("1e-20")    # 符号扫描的"视为零"相对阈值
+TOL_REL = mp.mpf("1e-30")  # 恒等式相对容差
+SWEEP_TOL = mp.mpf("1e-15")  # 自由参数反解的粗筛容差
+GAMMA_K_MAX = 60  # gamma 核指数搜索上限
+LN_S_MAX = 15  # ln 族分母幂搜索上限
+GRID_N = 200  # 符号扫描初始网格点数
+ZERO_REL = mp.mpf("1e-20")  # 符号扫描的"视为零"相对阈值
 
 x_sym = sp.Symbol("x")
 k_sym = sp.Symbol("k", integer=True, nonnegative=True)
@@ -57,12 +57,38 @@ t_sym = sp.Symbol("t")
 
 # P 因子的不定元在各类型下的取值域都化归 t∈(0,1)；
 # 三项式族用 a+bt+ct²，其余 a+bt。c_val 被复用的类型不在此列 c。
-P_QUADRATIC = {"e", "e_q", "ln_q", "ln_q_square", "sin_q", "cos_q", "tan_q",
-               "cot_q", "sinh_q", "cosh_q", "tanh_q", "coth_q"}
-P_LINEAR = {"golden", "pi", "pi_n", "catalan", "zeta3",
-            "arctan_q", "arccot_q", "artanh_q", "arcoth_q",
-            "e_pi", "sin_q_degree", "cos_q_degree", "sin_pi_q", "cos_pi_q",
-            "varpi", "gauss"}
+P_QUADRATIC = {
+    "e",
+    "e_q",
+    "ln_q",
+    "ln_q_square",
+    "sin_q",
+    "cos_q",
+    "tan_q",
+    "cot_q",
+    "sinh_q",
+    "cosh_q",
+    "tanh_q",
+    "coth_q",
+}
+P_LINEAR = {
+    "golden",
+    "pi",
+    "pi_n",
+    "catalan",
+    "zeta3",
+    "arctan_q",
+    "arccot_q",
+    "artanh_q",
+    "arcoth_q",
+    "e_pi",
+    "sin_q_degree",
+    "cos_q_degree",
+    "sin_pi_q",
+    "cos_pi_q",
+    "varpi",
+    "gauss",
+}
 
 
 def mp_func(f: sp.Expr):
@@ -121,8 +147,7 @@ def sign_scan(f: sp.Expr, a, b, dps=30):
             return 0
         tmin = min(mags, key=lambda p: p[1])[0]
         width = (bm - am) / GRID_N
-        vals += [(t, g(t)) for t in grid(tmin - width, tmin + width, 40)
-                 if am < t < bm]
+        vals += [(t, g(t)) for t in grid(tmin - width, tmin + width, 40) if am < t < bm]
     vmax = max(abs(v) for _, v in vals if mp.isfinite(v))
     pos = neg = False
     for _, v in vals:
@@ -166,9 +191,14 @@ def poly_factor_sign(kind: str, p: dict):
 def verify_record(rec: dict) -> dict:
     """验证单条记录，返回结论 dict（字段供 bench/report.py 聚合）。"""
     kind, comp = rec["type"], rec["comparison"]
-    out = {"type": kind, "power": rec["power"], "comparison": comp,
-           "rational": rec["rational"], "success": rec.get("success", False),
-           "parameters": rec.get("parameters")}
+    out = {
+        "type": kind,
+        "power": rec["power"],
+        "comparison": comp,
+        "rational": rec["rational"],
+        "success": rec.get("success", False),
+        "parameters": rec.get("parameters"),
+    }
     mp.dps = 50
     if not rec.get("success"):
         out["error"] = rec.get("error", "")
@@ -178,7 +208,8 @@ def verify_record(rec: dict) -> dict:
             power, rational = Fraction(rec["power"]), Fraction(rec["rational"])
             out["claimed_lhs"] = mp.nstr(lhs_mpf(kind, comp, power, rational), 20)
             out["error_consistent"] = direction_consistent(
-                kind, comp, power, rational, out["error"])
+                kind, comp, power, rational, out["error"]
+            )
         except (ValueError, ZeroDivisionError):
             out["error_consistent"] = None
         return out
@@ -186,8 +217,10 @@ def verify_record(rec: dict) -> dict:
     lhs = lhs_mpf(kind, comp, power, rational)
     out["claimed_lhs"] = mp.nstr(lhs, 20)
     f, a, b = reconstruct(kind, comp, power, rec["parameters"])
-    for sym, cands, key in ((k_sym, range(GAMMA_K_MAX + 1), "resolved_k"),
-                            (s_sym, range(LN_S_MAX + 1), "resolved_s")):
+    for sym, cands, key in (
+        (k_sym, range(GAMMA_K_MAX + 1), "resolved_k"),
+        (s_sym, range(LN_S_MAX + 1), "resolved_s"),
+    ):
         if sym not in f.free_symbols:
             continue
         hit = sweep_param(f, a, b, sym, cands, lhs)
@@ -211,9 +244,12 @@ def verify_record(rec: dict) -> dict:
     # 方向仍然成立（近似解仍构成合法界证明），单独标注
     out["bound_ok"] = bool(out["sign_ok"] and val * lhs > 0)
     out["verdict"] = (
-        "valid" if out["identity_ok"] and out["sign_ok"]
-        else "indefinite-sign" if out["identity_ok"]
-        else "false-identity")
+        "valid"
+        if out["identity_ok"] and out["sign_ok"]
+        else "indefinite-sign"
+        if out["identity_ok"]
+        else "false-identity"
+    )
     return out
 
 
@@ -240,22 +276,37 @@ def main():
     ap = argparse.ArgumentParser(description="verify integral identities")
     ap.add_argument("input", help="jsonl of records")
     ap.add_argument("-o", "--out", help="write per-case results jsonl")
-    ap.add_argument("--rigorous", action="store_true",
-                    help="对非 valid 记录用 flint.acb.integral 复核")
+    ap.add_argument(
+        "--rigorous", action="store_true", help="对非 valid 记录用 flint.acb.integral 复核"
+    )
     args = ap.parse_args()
     with open(args.input) as fh:
         recs = [json.loads(line) for line in fh if line.strip()]
-    results, stats = [], {"success_cases": 0, "valid": 0, "false-identity": 0,
-                          "indefinite-sign": 0, "unresolved-param": 0,
-                          "harness-error": 0, "error_cases": 0,
-                          "error_consistent": 0}
+    results, stats = (
+        [],
+        {
+            "success_cases": 0,
+            "valid": 0,
+            "false-identity": 0,
+            "indefinite-sign": 0,
+            "unresolved-param": 0,
+            "harness-error": 0,
+            "error_cases": 0,
+            "error_consistent": 0,
+        },
+    )
     for rec in recs:
         try:
             r = verify_record(rec)
         except Exception as e:
-            r = {"type": rec.get("type"), "success": rec.get("success"),
-                 "comparison": rec.get("comparison"), "rational": rec.get("rational"),
-                 "verdict": "harness-error", "detail": repr(e)}
+            r = {
+                "type": rec.get("type"),
+                "success": rec.get("success"),
+                "comparison": rec.get("comparison"),
+                "rational": rec.get("rational"),
+                "verdict": "harness-error",
+                "detail": repr(e),
+            }
         results.append(r)
         if rec.get("success"):
             stats["success_cases"] += 1
@@ -265,9 +316,11 @@ def main():
             if (r.get("error_consistent") or {}).get("consistent"):
                 stats["error_consistent"] += 1
         comp_s, rat_s = str(r.get("comparison", "?")), str(r.get("rational", "?"))
-        print(f"{r['type']:>14} {comp_s:>2} {rat_s:>8} "
-              f"-> {r.get('verdict', r.get('error', '?'))} "
-              f"{r.get('abs_deviation', '')}")
+        print(
+            f"{r['type']:>14} {comp_s:>2} {rat_s:>8} "
+            f"-> {r.get('verdict', r.get('error', '?'))} "
+            f"{r.get('abs_deviation', '')}"
+        )
     if args.rigorous:
         rigorous_recheck(recs, results)
     if args.out:
@@ -287,18 +340,28 @@ def rigorous_recheck(recs, results):
     for rec, r in zip(recs, results, strict=True):
         if r.get("verdict") not in ("false-identity", "indefinite-sign", "harness-error"):
             continue
-        f, a, b = reconstruct(rec["type"], rec["comparison"],
-                              Fraction(rec["power"]), rec["parameters"])
+        f, a, b = reconstruct(
+            rec["type"], rec["comparison"], Fraction(rec["power"]), rec["parameters"]
+        )
         if f.free_symbols - {x_sym}:
             continue  # 自由参数未定的记录复核超出本节范围
         # 用 acb 方法重写被积函数：analytic=True 调用会得到复球输入，
         # 非解析点自动返回非有限球（acb.log/sqrt 自带该行为）。
-        fa = sp.lambdify(x_sym, f, modules={
-            "sin": lambda z: z.sin(), "cos": lambda z: z.cos(),
-            "exp": lambda z: z.exp(), "log": lambda z: z.log(),
-            "sqrt": lambda z: z.sqrt(), "sinh": lambda z: z.sinh(),
-            "cosh": lambda z: z.cosh(), "tanh": lambda z: z.tanh(),
-            "pi": flint.acb.pi()})
+        fa = sp.lambdify(
+            x_sym,
+            f,
+            modules={
+                "sin": lambda z: z.sin(),
+                "cos": lambda z: z.cos(),
+                "exp": lambda z: z.exp(),
+                "log": lambda z: z.log(),
+                "sqrt": lambda z: z.sqrt(),
+                "sinh": lambda z: z.sinh(),
+                "cosh": lambda z: z.cosh(),
+                "tanh": lambda z: z.tanh(),
+                "pi": flint.acb.pi(),
+            },
+        )
         lo = flint.acb(mp.nstr(mp.mpf(sp.N(a, 60)), 50))
         hi = flint.acb(mp.nstr(mp.mpf(sp.N(b, 60)), 50))
 
@@ -309,8 +372,9 @@ def rigorous_recheck(recs, results):
             # 200bit(~60d) 上下文：区间半径须压过 lhs 的 mpf→arb 解析误差
             flint.ctx.prec = 200
             iv = flint.acb.integral(acb_f, lo, hi, abs_tol=flint.arf(1e-35))
-            lhs = lhs_mpf(rec["type"], rec["comparison"],
-                          Fraction(rec["power"]), Fraction(rec["rational"]))
+            lhs = lhs_mpf(
+                rec["type"], rec["comparison"], Fraction(rec["power"]), Fraction(rec["rational"])
+            )
             # 端点代数奇异可能导致 acb 返回 nan 球；nan.contains() 恒真，
             # 是无信息结果，须显式区分
             if not iv.real.is_finite():
