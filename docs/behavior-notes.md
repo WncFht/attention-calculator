@@ -130,6 +130,9 @@
   **返回的 `c_val` 此时是核频率 α，不是多项式系数**（sin_pi_q 1/5 → c_val=3/5；
   sin_q_degree 45 → c_val=1/2；cos_q_degree 60 → c_val=2/3），
   多项式第三系数由 cu_val 表示（这些 case 下 cu_val=0）。
+  注意该四型 WrongDirection 由"界 vs 常数"的数值预检触发、
+  扫描中恒≤0 候选被跳过而非立即报错，且 (m,n)=(1,8) 档的存储
+  公式带一项 δ(α)·(C−1) 的损坏——详见 kernel-spec.md 专节。
 - **e_pi**：域 [0,π]，`sin^m x(1-sin x)^n (au+bu·sin x)/u · e^x`；(2,5)→sin²x(1-sin x)⁵。
 - **ln_q**：`x^m(1-x)^n (au+bu·x)/[u·(1+(q-1)x)^s]`，s 见下节。
 - **ln_q_square**：`x^m(1-x)^n (au+bu·x+cu·x²)·log(1+(q-1)x)/[u·(1+(q-1)x)^s]`。

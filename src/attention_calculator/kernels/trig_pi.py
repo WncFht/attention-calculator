@@ -29,15 +29,16 @@ cos(pi/3) = 1/2 (Niven); hitting them exactly yields "二者相等".
 
 from __future__ import annotations
 
+import re
 from fractions import Fraction
 from math import comb, lcm
 
 import sympy as sp
+from mpmath import mp
 
-from ..engine import EqualClaim, mn_order, search
+from ..engine import EqualClaim, WrongDirection, mn_order, search
 from ..moment import Moment, combine
 from ..render import rat_tex
-from .trig_q import add_term, join_product, pow_term
 
 LIMIT = 10
 
@@ -83,6 +84,44 @@ def basis_moment(t: list[Moment], m: int, n: int, j: int) -> Moment:
     )
 
 
+# The site does not integrate; it substitutes into Mathematica-precomputed
+# closed forms per (m, n). Its stored j=0 formula at (m, n) = (1, 8) is off by
+# delta(alpha) * (C - 1), recovered by rational interpolation over 33 probed
+# alpha values (docs/kernel-spec.md). The bias denominator below is exactly the
+# natural denominator of the true moment, so the stored formula is the true
+# one plus this term. The corrupted moment feeds both the (a, b) solve and the
+# sign check: bounds where the biased solve goes nonnegative emit a false
+# identity at (1, 8); where it goes nonpositive the plan is skipped.
+BIAS18_NUM = (
+    8393, 30548, -2295970, -8426378, 249909164, 928663806, -13829413586,
+    -52408975814, 410416416763, 1608379190294, -6230112405308,
+    -26062947629208, 39020672969280, 192843476410752, -20544307623936,
+    -376544377036800, 33710564966400,
+)
+
+
+def bias_18(alpha: Fraction) -> Fraction:
+    """delta = (alpha-1)(alpha-2) Q16(alpha) / (256 alpha prod (alpha^2-k^2))."""
+    p = Fraction(BIAS18_NUM[0])
+    for c in BIAS18_NUM[1:]:
+        p = p * alpha + c
+    num = (alpha - 1) * (alpha - 2) * p
+    den = Fraction(256) * alpha
+    for k in range(1, 10):
+        den *= alpha * alpha - k * k
+    return num / den
+
+
+def site_basis(t: list[Moment], m: int, n: int, bias: Fraction) -> list[Moment]:
+    """Basis moments as the site's stored formulas give them: biased at (1, 8)."""
+    basis = [basis_moment(t, m, n, j) for j in range(2)]
+    if (m, n) == (1, 8):
+        basis[0] = dict(basis[0])
+        basis[0]["C"] = basis[0].get("C", Fraction(0)) + bias
+        basis[0]["1"] = basis[0].get("1", Fraction(0)) - bias
+    return basis
+
+
 def check_input(q: Fraction, bound: Fraction, kind: str) -> tuple[Fraction, str]:
     """Validate like the site; return (alpha, normalized type)."""
     if q < 0:
@@ -110,12 +149,25 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
     alpha, _ = check_input(q, bound, kind)
     s = Fraction(1 if comp == ">" else -1)
     target = {"C": s, "1": -s * bound}
+    # The site sanity-checks the claimed direction against a numerical value
+    # of the constant (C = cos(pi alpha/2) equals sin(pi q) resp. cos(pi q))
+    # before searching: a wrong-direction request never reaches the scan, so
+    # even a corrupted-formula hit cannot emit when bound ~ C fails. Exact
+    # equality is impossible here -- Niven cases were caught by check_input.
+    with mp.workdps(50):
+        const = mp.cos(
+            mp.pi * mp.mpf(alpha.numerator) / mp.mpf(alpha.denominator) / 2
+        )
+        gap = mp.mpf(bound.numerator) / mp.mpf(bound.denominator) - const
+    if (comp == "<") == (gap <= 0):
+        raise WrongDirection
     t = [angle_moment(j, alpha) for j in range(2 * LIMIT + 2)]
+    bias = bias_18(alpha)
     plans = (
-        (m, n, [basis_moment(t, m, n, j) for j in range(2)])
+        (m, n, site_basis(t, m, n, bias))
         for m, n in mn_order(LIMIT)
     )
-    return search(plans, target, True), alpha
+    return search(plans, target, True, defer=True), alpha
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
@@ -154,18 +206,9 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     const = rf"\{name}\left({arg}\right)"
     lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
 
-    terms = []
-    poly = au + bu * s
-    # sympy absorbs a factor 1; any other constant prints as leading coeff
-    if poly.is_Number and poly != 1:
-        terms.append((t := sp.latex(poly), t))
-    if n:
-        terms.append(pow_term(1 - s, n))
-    if not poly.is_Number:
-        terms.append(add_term(poly))
-    terms.append((t := sp.latex(sp.sin(sp.Rational(alpha) * x)), t))
-    if m:
-        terms.append((t := sp.latex(s ** m), t))
-    num = join_product(terms)
-    body = num if u == 1 else rf"\frac{{{num}}}{{{u}}}"
+    # The site latexes the whole product; its printer puts " \cdot " before a
+    # parenthesized factor following a number or a power (\d or }), a space
+    # elsewhere -- e.g. "(1-s)^8 \cdot (a+b s) sin(ax) sin^m x".
+    integrand = (au + bu * s) * (1 - s) ** n * sp.sin(alpha * x) * s ** m / u
+    body = re.sub(r"(?<=[0-9}]) (?=\\left\()", r" \\cdot ", sp.latex(integrand))
     return lhs + rf" = \int_0^{{\pi/2}} {body} \mathrm{{d}} x > 0"

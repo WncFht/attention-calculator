@@ -96,12 +96,15 @@ U = ((y²+y−2)·ln x − 2y)/(2y·ln x)，L = ((2−y)·ln x + 2y)/(2y·ln x)�
   `∫₀¹ au·(1−x)·√(1−x⁴)/π dx + b_val`，核是分子 √ 非 1/√，
   且带加性常数项——与标准模板并存，按 a_val==0 判别。
 - **站点会返回数值不成立的"恒等式"**（全量 golden 实证 34 例）：
-  trig_pi 四型在 m=1,n=8 极限档共 30 例（渲染方程两侧差 ~1e-6~1e-7，
+  trig_pi 四型在 m=1,n=8 档共 30 例（渲染方程两侧差 ~1e-6~1e-7，
   如 sin(2π/5) vs 5266/5537 的界证明里积分真值是 lhs 的 ~40 倍），
-  gauss '<' 大系数档 3 例（差 ~4000 倍）。这些记录的 P 系数达
-  ~10^26，推测求解器在高难度实例上给出近似解仍报 success。
-  但界本身仍成立：f 全部定号（sign_exact=+1）、积分>0 且与 lhs
-  同号 → verify 记 verdict=false-identity 而 bound_ok=True。
+  gauss '<' 大系数档 3 例（差 ~4000 倍）。
+  **trig_pi 30 例的根因已定位**：站点的 (m,n)=(1,8) j=0 存储公式比真值多
+  δ(α)·(C−1)，δ(α) 为有理函数（见 kernel-spec.md "trig_pi 四型"节，
+  33 点插值恢复并留出验证）。站点 (a,b) 满足的是含 δ 的方程，
+  真实积分两边不等，差 a·δ(α)·(1−C)；不等式本身仍成立
+  （bound_ok=True、被积函数定号）→ verify 记 verdict=false-identity。
+  gauss 3 例根因另查。
 - **trig_pi 四型（sin_pi_q、cos_pi_q、sin_q_degree、cos_q_degree）的
   c_val 不是多项式系数**，是核频率：sin 型核 sin((1−2q)x)、
   cos 型核 sin(2qx)。P=a+b·sin x 只用 a,b。

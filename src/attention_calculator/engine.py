@@ -120,13 +120,18 @@ def search(
     plans: Iterator[tuple[int, int, list[Moment]]],
     target: Moment,
     nonneg: bool,
+    defer: bool = False,
 ) -> Solved:
     """Iterate (m, n, basis_moments); return first sign-definite solution.
 
     If a solution's polynomial factor is uniformly non-positive the identity
-    proves the opposite inequality: raise WrongDirection. If it changes sign,
-    keep searching.
+    proves the opposite inequality: raise WrongDirection, or with ``defer``
+    keep searching and raise only when no nonneg candidate appears (the
+    zhuyidao trig_pi scan skips non-positive plans -- a later plan can still
+    produce the proof, e.g. past its corrupted (1, 8) formula). If it changes
+    sign, keep searching.
     """
+    saw_nonpos = False
     for m, n, basis in plans:
         try:
             coeffs = solve_moment(basis, target)
@@ -136,5 +141,9 @@ def search(
         if check(coeffs):
             return Solved(m, n, coeffs, +1)
         if check([-c for c in coeffs]):
-            raise WrongDirection
+            if not defer:
+                raise WrongDirection
+            saw_nonpos = True
+    if saw_nonpos:
+        raise WrongDirection
     raise NoSolution
