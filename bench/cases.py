@@ -16,7 +16,8 @@ from mpmath import mp, mpf
 mp.dps = 50
 
 # 29 个 type 的 power 取值集（Fraction）。pi/e 的 power 是系数（power=3 → 3π），
-# 已实测确认；常数类统一 power=1；pi_n 的 5/2 是分数幂探针。
+# 已实测确认；常数类（gamma/golden/catalan/zeta3/e_pi/varpi/gauss）同为系数，
+# 取 {0,1,2,3,1/2}；pi_n 的 5/2 是分数幂探针。
 PARAM_SETS = {
     "pi": [Fraction(1), Fraction(3), Fraction(8), Fraction(1, 2)],
     "e": [Fraction(1), Fraction(3), Fraction(8), Fraction(1, 2)],
@@ -55,13 +56,14 @@ PARAM_SETS = {
                Fraction(2), Fraction(5, 2)],
     "artanh_q": [Fraction(1, 5), Fraction(1, 3), Fraction(1, 2), Fraction(2, 3)],
     "arcoth_q": [Fraction(3, 2), Fraction(2), Fraction(3)],
-    "gamma": [Fraction(1)],
-    "golden": [Fraction(1)],
-    "catalan": [Fraction(1)],
-    "zeta3": [Fraction(1)],
-    "e_pi": [Fraction(1)],
-    "varpi": [Fraction(1)],
-    "gauss": [Fraction(1)],
+    # 常数类 power 是系数 k（证 k·C vs r），非负有理数；0 走进退化/方向预检路径
+    "gamma": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "golden": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "catalan": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "zeta3": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "e_pi": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "varpi": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
+    "gauss": [Fraction(1), Fraction(2), Fraction(3), Fraction(1, 2), Fraction(0)],
 }
 
 GRID_DENOMS = (10, 100, 1000)
@@ -132,19 +134,19 @@ def true_value(typ, q):
     if typ == "arcoth_q":
         return mp.atanh(1 / x)
     if typ == "gamma":
-        return +mp.euler
+        return x * mp.euler
     if typ == "golden":
-        return (1 + mp.sqrt(5)) / 2
+        return x * (1 + mp.sqrt(5)) / 2
     if typ == "catalan":
-        return +mp.catalan
+        return x * mp.catalan
     if typ == "zeta3":
-        return mp.zeta(3)
+        return x * mp.zeta(3)
     if typ == "e_pi":
-        return mp.exp(mp.pi)
+        return x * mp.exp(mp.pi)
     if typ == "varpi":
-        return mp.gamma(mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi))
+        return x * mp.gamma(mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi))
     if typ == "gauss":
-        return 1 / mp.agm(1, mp.sqrt(2))
+        return x / mp.agm(1, mp.sqrt(2))
     raise ValueError(f"unknown type {typ}")
 
 
