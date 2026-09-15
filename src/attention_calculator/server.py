@@ -43,31 +43,55 @@ NUM_RE = re.compile(r"^\d+(/\d+)?$")
 RATIONAL_CAP = 10**16
 
 INTERNAL_ERROR = "服务器内部错误，请稍后再试"  # noqa: RUF001 -- 站端原文
+# 姊妹应用（/convex、/health）的内部错误文案带句号，且所有未匹配/错方法
+# 一律 500（probe: /health/xyz、/health/en/、POST /health/en、/convex/Prove）
+SIBLING_INTERNAL_ERROR = "服务器内部错误，请稍后再试。"  # 站端原文（带句号）
 
 # 站端把一切非 2xx 包成 JSON：未知路径 404 文案固定，方法不对走 catch-all 500
 NOT_FOUND = "请求的页面不存在"
 
 
+def in_sibling(path: str) -> bool:
+    """路径是否落在姊妹应用挂载点内；'/healthxyz' 这类前缀兄弟不算
+    （probe: GET /healthxyz -> 主站 404 裸包络）。"""
+    return any(path == p or path.startswith(p + "/")
+               for p in ("/convex", "/health"))
+
+
 def fail(message: str, status: int):
-    """A failure JSON body; the site sends just ``{"error": ...}``."""
-    return respond({"error": message}, status)
+    """A failure JSON body; the site sends just ``{"error": ...}``.
+
+    /convex 与 /health 下的姊妹应用用新版包络 ``{"error": ..., "ok": false}``
+    （见 docs/sibling-apps.md §0）。
+    """
+    payload = {"error": message}
+    if in_sibling(request.path):
+        payload["ok"] = False
+    return respond(payload, status)
 
 
 @app.errorhandler(404)
 def not_found(_):
-    """Site answers unknown paths with a JSON body, not Flask's HTML page."""
+    """Site answers unknown paths with a JSON body, not Flask's HTML page.
+    姊妹应用域内未匹配路径不走 404，一律 500 内部错误（probe: /health/xyz）。"""
+    if in_sibling(request.path):
+        return fail(SIBLING_INTERNAL_ERROR, 500)
     return fail(NOT_FOUND, 404)
 
 
 @app.errorhandler(405)
 def method_not_allowed(_):
     """Wrong method -> the site's generic 500 (e.g. GET /calculate)."""
+    if in_sibling(request.path):
+        return fail(SIBLING_INTERNAL_ERROR, 500)
     return fail(INTERNAL_ERROR, 500)
 
 
 @app.errorhandler(Exception)
 def unhandled(_):
     """Everything else non-2xx is also JSON-wrapped server-side."""
+    if in_sibling(request.path):
+        return fail(SIBLING_INTERNAL_ERROR, 500)
     return fail(INTERNAL_ERROR, 500)
 
 
@@ -287,6 +311,74 @@ def decompose_inequality():
     except ValueError as exc:
         return fail(str(exc), 400)
     return respond(result)
+
+
+# ===== 姊妹应用 /convex（凹凸不等式计算器，docs/sibling-apps.md §1） =====
+
+
+@app.get("/convex/")
+@app.get("/convex/en")
+def convex_page():
+    """站端 /convex/ 与 /convex/en 返回同一份字节（语言由前端 JS 切换）。"""
+    return render_template("convex.html")
+
+
+@app.get("/convex/static/<path:name>")
+def convex_static(name: str):
+    """/convex/static/* 与主站共用 static 目录（bg1.png sha256 实测一致）。"""
+    from flask import send_from_directory
+
+    return send_from_directory(app.static_folder, name)
+
+
+@app.post("/convex/prove")
+def convex_prove():
+    """凹凸不等式证明端点；convex 模块惰性导入（scipy 重）。"""
+    from . import convex
+
+    inequality = request.form.get("inequality", "")
+    if not inequality:
+        return fail("请输入一个不等式。", 400)
+    line = request.form.get("line") or None  # 隐藏参数，缺席与空串同等处理
+    try:
+        result = convex.prove(inequality, line)
+    except ValueError as exc:
+        return fail(str(exc), 400)
+    except Exception:
+        return fail(INTERNAL_ERROR, 500)
+    return respond({"ok": True, "result": result})
+
+
+# ===== 姊妹应用 /health（健康计算器，docs/sibling-apps.md §2） =====
+
+
+@app.get("/health")
+@app.get("/health/")
+def health_page():
+    """/health 与 /health/ 均 200 返回同一份中文页面（两路并存，无斜杠跳转）。"""
+    return render_template("health.html")
+
+
+@app.get("/health/en")
+def health_page_en():
+    """英文版是独立模板；/health/en/ 无路由（probe: 500 内部错误）。"""
+    return render_template("health-en.html")
+
+
+@app.post("/health/calculate")
+def health_calculate():
+    """JSON-only 计算端点；校验错误 400、成功 200，新版 ``ok`` 包络。"""
+    from . import health
+
+    # 非 JSON Content-Type、坏 JSON、非 dict 顶层一律同一条错（probe: tr:*）
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return fail("提交内容格式不正确。", 400)
+    fields, err = health.validate(data)
+    if err:
+        return fail(err, 400)
+    return respond({"ok": True, "record_id": health.next_record_id(),
+                    "results": health.calculate(fields)})
 
 
 def main():

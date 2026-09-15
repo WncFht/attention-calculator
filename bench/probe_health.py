@@ -172,7 +172,8 @@ def transport():
     """Non-JSON bodies, wrong content types, odd JSON top levels, GET."""
     good = json.dumps(REQ)
     return [
-        raw("tr:form-urlencoded", "nickname=Probe&sex=male&age=35&height_cm=175&weight_kg=70&pal=1.55",
+        raw("tr:form-urlencoded",
+            "nickname=Probe&sex=male&age=35&height_cm=175&weight_kg=70&pal=1.55",
             content_type="application/x-www-form-urlencoded"),
         raw("tr:bad-json", "{"),
         raw("tr:empty-body", ""),
@@ -699,6 +700,63 @@ def supplement():
     return cases
 
 
+def supplement3():
+    """Third pass: last discriminations after s2 results were analyzed."""
+    return [
+        # deurenberg upper flag bound: deur=62.4..72.8 (58.3 ok, 74.9 flagged)
+        j("s3:deur-w170", height_cm=170, weight_kg=170),  # deur 62.4
+        j("s3:deur-w175", height_cm=170, weight_kg=175),  # deur 64.5
+        j("s3:deur-w180", height_cm=170, weight_kg=180),  # deur 66.6
+        j("s3:deur-w185", height_cm=170, weight_kg=185),  # deur 68.7
+        j("s3:deur-w190", height_cm=170, weight_kg=190),  # deur 70.7
+        j("s3:deur-w195", height_cm=170, weight_kg=195),  # deur 72.8
+        # cunbae upper bound: a120 h170, bf=15.372+0.772b-0.0008b²
+        j("s3:cb-a120-w300", age=120, height_cm=170, weight_kg=300),  # bf 86.9
+        j("s3:cb-a120-w340", age=120, height_cm=170, weight_kg=340),  # bf 95.1
+        j("s3:cb-a120-w380", age=120, height_cm=170, weight_kg=380),  # bf 103.1
+        # height tip bound between 90 (fires) and 110 (silent)
+        j("s3:htip-95", height_cm=95, weight_kg=19),   # bmi 21.1
+        j("s3:htip-100", height_cm=100, weight_kg=21),  # bmi 21.0
+        j("s3:htip-105", height_cm=105, weight_kg=23),  # bmi 20.9
+        # bp: high-vs-low category priority; sys>dia check position
+        j("s3:bp-150-50", bp_context="clinic", systolic_bp=150,
+          diastolic_bp=50),   # 1级 vs 偏低
+        j("s3:bph-140-50", bp_context="home", systolic_bp=140,
+          diastolic_bp=50),   # 筛查界值 vs 偏低
+        j("s3:bp-40-95", bp_context="clinic", systolic_bp=40,
+          diastolic_bp=95),   # sys range vs sys>dia: which error?
+        j("s3:bp-100-100", bp_context="clinic", systolic_bp=100,
+          diastolic_bp=100),  # sys==dia: > or >= ?
+        # bool rejection: age-only message or universal 格式不正确?
+        j("s3:pal-bool", pal=True),
+        j("s3:h-bool", height_cm=True),
+        j("s3:waist-bool", waist_cm=True),
+        j("s3:exmin-bool", exercise_type="jogging", exercise_minutes=True),
+        # non-scalar + non-finite on optionals
+        j("s3:waist-list", waist_cm=[80]),
+        raw("s3:waist-nan", '{"nickname":"P","sex":"male","age":35,'
+            '"height_cm":175,"weight_kg":70,"pal":1.55,"waist_cm":NaN}'),
+        raw("s3:exmin-nan", '{"nickname":"P","sex":"male","age":35,'
+            '"height_cm":175,"weight_kg":70,"pal":1.55,'
+            '"exercise_type":"jogging","exercise_minutes":NaN}'),
+    ]
+
+
+def supplement4():
+    """Fourth pass: final bound pins (deur ~70, cunbae upper, htip, /healthxyz)."""
+    return [
+        # deur bound: 68.7 ok / 70.7 flagged; w189 -> deur 69.91 splits 69 vs 70
+        j("s4:deur-w189", height_cm=170, weight_kg=189),
+        # cunbae upper: a120 h170, bf(w220)=69.5 / bf(w225)=70.6 -> bound 70?
+        j("s4:cb-a120-w220", age=120, height_cm=170, weight_kg=220),
+        j("s4:cb-a120-w225", age=120, height_cm=170, weight_kg=225),
+        # htip: 95 fires / 100 silent -> h<100?
+        j("s4:htip-99", height_cm=99, weight_kg=20),
+        # does /healthxyz belong to the health app (500) or main app (404)?
+        raw("s4:get-healthxyz", "", path="/healthxyz", method="GET"),
+    ]
+
+
 BATCHES = {
     "baseline": baseline,
     "transport": transport,
@@ -711,6 +769,8 @@ BATCHES = {
     "tips": tips,
     "misc": misc,
     "supplement": supplement,
+    "supplement3": supplement3,
+    "supplement4": supplement4,
 }
 
 

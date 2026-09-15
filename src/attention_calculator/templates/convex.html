@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="凹凸不等式, 凸函数, 凹函数, 不等式证明, 量化调酒师">
+    <meta name="author" content="量化调酒师">
+    <title>凹凸不等式计算器</title>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            color: #050505;
+            background: #fff url("/convex/static/bg1.png") center top / cover fixed no-repeat;
+        }
+        .page {
+            width: min(92vw, 1180px);
+            margin: 0 auto;
+            padding: 2rem 0 3rem;
+        }
+        header {
+            position: relative;
+            text-align: center;
+            padding: 0.75rem 0 1.75rem;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(1.55rem, 2.2vw, 2.1rem);
+            font-style: normal;
+            font-weight: 700;
+            color: #2f7bdc;
+            text-shadow: 0 2px 8px rgba(47, 123, 220, 0.2);
+        }
+        .language-switch {
+            position: absolute;
+            right: 0;
+            top: 1rem;
+            display: flex;
+            gap: 0.45rem;
+        }
+        .language-switch button {
+            border: 1px solid #111;
+            background: #fff;
+            color: #111;
+            border-radius: 5px;
+            padding: 0.35rem 0.7rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .language-switch button.active {
+            background: #111;
+            color: #fff;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 1.6rem;
+            margin-top: 1.5rem;
+        }
+        .title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .proof-form {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 190px;
+            gap: 1rem;
+            align-items: center;
+        }
+        input {
+            width: 100%;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.96);
+            font: inherit;
+        }
+        input {
+            height: 2.8rem;
+            padding: 0 0.85rem;
+            font-size: 1.05rem;
+        }
+        .primary-btn, .secondary-btn {
+            border: 0;
+            border-radius: 32px;
+            color: #fff;
+            background: linear-gradient(180deg, #1568df, #5aa8ee);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 2.8rem;
+            padding: 0 1.1rem;
+            white-space: nowrap;
+        }
+        .secondary-btn {
+            min-height: 2.7rem;
+            font-size: 0.95rem;
+        }
+        .help {
+            color: #606060;
+            line-height: 1.7;
+            margin-top: 0.85rem;
+            font-size: 0.98rem;
+        }
+        .result {
+            display: none;
+            margin-top: 1.5rem;
+        }
+        .proof-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            padding: 1.4rem;
+            margin-top: 1rem;
+        }
+        .proof-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+        }
+        .formula-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #fafafa;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        .meta {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fff;
+            padding: 0.8rem;
+            line-height: 1.5;
+        }
+        .meta strong { display: block; margin-bottom: 0.25rem; }
+        .error {
+            border-radius: 8px;
+            background: #fff0f2;
+            color: #e32637;
+            padding: 1rem;
+            line-height: 1.7;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: Consolas, "Courier New", monospace;
+        }
+        .copyright {
+            margin: 1.8rem 0 0;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        .copyright a {
+            color: #000;
+            text-decoration: underline;
+            font-weight: 700;
+        }
+        @media (max-width: 760px) {
+            header { padding-top: 3.2rem; }
+            .language-switch { left: 0; right: auto; }
+            .proof-form { grid-template-columns: 1fr; }
+            .meta-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header>
+            <div class="language-switch">
+                <button type="button" id="zhBtn" class="active">中文</button>
+                <button type="button" id="enBtn">English</button>
+            </div>
+            <h1 data-i18n="pageTitle">凹凸不等式计算器</h1>
+        </header>
+
+        <section class="panel">
+            <div class="title" data-i18n="formTitle">请输入一个单变量不等式</div>
+            <form id="proofForm">
+                <div class="proof-form">
+                    <input type="text" id="inequality" name="inequality" data-i18n-placeholder="placeholder" placeholder="例如：exp(x)-log(x)-261/112>0">
+                    <button class="primary-btn" type="submit" data-i18n="start">开始证明</button>
+                </div>
+            </form>
+            <div class="help" data-i18n="help">支持 exp(x)、log(x)、sqrt(x)、x^a、x、常数的顶层线性组合。暂不支持任意嵌套函数、非线性项乘积或多变量不等式。</div>
+            <div class="help" data-i18n="exampleHelp">例如：exp(x)-log(x)-261/112&gt;0</div>
+        </section>
+
+        <section id="result" class="panel result"></section>
+
+        <p class="copyright">
+            <span data-i18n="authorLabel">作者：</span>量化调酒师 （<a href="https://www.zhihu.com/people/plel/" target="_blank" rel="noopener" data-i18n="authorLink">量化调酒师知乎地址</a>）<br>
+            <span data-i18n="principleLabel">凹凸不等式证明器原理详见文章：</span><a href="https://zhuanlan.zhihu.com/p/2041917119399448712" target="_blank" rel="noopener" data-i18n="principleTitle">凹凸不等式证明器</a><br>
+            <span data-i18n="attentionLabel">注意力计算器：</span><a href="/attention" target="_blank" rel="noopener" data-i18n="attentionTitle">打开注意力计算器</a><br>
+            <span data-i18n="healthLabel">健康计算器：</span><a href="/health" target="_blank" rel="noopener" data-i18n="healthTitle">打开健康计算器</a>
+        </p>
+    </main>
+
+    <script>
+        const TEXT = {
+            zh: {
+                pageTitle: '凹凸不等式计算器',
+                formTitle: '请输入一个单变量不等式',
+                placeholder: '例如：exp(x)-log(x)-261/112>0',
+                start: '开始证明',
+                help: '支持 exp(x)、log(x)、sqrt(x)、x^a、x、常数的顶层线性组合。暂不支持任意嵌套函数、非线性项乘积或多变量不等式。',
+                exampleHelp: '例如：exp(x)-log(x)-261/112>0',
+                working: '正在寻找凹凸分离直线...',
+                resultTitle: '证明结果',
+                notice: '注意到',
+                qed: '证毕！',
+                normalized: '整理形式',
+                curvature: '凹凸性',
+                minimum: '数值验证',
+                tangentAt: '切点',
+                showTex: '显示TeX代码',
+                close: '关闭',
+                failed: '暂未证明',
+                authorLabel: '作者：',
+                authorLink: '量化调酒师知乎地址',
+                principleLabel: '凹凸不等式证明器原理详见文章：',
+                principleTitle: '凹凸不等式证明器',
+                attentionLabel: '注意力计算器：',
+                attentionTitle: '打开注意力计算器',
+                healthLabel: '健康计算器：',
+                healthTitle: '打开健康计算器'
+            },
+            en: {
+                pageTitle: 'Convex Concave Prover',
+                formTitle: 'Enter a one-variable inequality',
+                placeholder: 'Example: exp(x)-log(x)-261/112>0',
+                start: 'Generate Proof',
+                help: 'Supports top-level linear combinations of exp(x), log(x), sqrt(x), x^a, x, and constants. Arbitrary nested functions, nonlinear products, and multivariable inequalities are not supported yet.',
+                exampleHelp: 'Example: exp(x)-log(x)-261/112>0',
+                working: 'Searching for a separating line...',
+                resultTitle: 'Proof Result',
+                notice: 'Notice that',
+                qed: 'Q.E.D.',
+                normalized: 'Normal Form',
+                curvature: 'Curvature',
+                minimum: 'Numerical Check',
+                tangentAt: 'Tangent Point',
+                showTex: 'Show Tex',
+                close: 'Close',
+                failed: 'Not Proved',
+                authorLabel: 'Author: ',
+                authorLink: 'Zhihu Profile',
+                principleLabel: 'About Convex Concave Prover: ',
+                principleTitle: 'Convex Concave Prover',
+                attentionLabel: 'Attention Calculator: ',
+                attentionTitle: 'Open Attention Calculator',
+                healthLabel: 'Health Calculator: ',
+                healthTitle: 'Open Health Calculator'
+            }
+        };
+
+        const PROVE_URL = "/convex/prove";
+        const ROOT_URL = "/convex/";
+        const EN_URL = "/convex/en";
+        let lang = location.pathname.endsWith('/en') ? 'en' : 'zh';
+        let latestTex = '';
+
+        function t(key) { return TEXT[lang][key] || key; }
+
+        function applyLang() {
+            document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+            document.title = t('pageTitle');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.dataset.i18n);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = t(el.dataset.i18nPlaceholder);
+            });
+            document.getElementById('zhBtn').classList.toggle('active', lang === 'zh');
+            document.getElementById('enBtn').classList.toggle('active', lang === 'en');
+        }
+
+        async function renderMath(container) {
+            if (!window.MathJax) return;
+            if (MathJax.startup && MathJax.startup.promise) {
+                await MathJax.startup.promise;
+            }
+            if (MathJax.typesetClear && container) {
+                MathJax.typesetClear([container]);
+            }
+            if (MathJax.typesetPromise) {
+                await MathJax.typesetPromise(container ? [container] : undefined);
+            }
+        }
+
+        function showTex(tex) {
+            alert(tex);
+        }
+
+        function normalCard(result) {
+            const proof = result.proof;
+            const proofHtml = proof ? `
+                <div class="proof-card">
+                    <div class="proof-head">
+                        <strong>${t('notice')}</strong>
+                        <button class="secondary-btn" type="button" id="showTex">${t('showTex')}</button>
+                    </div>
+                    <div class="formula-box">\\[${proof.formula_latex}\\]</div>
+                    <p><strong>${t('qed')}</strong></p>
+                </div>` : '';
+            return `
+                <div class="title">${t('resultTitle')}</div>
+                ${proofHtml}
+                ${result.reason && !proof ? `<div class="error" style="margin-top:1rem;">${result.reason}</div>` : ''}
+            `;
+        }
+
+        function failedCard(result) {
+            return `
+                <div class="title">${t('failed')}</div>
+                <div class="error">${result.reason || 'Proof failed.'}</div>
+            `;
+        }
+
+        document.getElementById('zhBtn').addEventListener('click', () => {
+            lang = 'zh';
+            history.replaceState(null, '', ROOT_URL);
+            applyLang();
+        });
+        document.getElementById('enBtn').addEventListener('click', () => {
+            lang = 'en';
+            history.replaceState(null, '', EN_URL);
+            applyLang();
+        });
+
+        document.getElementById('proofForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const resultBox = document.getElementById('result');
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<div class="title">${t('working')}</div>`;
+            const formData = new FormData(event.currentTarget);
+            try {
+                const response = await fetch(PROVE_URL, { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || 'Request failed.');
+                }
+                const result = data.result;
+                latestTex = result.proof ? result.proof.formula_latex : '';
+                resultBox.innerHTML = result.ok ? normalCard(result) : failedCard(result);
+                const showBtn = document.getElementById('showTex');
+                if (showBtn) showBtn.addEventListener('click', () => showTex(latestTex));
+                await renderMath(resultBox);
+            } catch (err) {
+                resultBox.innerHTML = `<div class="error">${err.message}</div>`;
+            }
+        });
+
+        applyLang();
+    </script>
+</body>
+</html>

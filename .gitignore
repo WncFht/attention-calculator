@@ -4,3 +4,4 @@ __pycache__/
 bench/data/
 bench/out/
 *.egg-info/
+health-records.json
