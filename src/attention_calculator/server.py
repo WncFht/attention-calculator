@@ -10,17 +10,26 @@ Run with ``python -m attention_calculator.server`` or
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from fractions import Fraction
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, render_template, request
 
 from . import engine, render, solve
 from .kernels import TYPES
 
 app = Flask(__name__)
-app.json.ensure_ascii = False  # 错误文案为中文, 直接输出 UTF-8
+
+
+def respond(payload: dict, status: int = 200) -> Response:
+    """JSON body matching the live site byte-for-byte: compact separators,
+    \\uXXXX escapes (ensure_ascii), alphabetically sorted keys, and the
+    trailing newline old Flask's jsonify appended."""
+    body = json.dumps(payload, ensure_ascii=True, sort_keys=True,
+                      separators=(",", ":")) + "\n"
+    return Response(body, status=status, mimetype="application/json")
 
 # 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
 EXPONENT_LIMIT = {"pi": 30, "e": 30}
@@ -39,7 +48,7 @@ NOT_FOUND = "请求的页面不存在"
 
 def fail(message: str, status: int):
     """A failure JSON body; the site sends just ``{"error": ...}``."""
-    return jsonify({"error": message}), status
+    return respond({"error": message}, status)
 
 
 @app.errorhandler(404)
@@ -63,10 +72,11 @@ def unhandled(_):
 def split_num(text: str) -> tuple[int, int] | None:
     """Split the site's 'n'/'n/d' wire format into (numerator, denominator).
 
-    Returns None on format violation (empty, non-digit, negative, decimal);
+    站端把空格和换行当透明字符全局删掉再校验（"2 2/7"→22/7、"1\n"→1 均实测），
+    tab 等其它空白不赦免（"\\t22/7"→400）。Returns None on format violation;
     denominator 0 is returned as-is so the caller can pick the right message.
     """
-    text = text.strip()
+    text = text.replace(" ", "").replace("\n", "")
     if not NUM_RE.match(text):
         return None
     num, _, den = text.partition("/")
@@ -135,10 +145,12 @@ def calculate():
     """Run a proof search; wraps solve.prove into the site's response shape."""
     # type 缺省回退 pi（实测：不发 type 字段照常出解；发 type="" 报无效类型）
     kind = request.form.get("type", "pi")
-    power = request.form.get("power", "").strip()
+    # power/rational 不做 strip——空白字符规则由 split_num 统一实现
+    # （站端删掉 " "/"\\n" 但不赦免 tab，strip() 会误吃两端 tab）
+    power = request.form.get("power", "")
     # 缺席 -> 站端默认 '>'；存在但为空 -> 400（缺席与空串不同待遇）
     comp = request.form.get("comparison", ">")
-    rational = request.form.get("rational", "").strip()
+    rational = request.form.get("rational", "")
 
     if kind not in TYPES:
         return fail("无效的证明类型", 400)
@@ -167,8 +179,11 @@ def calculate():
     if err:
         return fail(err, 404)
 
+    # 求解器拿到的是清理后的 n/d 文本（站端校验即清理；原始串可能含空格）
+    power_wire = "/".join(map(str, power_parts))
+    rational_wire = "/".join(map(str, bound_parts))
     try:
-        result = solve.prove(kind, power, comp, rational)
+        result = solve.prove(kind, power_wire, comp, rational_wire)
     except engine.WrongDirection:
         return fail("要证明的式子不等号方向反了", 404)
     except engine.NoSolution:
@@ -188,10 +203,12 @@ def calculate():
     params["m"], params["n"] = int(params["m"]), int(params["n"])
     for k in ("au_val", "bu_val", "cu_val", "u_val"):
         params[k] = str(params[k])
-    return jsonify(
+    return respond(
         {
             "success": True,
-            "type": kind,
+            # kernels may normalize the wire type (site echoes sin_q_degree
+            # requests back as "sin_pi_q"); default to the request's type
+            "type": result.get("type", kind),
             "parameters": params,
             "equations": {"solution": result["solution"]},
         }
@@ -201,11 +218,12 @@ def calculate():
 # 图像端点逐字段校验（probe 钉死）：
 # 顺序 type -> comparison -> 整数字段 m,n,u,au,bu,cu -> 分数字段 a,b,c；
 # coef/rational 完全不校验、原文回显（coef=x -> x\pi，rational 缺席 -> 0）。
-IMG_INT_RE = re.compile(r"^-?\d+$")
 IMG_FRAC_RE = re.compile(r"^-?\d+(/\d+)?$")
 IMG_INT_KEYS = ("m", "n", "u_val", "au_val", "bu_val", "cu_val")
 IMG_FRAC_KEYS = ("a_val", "b_val", "c_val")
-IMG_INT_BOUNDS = {"m": (0, 30), "n": (0, 30), "u_val": (1, None)}
+IMG_INT_BOUNDS = {"m": (0, 30), "n": (0, 30)}
+# u_val 下限按类型：gamma 两段式核允许 u=0（golden 实测），其余要 >=1
+IMG_U_MIN = {"gamma": 0}
 
 
 @app.get("/get_integral_image")
@@ -221,16 +239,21 @@ def get_integral_image():
     params = {}
     for k in IMG_INT_KEYS:
         v = request.args.get(k, "")
-        if not IMG_INT_RE.match(v):
+        # 整数字段站端就是 int()：两端空白（含 tab）可、内部空白不可
+        try:
+            params[k] = int(v)
+        except ValueError:
             return fail(f"{k}必须是整数", 400)
-        params[k] = int(v)
         lo, hi = IMG_INT_BOUNDS.get(k, (None, None))
+        if k == "u_val":
+            lo = IMG_U_MIN.get(kind, 1)
         if lo is not None and params[k] < lo:
             return fail(f"{k}过小", 400)
         if hi is not None and params[k] > hi:
             return fail(f"{k}过大", 400)
     for k in IMG_FRAC_KEYS:
-        v = request.args.get(k, "")
+        # 分数字段同 /calculate 语法：先去 " "/"\\n" 再卡格式
+        v = request.args.get(k, "").replace(" ", "").replace("\n", "")
         if not IMG_FRAC_RE.match(v):
             return fail(f"{k}格式无效", 400)
         _, _, den = v.partition("/")
@@ -244,7 +267,7 @@ def get_integral_image():
         equation = render.render_equation(params, kind, power, comp, bound)
     except Exception:
         return fail(INTERNAL_ERROR, 500)
-    return jsonify({"equation": equation})
+    return respond({"equation": equation})
 
 
 @app.post("/decompose_inequality")
@@ -259,7 +282,7 @@ def decompose_inequality():
         result = decompose.decompose_inequality(problem)
     except ValueError as exc:
         return fail(str(exc), 400)
-    return jsonify(result)
+    return respond(result)
 
 
 def main():

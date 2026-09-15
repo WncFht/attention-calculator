@@ -19,7 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from attention_calculator.server import IMAGE_KEYS, app
+from attention_calculator.server import IMG_FRAC_KEYS, IMG_INT_KEYS, app
+
+IMAGE_KEYS = IMG_INT_KEYS + IMG_FRAC_KEYS
 
 
 def _norm(tex: str) -> str:
@@ -49,6 +51,9 @@ def compare_record(client, rec: dict) -> dict:
         return out
     out["elapsed_ms"] = round(1000 * (time.time() - t0), 1)
     out["status_match"] = resp.status_code == rec.get("http_status")
+    # 全字节比较：sorted keys + \uXXXX + 尾随换行都计入（type 归一化也覆盖到）
+    if rec.get("raw_calculate") is not None:
+        out["body_match"] = resp.get_data(as_text=True) == rec["raw_calculate"]
 
     if not body.get("success"):
         out["ours_success"] = False
@@ -121,11 +126,18 @@ def main() -> None:
     eq_total = sum(1 for r in results if r.get("equation_match") is not None)
     both_fail = [r for r in results if not r["site_success"] and not r.get("ours_success")]
     err_match = sum(1 for r in both_fail if r.get("error_match"))
+    body_exact = sum(1 for r in results if r.get("body_match"))
+    body_total = sum(1 for r in results if "body_match" in r)
     print(f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
           f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
-          f"solution_match={sol} status_match={stat} "
+          f"solution_match={sol} status_match={stat} body_exact={body_exact}/{body_total} "
           f"eq_match={eq_match}/{eq_total} both_fail={len(both_fail)} "
           f"err_match={err_match} crashes={len(crashes)}")
+    body_diff = [r for r in results if r.get("body_match") is False]
+    if body_diff:
+        print("response body byte diffs:")
+        for r in body_diff[:10]:
+            print(f"  {r['type']} {r['power']} {r['comparison']} {r['rational']}")
     err_diff = [r for r in both_fail if r.get("error_match") is False]
     if err_diff:
         print("both fail but error text differs:")
