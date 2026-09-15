@@ -40,16 +40,19 @@ def exp_sin_moment(j: int, sym: str = "e_pi") -> Moment:
         return {sym: Fraction(1), "1": Fraction(-1)}
     out: Moment = {}
     if j % 2 == 1:  # sin^{2l+1} x = 4^{-l} sum_k (-1)^k C(2l+1,l-k) sin((2k+1)x)
-        l = (j - 1) // 2
-        for k in range(l + 1):
-            c = Fraction((-1) ** k * comb(2 * l + 1, l - k), 4**l)
+        ell = (j - 1) // 2
+        for k in range(ell + 1):
+            c = Fraction((-1) ** k * comb(2 * ell + 1, ell - k), 4**ell)
             kk = 2 * k + 1  # ∫ e^x sin(kk x) dx = kk(1+e^pi)/(1+kk^2), kk odd
             out = add(out, {sym: c * kk / (1 + kk * kk), "1": c * kk / (1 + kk * kk)})
     else:  # sin^{2l} x = 4^{-l} [C(2l,l) + 2 sum_k (-1)^k C(2l,l-k) cos(2kx)]
-        l = j // 2
-        out = {sym: Fraction(comb(2 * l, l), 4**l), "1": -Fraction(comb(2 * l, l), 4**l)}
-        for k in range(1, l + 1):
-            c = Fraction(2 * (-1) ** k * comb(2 * l, l - k), 4**l)
+        ell = j // 2
+        out = {
+            sym: Fraction(comb(2 * ell, ell), 4**ell),
+            "1": -Fraction(comb(2 * ell, ell), 4**ell),
+        }
+        for k in range(1, ell + 1):
+            c = Fraction(2 * (-1) ** k * comb(2 * ell, ell - k), 4**ell)
             # ∫ e^x cos(2kx) dx = (e^pi-1)/(1+4k^2)
             out = add(out, {sym: c / (1 + 4 * k * k), "1": -c / (1 + 4 * k * k)})
     return out
