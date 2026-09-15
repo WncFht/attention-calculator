@@ -15,7 +15,8 @@ from attention_calculator.engine import (
 
 def test_mn_order_shape():
     seq = list(mn_order(3))
-    assert seq[:4] == [(0, 0), (1, 0), (0, 1), (1, 1)]
+    # 站点约定：同和、同 |m-n| 时 m 小者先（pi>8/3 实测取 (0,1) 而非 (1,0)）
+    assert seq[:4] == [(0, 0), (0, 1), (1, 0), (1, 1)]
     # m+n non-decreasing
     assert [a + b for a, b in seq] == sorted(a + b for a, b in seq)
     # within each sum, |m-n| ascending

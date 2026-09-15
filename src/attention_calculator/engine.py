@@ -25,10 +25,15 @@ class NoSolution(Exception):
 
 
 def mn_order(limit: int) -> Iterator[tuple[int, int]]:
-    """Yield (m, n) with m+n ascending, then |m-n| ascending (author's order)."""
+    """Yield (m, n) with m+n ascending, then |m-n|, then m ascending.
+
+    Observed site convention: among (m, n) pairs with the same sum and the
+    same |m-n|, the smaller-m variant is tried first — e.g. pi>8/3 resolves
+    at (0, 1) even though (1, 0) is also a valid proof.
+    """
     for s in range(0, 2 * limit + 1):
         pairs = [(m, s - m) for m in range(s + 1) if s - m <= limit and m <= limit]
-        pairs.sort(key=lambda p: (abs(p[0] - p[1]), -p[0]))
+        pairs.sort(key=lambda p: (abs(p[0] - p[1]), p[0]))
         yield from pairs
 
 
