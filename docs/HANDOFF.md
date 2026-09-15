@@ -31,14 +31,14 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 | 评测 | 数字 | 入口 |
 |---|---|---|
 | golden parity（/calculate + /get_integral_image，含响应体逐字节） | **wip 全绿：3454/3454 status+body，eq_match 1588/1588** | `bench/parity.py bench/data/golden.jsonl` |
-| verify（恒等式数学真值，50dps） | 1391 成功记录中 1358 真 + **33 假=站点 bug 复现**（30 trig-bias + 3 gauss-window），0 未知 | `bench/verify.py` |
-| edge 重放（376 条边缘探针离线重放） | 368 match / 8 mismatch（7 float-fidelity + 1 decompose nosolve） | `bench/replay_edge.py` |
+| verify（恒等式数学真值，50dps） | 1438 成功记录中 1438 真/假随数据集增长——verify 把复现的站点 bug 也计入假（30 trig-bias + 3 gauss-window 等） | `bench/verify.py` |
+| edge 重放（376 条边缘探针离线重放） | 375 match / 1 mismatch（仅 `mth2:dec-nosolve`，等 decompose.py） | `bench/replay_edge.py` |
 | fuzz 重放（922 条随机探针离线重放） | **922/922 全绿** | `bench/replay_fuzz.py` |
 | health parity（姊妹应用） | **420/420 字节级全绿** | `bench/parity_health.py` |
-| convex parity（姊妹应用，333 tags） | 79 match / 254 mismatch——求解器在收敛中 | `bench/parity_convex.py` |
-| decompose parity | combo+decompose 全集未绿——decompose.py 还没写 | `bench/parity_decompose.py` |
+| convex parity（姊妹应用，333 tags） | **333/333 字节级全绿** | `bench/parity_convex.py` |
+| decompose parity | combo 87 字节级 + decompose 182 JSON 级——decompose.py 三方竞速中 | `bench/parity_decompose.py` |
 | 页面字节级 | `/`、`/en`、`/attention`、`/convex`、`/health`、`/health/en` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
-| pytest | 566 绿 + 21 skip + 2 挂（fidelity direction_f 在制） | `.venv/bin/python -m pytest tests/` |
+| pytest | 603 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
 
 全量评测一条命令：`bench/run_all.sh`（同步 devbox → parity → decompose parity →
 两份重放 → verify → 聚合报告）。
@@ -73,12 +73,15 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 ## 暂停时的在制品（6 个任务，按文件归属续作）
 
-### 1. decompose.py（组合拆解）— 最接近完成
-- 现状：规则模型在 `bench/decompose_model.py` 基本收敛——固定处理序 + 贪心链分配
-  （resid 项规则、wrap-around 处理序、share=R−Σcontrib、乘积项吸附）；停前在探
-  `ln5<7/4` 的判别变体（站端选 5/3 的方式还没钉死）。
+### 1. decompose.py（组合拆解）— 语义全钉死，三方竞速实现中
+- 行为模型已收敛并验证：`bench/decompose_model.py` 的界值分配机制对全部 182 条
+  decompose 记录逐步验证吻合；leader 另补齐完整响应语义（见 /tmp/decompose-brief.md：
+  kept/moved 归一化形、steps 序=reversed Add.make_args(R−lhs)、逐步 prove+render
+  接线、错误串目录、decomposition_latex 链尾规则）。
 - 剩余：写 `src/attention_calculator/decompose.py` + 过 `bench/parity_decompose.py`
-  （combo 87 条逐字节 + decompose 182 条 JSON 级）。
+  （combo 87 条逐字节 + decompose 182 条 JSON 级；transport_error 记录只需 400+error 键）。
+- 竞速：decompose→/tmp/decompose_v1.py、decompose2→/tmp/decompose_v2.py、
+  decompose3（fresh，从 brief 起步）→/tmp/decompose_v3.py；胜者装入 src。
 - 文法情报（已验证）：`e^pi` 合法（e_pi 型）；`pi^e`、`sin(30°)`、`sin(pi/5)`、
   `ln(2)^2`、`phi^2`、`sin(1)*pi`、`ln(10)/pi` 全 400；`ln(2)` 带括号合法、`ln2` 不带 400。
 
@@ -133,23 +136,23 @@ JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/h
 注意：`/convex/prove` 的 catch-all 目前用主站 500 文案（无句号），若 convex 探针
 发现站端 500 带「。」需换 `SIBLING_INTERNAL_ERROR`（已转告 convex-probe agent）。
 
-### 5. /convex 行为探测 — ✅ 数据侧已完成
+### 5. /convex 行为探测 — ✅ 已完成
 - 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr；
   注意 Python 3.14 `ast.dump` 需 `show_empty=True` 才与老版本逐字一致）。
 - 已落盘：`bench/data/convex-probes.jsonl`（333 tags，13 个探针族）、
   `docs/convex-behavior.md`（错误面/原子表/归一化/分类/minimum/tangent 全谱）、
   `bench/convex_model.py`（离线假设模型）。
-- 判官：`bench/parity_convex.py` 逐字节重放（79/333 起步）。
+- `docs/convex-behavior.md` 经独立复核（/tmp/convex-doc-audit.md）：333 条语料
+  零硬矛盾；7 处弱支撑点均朝「参考实现常数」方向、无反例。
+- 判官：`bench/parity_convex.py` 逐字节重放。
 
-### 6. /convex 求解器 — 骨架完成，按 parity_convex 收敛中
-- `src/attention_calculator/convex.py` 已写：ast 解析（错误串=`ast.dump` 逐字）、
-  归一化、凹凸分类、状态机+全部 reason 原文、scipy brentq 数值引擎、
-  provided_line 处理、响应 dict 全字段；路由已挂（/convex + /convex/ +
-  /convex/en + POST /convex/prove + /convex/static/*）。
-- parity_convex 暴露的缺口：边界最小值误判 proved（站端 failed）、缺原子
-  （ln/e^x 字面/x^sqrt(2)/sqrt(const)/加法组）、显示归一化（√x、x*x→2*x）、
-  域上界 2^27、err 族错串措辞（`expects one argument`/`expected numeric
-  constant`/`float division by zero`/`products of two non-constant atoms`）。
+### 6. /convex 求解器 — ✅ 已完成（`4675217`，parity 333/333 字节级）
+- `src/attention_calculator/convex.py` = 上游开源实现
+  `lianghuatiaojiushi/ConvexConcaveProver` 的 scripts/prove.py 移植（float64
+  项模型 + 160 次折半导数定号 + CF 切点候选 12 项/分母≤10000）+ 站端 JSON/latex
+  包装：normalized/*_latex、status/reason 五串、line/domain 参数全量复现。
+- 隐藏参数 `domain` 已接线（`prove(inequality, line, domain)`）；
+  `line` 是惰性解析——只在进入证明路径时才 parse（x>0+foo(x)→200，可证路径→400）。
 - 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）；未匹配路径
   一律 500 `服务器内部错误，请稍后再试。`（带句号）。
 
