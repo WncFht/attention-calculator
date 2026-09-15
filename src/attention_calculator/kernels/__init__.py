@@ -9,6 +9,14 @@ It returns ``{"parameters": {...}, "solution": "a = 47/120, b = -13/120"}``
 with ``parameters`` holding the nine site fields (m, n, a_val, b_val, c_val,
 au_val, bu_val, cu_val, u_val). Raises WrongDirection or NoSolution from
 ..engine on failure.
+
+Each family module also defines::
+
+    def render_equation(params: dict, kind: str, power: Fraction,
+                        comp: str, bound: Fraction) -> str
+
+producing the same LaTeX proof string the site's /get_integral_image returns
+(e.g. "\\dfrac{22}{7} - \\pi = \\int_0^1 ... \\mathrm{d} x > 0").
 """
 
 TYPES = [
