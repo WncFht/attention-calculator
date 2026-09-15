@@ -16,10 +16,11 @@ from mpmath import mp
 
 sys.path.insert(0, "src")
 sys.path.insert(0, "bench")
-from attention_calculator.engine import mn_order, solve_moment
-from sim_mechanisms import basis_and_target
+from sim_evals import cramer_terms, system
 from sim_float_solve import f_nonneg, f_nonpos
-from sim_evals import system, cramer_terms
+from sim_mechanisms import basis_and_target
+
+from attention_calculator.engine import mn_order, solve_moment
 
 
 def solve_exact_on(basis, target):
@@ -59,7 +60,7 @@ def mech_exactnum(basis, target, B):
     if ct is None:
         return None
     P, Q, D = ct
-    return [float(p + q * B) / float(D) for p, q in zip(P, Q)]
+    return [float(p + q * B) / float(D) for p, q in zip(P, Q, strict=True)]
 
 
 def mech_exactnum_fden(basis, target, B):
@@ -68,7 +69,7 @@ def mech_exactnum_fden(basis, target, B):
     if ct is None:
         return None
     P, Q, D = ct
-    return [float((p + q * B) / D) for p, q in zip(P, Q)]
+    return [float((p + q * B) / D) for p, q in zip(P, Q, strict=True)]
 
 
 def mech_mp(basis, target, B, dps):
@@ -127,9 +128,9 @@ CASES = [
 def predict(mech, kind, pw, comp, rs):
     if isinstance(mech, str):
         mech = MECHS[mech]
-    power, bound = Fraction(pw), Fraction(rs)
+    bound = Fraction(rs)
     limit, mk, target, B = basis_and_target(kind, pw, comp, bound)
-    for i, (m, n) in enumerate(mn_order(limit)):
+    for m, n in mn_order(limit):
         basis = mk(m, n)
         try:
             u = mech(basis, target, B)
