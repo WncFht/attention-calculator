@@ -31,6 +31,7 @@ mapped to the phi-basis via sqrt(5) = 2 phi - 1.
 
 import re
 from fractions import Fraction
+from itertools import pairwise
 from math import comb, lcm
 
 import sympy as sp
@@ -259,7 +260,7 @@ def join_cdot(pieces: list[str]) -> str:
     """Join factors the way the site's sympy does: ' \\cdot ' iff the left piece
     ends in '}' and the right is a '\\left(<digit>...\\right)' group."""
     out = pieces[0]
-    for prev, cur in zip(pieces, pieces[1:]):
+    for prev, cur in pairwise(pieces):
         cdot = (prev.endswith("}") and cur.startswith("\\left(")
                 and cur[6].isdigit() and cur.endswith("\\right)"))
         out += " \\cdot " if cdot else " "
