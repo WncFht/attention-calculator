@@ -115,7 +115,7 @@ def done_tags():
     """Tags already present in OUT (for resuming after a crash)."""
     if not OUT.exists():
         return set()
-    return {json.loads(l)["tag"] for l in OUT.open()}
+    return {json.loads(line)["tag"] for line in OUT.open()}
 
 
 def run_batch(cases, skip_done=False):
