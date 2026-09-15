@@ -1,4 +1,3 @@
-# ruff: noqa: RUF001, RUF002, RUF003
 """随机差分模糊测试：同一请求打 zhuyidao.net 与本机克隆，比对响应找分歧。
 
 /calculate 探针：type 从 29 个合法值里取（偶发非法串），power/rational 覆盖
