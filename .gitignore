@@ -5,3 +5,13 @@ bench/data/
 bench/out/
 *.egg-info/
 health-records.json
+
+# 工具链
+/node_modules/
+/.ruff_cache/
+/.pytest_cache/
+
+# 本机 agent / 预览层（scripts/agent-links.sh、scripts/crossnote-links.sh 重建）
+/CLAUDE.md
+/.claude/
+/.crossnote/

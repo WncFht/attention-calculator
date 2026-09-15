@@ -1,0 +1,4 @@
+{
+    // 生成物与依赖不进 lint 扫描；规则本身在 .markdownlint.jsonc
+    "ignores": ["node_modules/**", ".venv/**", ".crossnote/**", "docs/**"],
+}

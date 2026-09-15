@@ -1,0 +1,8 @@
+node_modules/
+# 生成物、运行时缓存、大型二进制资源按需追加
+.venv/
+.crossnote/
+# flask 模板与线上站点逐字节对齐——任何 formatter 都不能碰
+src/attention_calculator/templates/
+# docs 内 code span 逐字引用站端原文（全角标点、带空白回显），内容即数据
+docs/
