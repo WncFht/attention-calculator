@@ -1,0 +1,7 @@
+{
+ "error": "要证明的式子不等号方向反了",
+ "type": "gauss",
+ "power": "2",
+ "comparison": "<",
+ "rational": "1"
+}

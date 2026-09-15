@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 7011/3520, b = 5157/1600"
+ },
+ "parameters": {
+  "a_val": "7011/3520",
+  "au_val": "35055",
+  "b_val": "5157/1600",
+  "bu_val": "56727",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 4,
+  "n": 1,
+  "u_val": "17600",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "171/200",
+ "equation": "\\dfrac{171}{200}G^{-1}-1 = \\int_0^1 \\frac{x^{18} \\cdot \\left(56727 x^{4} + 35055\\right)}{17600}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

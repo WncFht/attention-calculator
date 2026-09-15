@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 3817554/1045, b = 99612513/32000"
+ },
+ "parameters": {
+  "a_val": "3817554/1045",
+  "au_val": "24432345600",
+  "b_val": "99612513/32000",
+  "bu_val": "20819015217",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 5,
+  "n": 1,
+  "u_val": "6688000",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "209/250",
+ "equation": "\\dfrac{209}{250}G^{-1}-1 = \\int_0^1 \\frac{x^{22} \\cdot \\left(20819015217 x^{4} + 24432345600\\right)}{6688000}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

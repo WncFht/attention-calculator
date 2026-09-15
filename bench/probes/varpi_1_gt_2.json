@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 4, b = 0"
+ },
+ "parameters": {
+  "a_val": "4",
+  "au_val": "4",
+  "b_val": "0",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": ">",
+ "rational": "2",
+ "equation": "1 - 2\\varpi^{-1} = \\int_0^1  4 x\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

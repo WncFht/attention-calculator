@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 2/5, b = 12/5"
+ },
+ "parameters": {
+  "a_val": "2/5",
+  "au_val": "2",
+  "b_val": "12/5",
+  "bu_val": "12",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "5",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "23/25",
+ "equation": "\\dfrac{23}{25}G^{-1}-1 = \\int_0^1 \\frac{x^{2} \\cdot \\left(12 x^{4} + 2\\right)}{5}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

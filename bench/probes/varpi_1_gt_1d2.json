@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 0, b = 0"
+ },
+ "parameters": {
+  "a_val": "0",
+  "au_val": "5",
+  "b_val": "11/16",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "1",
+  "m": 0,
+  "n": 0,
+  "u_val": "2",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": ">",
+ "rational": "1/2",
+ "equation": "1 - \\dfrac{1}{2}\\varpi^{-1} = \\int_0^1 \\frac{5 x \\left(1 - x\\right)}{2}\\dfrac{\\sqrt{1-x^4}}{\\pi} \\mathrm{d} x+\\dfrac{11}{16} > 0"
+}

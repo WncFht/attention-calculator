@@ -1,0 +1,7 @@
+{
+ "error": "在指数不超过10的范围内未找到<方向的解",
+ "type": "varpi",
+ "power": "1",
+ "comparison": "<",
+ "rational": "66/25"
+}

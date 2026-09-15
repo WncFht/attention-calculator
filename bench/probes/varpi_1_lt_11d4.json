@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 33/20, b = 33/4"
+ },
+ "parameters": {
+  "a_val": "33/20",
+  "au_val": "33",
+  "b_val": "33/4",
+  "bu_val": "165",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 1,
+  "n": 1,
+  "u_val": "20",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": "<",
+ "rational": "11/4",
+ "equation": "\\dfrac{11}{4} - \\varpi = \\int_0^1 \\frac{x^{7} \\cdot \\left(165 x^{4} + 33\\right)}{20}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

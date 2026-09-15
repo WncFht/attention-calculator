@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 0, b = 0"
+ },
+ "parameters": {
+  "a_val": "0",
+  "au_val": "6",
+  "b_val": "3/4",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "1",
+  "m": 0,
+  "n": 0,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "2",
+ "comparison": ">",
+ "rational": "0",
+ "equation": "2G-0 = \\int_0^1  \\left(6 - 6 x\\right)\\dfrac{\\sqrt{1-x^4}}{\\pi} \\mathrm{d} x+\\dfrac{3}{4} > 0"
+}

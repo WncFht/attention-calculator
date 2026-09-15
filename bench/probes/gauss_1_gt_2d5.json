@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 14/5, b = -12/5"
+ },
+ "parameters": {
+  "a_val": "14/5",
+  "au_val": "14",
+  "b_val": "-12/5",
+  "bu_val": "-12",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "5",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": ">",
+ "rational": "2/5",
+ "equation": "G-\\dfrac{2}{5} = \\int_0^1  \\frac{14}{5} - \\frac{12 x^{4}}{5}\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

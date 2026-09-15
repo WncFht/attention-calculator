@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 3819543/1045, b = 398657259/128000"
+ },
+ "parameters": {
+  "a_val": "3819543/1045",
+  "au_val": "97780300800",
+  "b_val": "398657259/128000",
+  "bu_val": "83319367131",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 5,
+  "n": 1,
+  "u_val": "26752000",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "837/1000",
+ "equation": "\\dfrac{837}{1000}G^{-1}-1 = \\int_0^1 \\frac{x^{22} \\cdot \\left(83319367131 x^{4} + 97780300800\\right)}{26752000}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

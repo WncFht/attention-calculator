@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 6, b = 0"
+ },
+ "parameters": {
+  "a_val": "6",
+  "au_val": "6",
+  "b_val": "0",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": "<",
+ "rational": "3",
+ "equation": "3 - \\varpi = \\int_0^1 6 x^{3}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

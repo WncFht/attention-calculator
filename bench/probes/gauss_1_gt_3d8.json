@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 3, b = -3"
+ },
+ "parameters": {
+  "a_val": "3",
+  "au_val": "3",
+  "b_val": "-3",
+  "bu_val": "-3",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": ">",
+ "rational": "3/8",
+ "equation": "G-\\dfrac{3}{8} = \\int_0^1  3 - 3 x^{4}\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

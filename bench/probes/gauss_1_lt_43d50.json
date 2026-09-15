@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 5451/3080, b = 9027/3080"
+ },
+ "parameters": {
+  "a_val": "5451/3080",
+  "au_val": "5451",
+  "b_val": "9027/3080",
+  "bu_val": "9027",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 3,
+  "n": 1,
+  "u_val": "3080",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "43/50",
+ "equation": "\\dfrac{43}{50}G^{-1}-1 = \\int_0^1 \\frac{x^{14} \\cdot \\left(9027 x^{4} + 5451\\right)}{3080}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

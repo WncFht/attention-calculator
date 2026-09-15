@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 12/5, b = 3/4"
+ },
+ "parameters": {
+  "a_val": "12/5",
+  "au_val": "48",
+  "b_val": "3/4",
+  "bu_val": "15",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 1,
+  "n": 1,
+  "u_val": "20",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "179/200",
+ "equation": "\\dfrac{179}{200}G^{-1}-1 = \\int_0^1 \\frac{x^{6} \\cdot \\left(15 x^{4} + 48\\right)}{20}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

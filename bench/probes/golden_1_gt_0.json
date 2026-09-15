@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 89/160, b = 13/32"
+ },
+ "parameters": {
+  "a_val": "89/160",
+  "au_val": "89",
+  "b_val": "13/32",
+  "bu_val": "65",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "160",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "golden",
+ "power": "1",
+ "comparison": ">",
+ "rational": "0",
+ "equation": "\\phi - 0 = \\int_0^1 \\frac{\\sqrt{x + 4} \\cdot \\left(65 x + 89\\right)}{160} \\mathrm{d} x > 0"
+}

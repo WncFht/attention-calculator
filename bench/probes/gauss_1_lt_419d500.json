@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 347412/95, b = 199432233/64000"
+ },
+ "parameters": {
+  "a_val": "347412/95",
+  "au_val": "4446873600",
+  "b_val": "199432233/64000",
+  "bu_val": "3789212427",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 5,
+  "n": 1,
+  "u_val": "1216000",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "419/500",
+ "equation": "\\dfrac{419}{500}G^{-1}-1 = \\int_0^1 \\frac{x^{22} \\cdot \\left(3789212427 x^{4} + 4446873600\\right)}{1216000}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

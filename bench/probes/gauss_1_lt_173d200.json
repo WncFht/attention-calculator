@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 57/140, b = 39/10"
+ },
+ "parameters": {
+  "a_val": "57/140",
+  "au_val": "57",
+  "b_val": "39/10",
+  "bu_val": "546",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 2,
+  "n": 1,
+  "u_val": "140",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "173/200",
+ "equation": "\\dfrac{173}{200}G^{-1}-1 = \\int_0^1 \\frac{x^{10} \\cdot \\left(546 x^{4} + 57\\right)}{140}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

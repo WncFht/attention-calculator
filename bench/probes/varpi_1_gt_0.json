@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 0, b = 0"
+ },
+ "parameters": {
+  "a_val": "0",
+  "au_val": "0",
+  "b_val": "1",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "1",
+  "m": 0,
+  "n": 0,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": ">",
+ "rational": "0",
+ "equation": "1 - 0\\varpi^{-1} = \\int_0^1 0\\dfrac{\\sqrt{1-x^4}}{\\pi} \\mathrm{d} x+1 > 0"
+}

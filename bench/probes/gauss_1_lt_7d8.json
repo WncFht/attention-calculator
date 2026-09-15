@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 0, b = 15/4"
+ },
+ "parameters": {
+  "a_val": "0",
+  "au_val": "0",
+  "b_val": "15/4",
+  "bu_val": "15",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 1,
+  "n": 1,
+  "u_val": "4",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "7/8",
+ "equation": "\\dfrac{7}{8}G^{-1}-1 = \\int_0^1 \\frac{15 x^{10}}{4}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

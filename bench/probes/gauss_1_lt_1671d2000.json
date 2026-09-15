@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 7633119/2090, b = 796692897/256000"
+ },
+ "parameters": {
+  "a_val": "7633119/2090",
+  "au_val": "195407846400",
+  "b_val": "796692897/256000",
+  "bu_val": "166508815473",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 5,
+  "n": 1,
+  "u_val": "53504000",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "1671/2000",
+ "equation": "\\dfrac{1671}{2000}G^{-1}-1 = \\int_0^1 \\frac{x^{22} \\cdot \\left(166508815473 x^{4} + 195407846400\\right)}{53504000}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 2, b = 0"
+ },
+ "parameters": {
+  "a_val": "2",
+  "au_val": "2",
+  "b_val": "0",
+  "bu_val": "0",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "1",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": ">",
+ "rational": "1/2",
+ "equation": "G-\\dfrac{1}{2} = \\int_0^1  2\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

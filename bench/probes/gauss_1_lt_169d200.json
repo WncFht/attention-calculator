@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 767091/209, b = 80062983/25600"
+ },
+ "parameters": {
+  "a_val": "767091/209",
+  "au_val": "19637529600",
+  "b_val": "80062983/25600",
+  "bu_val": "16733163447",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 5,
+  "n": 1,
+  "u_val": "5350400",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "169/200",
+ "equation": "\\dfrac{169}{200}G^{-1}-1 = \\int_0^1 \\frac{x^{22} \\cdot \\left(16733163447 x^{4} + 19637529600\\right)}{5350400}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

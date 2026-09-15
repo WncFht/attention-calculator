@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 8/5, b = 3/5"
+ },
+ "parameters": {
+  "a_val": "8/5",
+  "au_val": "8",
+  "b_val": "3/5",
+  "bu_val": "3",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "5",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "49/50",
+ "equation": "\\dfrac{49}{50}G^{-1}-1 = \\int_0^1 \\frac{x^{2} \\cdot \\left(3 x^{4} + 8\\right)}{5}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

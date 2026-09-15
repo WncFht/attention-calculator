@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 0, b = 42/5"
+ },
+ "parameters": {
+  "a_val": "0",
+  "au_val": "0",
+  "b_val": "42/5",
+  "bu_val": "42",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "5",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": "<",
+ "rational": "14/5",
+ "equation": "\\dfrac{14}{5} - \\varpi = \\int_0^1 \\frac{42 x^{7}}{5}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

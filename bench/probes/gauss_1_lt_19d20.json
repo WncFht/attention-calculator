@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 1, b = 3/2"
+ },
+ "parameters": {
+  "a_val": "1",
+  "au_val": "2",
+  "b_val": "3/2",
+  "bu_val": "3",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "2",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "19/20",
+ "equation": "\\dfrac{19}{20}G^{-1}-1 = \\int_0^1 \\frac{x^{2} \\cdot \\left(3 x^{4} + 2\\right)}{2}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

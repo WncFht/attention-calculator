@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 3/5, b = 21/10"
+ },
+ "parameters": {
+  "a_val": "3/5",
+  "au_val": "6",
+  "b_val": "21/10",
+  "bu_val": "21",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 1,
+  "u_val": "10",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "gauss",
+ "power": "1",
+ "comparison": "<",
+ "rational": "93/100",
+ "equation": "\\dfrac{93}{100}G^{-1}-1 = \\int_0^1 \\frac{x^{2} \\cdot \\left(21 x^{4} + 6\\right)}{10}\\dfrac{(1-x)}{\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

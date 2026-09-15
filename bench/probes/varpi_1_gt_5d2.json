@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 53/7, b = 26/7"
+ },
+ "parameters": {
+  "a_val": "53/7",
+  "au_val": "53",
+  "b_val": "26/7",
+  "bu_val": "26",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 2,
+  "n": 0,
+  "u_val": "7",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "varpi",
+ "power": "1",
+ "comparison": ">",
+ "rational": "5/2",
+ "equation": "1 - \\dfrac{5}{2}\\varpi^{-1} = \\int_0^1  \\frac{x^{9} \\cdot \\left(26 x^{4} + 53\\right)}{7}\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}} \\mathrm{d} x > 0"
+}

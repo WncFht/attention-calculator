@@ -1,0 +1,23 @@
+{
+ "equations": {
+  "solution": "a = 11/160, b = 7/32"
+ },
+ "parameters": {
+  "a_val": "11/160",
+  "au_val": "11",
+  "b_val": "7/32",
+  "bu_val": "35",
+  "c_val": "0",
+  "cu_val": "0",
+  "m": 0,
+  "n": 0,
+  "u_val": "160",
+  "unified_form": {}
+ },
+ "success": true,
+ "type": "golden",
+ "power": "1",
+ "comparison": "<",
+ "rational": "2",
+ "equation": "2 - \\phi = \\int_0^1 \\frac{\\sqrt{x + 4} \\cdot \\left(35 x + 11\\right)}{160} \\mathrm{d} x > 0"
+}
