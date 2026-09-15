@@ -4,7 +4,7 @@
 ast 解析受限文法 → 项的线性组合 → 归一 left > right → 二阶导符号分类 →
 定义域数值最小值 → (proved|inconclusive|failed) → 有理切点切线搜索。
 
-错误面与站端逐字一致: ast.dump(node) 直接进错误串
+错误面与站端逐字一致: ast.dump(node, show_empty=True) 直接进错误串
 （`unsupported atom Call(func=Name(id='foo', ctx=Load()), ...)`）、
 `log only supports argument x`、缺字段 `请输入一个不等式。`。
 
@@ -105,11 +105,11 @@ def parse_atom(node: ast.expr) -> Atom:
     if isinstance(node, ast.Name):
         if node.id == "x":
             return ("x",)
-        raise ValueError(f"unsupported atom {ast.dump(node)}")
+        raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
     if isinstance(node, ast.Call):
         fname = node.func.id if isinstance(node.func, ast.Name) else ""
         if fname not in ("exp", "log", "sqrt"):
-            raise ValueError(f"unsupported atom {ast.dump(node)}")
+            raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
         if (len(node.args) != 1 or node.keywords
                 or not isinstance(node.args[0], ast.Name) or node.args[0].id != "x"):
             raise ValueError(f"{fname} only supports argument x")
@@ -118,7 +118,7 @@ def parse_atom(node: ast.expr) -> Atom:
             and isinstance(node.left, ast.Name) and node.left.id == "x"
             and is_const_expr(node.right)):
         return ("pow", eval_const(node.right))
-    raise ValueError(f"unsupported atom {ast.dump(node)}")
+    raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
 
 
 def mul_factors(node: ast.expr) -> list[ast.expr]:
@@ -150,10 +150,10 @@ def parse_term(node: ast.expr) -> Term:
                 atoms.append(parse_atom(f))  # 各因子自己的错误串（Name('y') 等）
         for f in denom:
             if not is_const_expr(f):
-                raise ValueError(f"unsupported atom {ast.dump(node)}")
+                raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
             coef /= eval_const(f)
         if len(atoms) != 1:
-            raise ValueError(f"unsupported atom {ast.dump(node)}")
+            raise ValueError(f"unsupported atom {ast.dump(node, show_empty=True)}")
         return coef, atoms[0]
     return Fraction(1), parse_atom(node)
 
