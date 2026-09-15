@@ -67,7 +67,10 @@ def compare_record(rec: dict) -> dict:
         out["ours_error"] = "要证明的式子不等号方向反了"
     except NoSolution:
         out["ours_success"] = False
-        out["ours_error"] = "no_solution"
+        # 与 server 同一口径，error_match 才有意义
+        from attention_calculator.server import EXPONENT_LIMIT
+        limit = EXPONENT_LIMIT.get(rec["type"], 10)
+        out["ours_error"] = f"在指数不超过{limit}的范围内未找到{rec['comparison']}方向的解"
     except ValueError as exc:  # 域校验失败——与站点文案比对
         out["ours_success"] = False
         out["ours_error"] = str(exc)

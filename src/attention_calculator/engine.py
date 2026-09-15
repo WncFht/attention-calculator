@@ -25,16 +25,20 @@ class NoSolution(Exception):
 
 
 def mn_order(limit: int) -> Iterator[tuple[int, int]]:
-    """Yield (m, n) with m+n ascending, then |m-n|, then m ascending.
+    """Yield (m, n) with m+n ascending, |m-n| ascending, then the parity rule.
 
-    Observed site convention: among (m, n) pairs with the same sum and the
-    same |m-n|, the smaller-m variant is tried first — e.g. pi>8/3 resolves
-    at (0, 1) even though (1, 0) is also a valid proof.
+    Observed site convention: mirror pairs are tried smaller-m first when the
+    sum is odd, larger-m first when even — ln²(3/2)<17/100 resolves at (2, 0)
+    though (0, 2) is also a valid proof, while pi>8/3 resolves at (0, 1) over
+    (1, 0). Equivalent to walking n = ⌈s/2⌉, ⌈s/2⌉-1, ⌈s/2⌉+1, ⌈s/2⌉-2, …
     """
     for s in range(0, 2 * limit + 1):
-        pairs = [(m, s - m) for m in range(s + 1) if s - m <= limit and m <= limit]
-        pairs.sort(key=lambda p: (abs(p[0] - p[1]), p[0]))
-        yield from pairs
+        for d in range(s % 2, s + 1, 2):
+            lo, hi = (s - d) // 2, (s + d) // 2
+            pair = (lo, hi) if s % 2 else (hi, lo)
+            for m, n in dict.fromkeys((pair, pair[::-1])):
+                if m <= limit and n <= limit:
+                    yield m, n
 
 
 def solve_moment(basis: list[Moment], target: Moment) -> list[Fraction]:

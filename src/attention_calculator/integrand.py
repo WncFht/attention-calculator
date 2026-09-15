@@ -175,7 +175,7 @@ def gamma_integrand(comp: str, p: dict):
     sub = x**m * (1 - x) ** n \
         * (sp.Rational(a.numerator, a.denominator)
            + sp.Rational(b.numerator, b.denominator) * x) \
-        / (1 + k * x) ** n
+        / (1 + k * x) ** max(m, n, 1)  # 分母幂同 ln 族 s = max(m,n,1) 约定
     return first + sub
 
 
