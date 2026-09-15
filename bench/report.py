@@ -32,7 +32,8 @@ def parity_table(rows: list[dict]) -> str:
         by_type[r["type"]].append(r)
 
     lines = [
-        "| type | n | site ok | both ok | site ok / ours fail | site fail / ours ok | param exact | crashes |",
+        "| type | n | site ok | both ok | site ok / ours fail"
+        " | site fail / ours ok | param exact | crashes |",
         "|---|---|---|---|---|---|---|---|",
     ]
     tot = defaultdict(int)
@@ -46,7 +47,7 @@ def parity_table(rows: list[dict]) -> str:
         crash = sum(1 for r in rs if str(r.get("ours_error", "")).startswith("crash"))
         lines.append(f"| {t} | {n} | {site_ok} | {both} | {s_o_f} | {s_f_o} | {exact} | {crash} |")
         for k, v in zip(("n", "site_ok", "both", "s_o_f", "s_f_o", "exact", "crash"),
-                        (n, site_ok, both, s_o_f, s_f_o, exact, crash)):
+                        (n, site_ok, both, s_o_f, s_f_o, exact, crash), strict=True):
             tot[k] += v
     lines.append(f"| **合计** | {tot['n']} | {tot['site_ok']} | {tot['both']} | "
                  f"{tot['s_o_f']} | {tot['s_f_o']} | {tot['exact']} | {tot['crash']} |")
