@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 r"""第二波边缘探针：钉死 /get_integral_image 的校验规则和 /calculate 的校验顺序。
 
 第一波发现站端 image 端点不是笼统 500，而是逐字段 400 校验
@@ -13,6 +12,7 @@ a/b/c 的格式域（Fraction() 直解？接受小数/科学计数法？）、�
 记录格式与 edge_probe.py 相同，追加进同一个 edge-probes.jsonl。
 """
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -247,10 +247,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     if args.only:
         todo = [p for p in todo if args.only in p["id"]]
