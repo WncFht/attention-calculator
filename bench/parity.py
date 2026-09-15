@@ -13,12 +13,19 @@ import argparse
 import json
 import sys
 import time
+from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from attention_calculator.engine import NoSolution, WrongDirection
+from attention_calculator.render import coerce_params, render_equation
 from attention_calculator.solve import prove
+
+
+def _norm(tex: str) -> str:
+    """Whitespace-insensitive LaTeX compare."""
+    return "".join(tex.split())
 
 
 def compare_record(rec: dict) -> dict:
@@ -43,6 +50,17 @@ def compare_record(rec: dict) -> dict:
                 str(ours.get(k)) == str(site.get(k))
                 for k in ("m", "n", "a_val", "b_val", "c_val", "u_val")
             )
+            if rec.get("equation"):
+                try:
+                    eq = render_equation(
+                        coerce_params(ours), rec["type"], Fraction(rec["power"]),
+                        rec["comparison"], Fraction(rec["rational"]))
+                    out["equation_match"] = _norm(eq) == _norm(rec["equation"])
+                    if not out["equation_match"]:
+                        out["ours_equation"] = eq
+                except Exception as exc:
+                    out["equation_match"] = None
+                    out["equation_error"] = f"{type(exc).__name__}: {exc}"
     except WrongDirection:
         out["ours_success"] = False
         out["ours_error"] = "wrong_direction"
@@ -87,8 +105,11 @@ def main() -> None:
     exact = sum(1 for r in results if r.get("param_match"))
     crashes = [r for r in results if str(r.get("ours_error", "")).startswith("crash")]
 
+    eq_match = sum(1 for r in results if r.get("equation_match"))
+    eq_total = sum(1 for r in results if r.get("equation_match") is not None)
     print(f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
-          f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} crashes={len(crashes)}")
+          f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
+          f"eq_match={eq_match}/{eq_total} crashes={len(crashes)}")
     if crashes:
         print("CRASHES (fix first):")
         for r in crashes[:20]:
