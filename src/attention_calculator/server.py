@@ -76,6 +76,8 @@ def domain_error(kind: str, power: Fraction) -> str | None:
         power.denominator == 1 or not 0 < power < Fraction(1, 2)
     ):
         return "请在输入一个在(0,1/2)内的分数，本情况不支持整数"  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+    if kind in ("sin_q_degree", "cos_q_degree") and not 0 < power < 90:
+        return "请在输入一个在(0,90)内的数"  # 站端原文(含"在"字笔误)
     return None
 
 
