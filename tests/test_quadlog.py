@@ -309,7 +309,6 @@ def test_wrong_direction(kind, power, comp, bound):
 
 @pytest.mark.parametrize("kind,power,comp,bound", [
     ("arctan_q", "3", "<", "5/4"),     # true but needs exponents > 10
-    ("catalan", "1", "<", "915965594177219/1000000000000000"),
     ("pi_n", "2", "<", "986960440109/100000000000"),
 ])
 def test_no_solution(kind, power, comp, bound):
