@@ -25,6 +25,8 @@ from fractions import Fraction
 from functools import cache
 from math import comb, factorial, gcd, lcm
 
+import sympy as sp
+
 from ..engine import mn_order, search
 from ..moment import Moment
 from ..render import rat_tex, wire_fraction
@@ -161,84 +163,46 @@ def const_tex(kind: str, power: Fraction | str) -> str:
     return "\\zeta(3)" if pv == 1 else rat_tex(power) + "\\zeta(3)"
 
 
-def paren_pow(inner: str, e: int) -> str:
-    """'\\left(inner\\right)^{e}', exponent omitted for e == 1."""
-    return f"\\left({inner}\\right)" if e == 1 else f"\\left({inner}\\right)^{{{e}}}"
+def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
+    """Numerator t·x^{2m+odd}·(1-x²)^n·(au+bu·x²) as a sympy expression.
 
-
-def poly_tex(au: int, bu: int) -> str:
-    """Inner string of a + b·x^2: positive term first, x^2 term first on ties.
-
-    Leading negative renders as '- 2 x^{2}'; coefficient 1 on x^2 is omitted.
+    The site binds t into the first surviving factor (x-part, then the basis,
+    then P); the Mul then canonicalizes — a monomial or constant P merges into
+    the leading coefficient/power, a printed P equal to the basis factor folds
+    into its power (so fold needs t·au==1, t·bu==-1 whenever t scales the
+    basis), and the Add factors come out in sympy's print order — e.g.
+    ``(1-x²)`` before ``(3-3x²)``.
     """
-    first_x2 = bu > 0 or au <= 0  # both-nonpositive also lists the x^2 term first
-    terms = [(bu, True), (au, False)] if first_x2 else [(au, False), (bu, True)]
-    out = ""
-    for i, (v, is_x2) in enumerate(terms):
-        body = ("x^{2}" if abs(v) == 1 else f"{abs(v)} x^{{2}}") if is_x2 else str(abs(v))
-        if i == 0:
-            out = ("- " + body) if v < 0 else body
-        else:
-            out += (" + " if v > 0 else " - ") + body
-    return out
-
-
-def numerator_tex(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> str:
-    """Rendered numerator of t·x^{2m+odd}(1-x^2)^n(au+bu·x^2)/u.
-
-    The site canonicalizes monomial factors: a one-term P merges into the x-part
-    (a as scalar, b·x^2 as extra degree), and P = 1-x^2 (i.e. au==1, bu==-1)
-    merges into the basis power. The scale factor t lands on the first factor.
-    Exactly one '\\cdot' is printed; its position is the observed truth table.
-    """
-    p = 2 * m + odd
-    if au == 1 and bu == -1:  # folded: t·x^p·(1-x^2)^{n+1}
-        e = n + 1
-        xp = f"x^{{{p}}}" if t == 1 else f"{t} x^{{{p}}}"
-        b = paren_pow("1 - x^{2}", e) if t == 1 or p else (
-            f"\\left({t} - {t} x^{{2}}\\right)" if e == 1
-            else f"{t} \\left(1 - x^{{2}}\\right)^{{{e}}}")
-        if p == 0:
-            return "1 - x^{2}" if (e == 1 and t == 1) else (
-                f"{t} - {t} x^{{2}}" if e == 1 else b)
-        return xp + (" \\cdot " if e == 1 else " ") + b
-    # single-term P merges into the x-part
-    mono_b = bu if au == 0 else 0
-    p += 2 if mono_b else 0
-    c1 = t * (au if bu == 0 else mono_b or 1)  # scalar on the x-part
+    x = sp.symbols("x")
     pieces = []
-    if p:
-        pieces.append(f"x^{{{p}}}" if c1 == 1 else f"{c1} x^{{{p}}}")
+    if 2 * m + odd:
+        pieces.append(x ** (2 * m + odd))
     if n:
-        if p or t == 1:
-            pieces.append(paren_pow("1 - x^{2}", n))
-        else:
-            pieces.append(f"\\left({t} - {t} x^{{2}}\\right)" if n == 1
-                          else f"{t} \\left(1 - x^{{2}}\\right)^{{{n}}}")
-    two_term = au != 0 and bu != 0
-    if two_term:
-        if not pieces:
-            # lone (possibly t-scaled) polynomial, printed expanded without parens
-            return poly_tex(au * t, bu * t)
-        pieces.append(f"\\left({poly_tex(au, bu)}\\right)")
-    if len(pieces) == 1:
-        return pieces[0]
-    # joins: cdot before a degree-1 basis factor or before P; plain space otherwise,
-    # except a lone unscaled basis factor never takes a cdot.
-    if len(pieces) == 2:
-        first, second = pieces
-        if not two_term:  # [x, B] merged-monomial/constant pair
-            sep = " \\cdot " if n == 1 else " "
-        elif p:          # [x, P]
-            sep = " \\cdot "
-        else:            # [B, P]: cdot only when B is a scaled power (t>1, n>1)
-            sep = " \\cdot " if t != 1 and n > 1 else " "
-        return first + sep + second
-    # three pieces [x, B, P]
-    x, b, pp = pieces
-    j1 = " \\cdot " if n == 1 else " "
-    j2 = " " if n == 1 else " \\cdot "
-    return x + j1 + b + j2 + pp
+        pieces.append((1 - x ** 2) ** n)
+    if au or bu:
+        pieces.append(au + bu * x ** 2)
+    pieces[0] = t * pieces[0]
+    return sp.Mul(*pieces)
+
+
+def factors_tex(num: sp.Expr) -> str:
+    """Per-factor sympy latex joined by the site cdot rule.
+
+    `` \\cdot `` iff the left piece ends in '}' and the right is a
+    ``\\left(<digit>...\\right)`` group — a parenthesized Add carrying no
+    outer exponent (same rule as beta_family.join_cdot).
+    """
+    args = num.as_ordered_factors()
+    wrap = len(args) > 1
+    tex = [f"\\left({sp.latex(a)}\\right)" if a.is_Add and wrap else sp.latex(a)
+           for a in args]
+    out = tex[0]
+    for prev, cur in zip(tex, tex[1:]):
+        cdot = (prev.endswith("}") and cur.startswith("\\left(")
+                and cur[6].isdigit() and cur.endswith("\\right)"))
+        out += " \\cdot " if cdot else " "
+        out += cur
+    return out
 
 
 def render_equation(params: dict, kind: str, power: Fraction | str,
@@ -264,9 +228,19 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     # scale t so the denominator u'·(1+q^2 x^2) has integer coefficients
     s = q.denominator
     t = s * s // gcd(s * s, u)
-    den = f"x^{{2}} + {u * t}" if q * q * u * t == 1 else f"{u * t * q * q} x^{{2}} + {u * t}"
 
-    num = numerator_tex(m, n, cfg["odd"], au, bu, t)
+    x = sp.symbols("x")
+    qq = sp.Rational(q.numerator, q.denominator)
+    num = numerator(m, n, cfg["odd"], au, bu, t)
+    den = u * t * (qq * qq * x ** 2 + 1)
+
+    # the site feeds the assembled fraction through sympy: a numerator
+    # proportional to the denominator cancels away entirely (pi 0 < 1 -> 1)
+    ratio = sp.cancel(num / den)
+    if ratio.as_numer_denom()[1] == 1:
+        body = sp.latex(ratio)
+    else:
+        body = f"\\frac{{{factors_tex(num)}}}{{{sp.latex(den)}}}"
 
     if kind == "pi_n":
         r = pv.numerator - 1
@@ -278,4 +252,4 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     else:
         ln = ""
     tail = "  \\mathrm{d} x > 0" if (kind == "pi" and comp == ">") else " \\mathrm{d} x > 0"
-    return f"{lhs}{eq_sep}\\int_0^1 \\frac{{{num}}}{{{den}}}{ln}{tail}"
+    return f"{lhs}{eq_sep}\\int_0^1 {body}{ln}{tail}"
