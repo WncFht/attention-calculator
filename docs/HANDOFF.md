@@ -144,13 +144,15 @@ golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain�
 - 停前在找原作者关于凸性证明器的专栏文章（文章归档在
   `~/Desktop/obsidian/output/zhihu-mathematical/`，那里没有的话可抓知乎原文）。
 
-### 6. /convex 求解器骨架（刚起步）
-- 已确认：`ast.dump` 产生的正是泄漏的报错格式；`pyproject.toml` 已加 scipy
-  （顺带加了 tuna 镜像源——保留）。`convex.py` 本体还没写。
-- 任务书在 wip 快照的 agent 记录里：解析器（ast，错误串逐字）、归一化、凹凸分类、
-  状态机、数值最小化与切点搜索留 seam 等探测数据。
-- 路由约定：GET `/convex/` + `/convex/en` 同一页面、POST `/convex/prove`、
-  `/convex/static/*`；错误包络 `{"error","ok":false}`。
+### 6. /convex 求解器 — 骨架完成，等探测数据收尾
+- `src/attention_calculator/convex.py` 已写：ast 解析（错误串=`ast.dump` 逐字）、
+  归一化、凹凸分类、状态机+全部 reason 原文、scipy brentq 数值引擎、
+  provided_line 处理、响应 dict 全字段；路由已挂（/convex/ + /convex/en +
+  POST /convex/prove + /convex/static/*）。
+- 样例精度：`minimum.value` 逐位一致，`x` 差 1 ulp——等 convex-probe 钉
+  bracket/xtol/候选集后对齐。全部待定点收在 `ProbeConfig` +
+  `convergent_candidates`（候选集假说：CF 渐近分数，样例 17/30 吻合）。
+- 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）。
 
 ## 协作约定（照此执行过的）
 
