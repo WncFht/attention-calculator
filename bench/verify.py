@@ -167,7 +167,8 @@ def verify_record(rec: dict) -> dict:
     """验证单条记录，返回结论 dict（字段供 bench/report.py 聚合）。"""
     kind, comp = rec["type"], rec["comparison"]
     out = {"type": kind, "power": rec["power"], "comparison": comp,
-           "rational": rec["rational"], "success": rec.get("success", False)}
+           "rational": rec["rational"], "success": rec.get("success", False),
+           "parameters": rec.get("parameters")}
     mp.dps = 50
     if not rec.get("success"):
         out["error"] = rec.get("error", "")
@@ -200,6 +201,7 @@ def verify_record(rec: dict) -> dict:
     out["quad_error_est"] = mp.nstr(err, 5)
     dev = abs(val - lhs)
     out["abs_deviation"] = mp.nstr(dev, 5)
+    out["margin"] = mp.nstr(val - lhs, 5)  # 有符号差 actual−claimed
     out["identity_ok"] = bool(dev <= TOL_REL * max(1, abs(lhs)))
     sgn = sign_scan(f, a, b)
     out["sign_scan"] = {1: "nonneg", -1: "nonpos", 0: "changes"}[sgn]
