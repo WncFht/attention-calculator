@@ -2,7 +2,8 @@
 
 输入校验顺序、公式、阈值、状态文案与提示语全部来自线上实测
 （bench/data/health-probes.jsonl，规则推导见 docs/health-notes.md）。
-入口 ``calculate(data)`` 返回 ``(results_dict, error_str)``；server 层负责
+入口 ``validate(data)`` 返回 ``(fields, err)``、``calculate(fields)`` 返回
+``results_dict``；server 层负责
 把错误包成 ``{"error": ..., "ok": false}``、把结果包成
 ``{"ok": true, "record_id": n, "results": ...}``。
 """
