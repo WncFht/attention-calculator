@@ -1,4 +1,4 @@
-# ruff: noqa: RUF001, RUF002, RUF003  # 中文标点属刻意文体
+# 中文标点属刻意文体
 """批量验证积分恒等式记录（golden.jsonl 或本方 solver 输出）。
 
 每条 success=true 的记录验证两件事：
