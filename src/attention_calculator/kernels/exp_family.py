@@ -10,25 +10,11 @@ from math import comb, lcm
 
 import sympy as sp
 
-from ..engine import search
+from ..engine import mn_order, search
 from ..moment import Moment, add, combine, scale
 
 LIMIT_E = 30  # e、pi 两类型指数上限 30
 LIMIT_OTHER = 10
-
-
-def mn_order(limit: int):
-    """(m,n) in the site's order: m+n asc, |m-n| asc, then m asc.
-
-    engine.mn_order breaks |m-n| ties towards larger m; the live site does
-    the opposite (e.g. e_pi power=3/4 picks (1,2) over (2,1), cosh_q picks
-    (0,1) over (1,0)). Kept local so family parity does not depend on the
-    shared engine ordering.
-    """
-    for s in range(2 * limit + 1):
-        pairs = [(m, s - m) for m in range(s + 1) if s - m <= limit and m <= limit]
-        pairs.sort(key=lambda p: (abs(p[0] - p[1]), p[0]))
-        yield from pairs
 
 
 def exp_x_moments(q: Fraction, sym: str, upto: int) -> list[Moment]:
@@ -73,6 +59,30 @@ def basis_sin_moment(m: int, n: int, j: int) -> Moment:
     return combine(coeffs, [exp_sin_moment(m + j + i) for i in range(n + 1)])
 
 
+def mul_latex(numer: sp.Expr, u: int) -> str:
+    """Site-style LaTeX of the integrand numerator / u.
+
+    The site puts `\\cdot` between a Pow factor and a following parenthesized
+    Add factor only when the Add's own text starts with a digit:
+    `x^{2} \\cdot \\left(1 - x\\right)` and `(1-x)^{2} \\cdot \\left(8 x + 3\\right)`,
+    but `x \\left(1 - x\\right)^{2} \\left(x + 1\\right)` (golden byte-diff).
+    Factor order is sympy's as_ordered_factors.
+    """
+    terms = numer.as_ordered_factors()
+    parts = []
+    for i, t in enumerate(terms):
+        tex = sp.latex(t)
+        cdot = terms[i - 1].is_Pow and isinstance(t, sp.Add) and tex[0].isdigit() if i else False
+        if isinstance(t, sp.Add):
+            tex = rf"\left({tex}\right)"
+        if i:
+            parts.append(" \\cdot " if cdot else " ")
+        parts.append(tex)
+    if u == 1:
+        return "".join(parts)
+    return rf"\frac{{{''.join(parts)}}}{{{u}}}"
+
+
 def frac_latex(r: Fraction) -> str:
     """Site-style rational LaTeX: integers bare, fractions as \\dfrac."""
     if r.denominator == 1:
@@ -110,11 +120,11 @@ def emit(kind: str, m: int, n: int, coeffs: list[Fraction]) -> dict:
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
-    """prove(kind, power, comp, bound) -> site /calculate shape."""
-    if power <= 0:
-        raise ValueError("左侧系数格式无效")
-    if bound <= 0:
-        raise ValueError("右侧有理数格式无效")
+    """prove(kind, power, comp, bound) -> site /calculate shape.
+
+    Input format is validated one layer up (server.NUM_RE); power==0 for
+    e_q reaches the natural 1/q division (site answers 500 there).
+    """
     if kind == "e_q":
         sym, coef, q, limit = "e_q", Fraction(1), power, LIMIT_OTHER
         plans = ((m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)])
@@ -144,10 +154,8 @@ def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: 
     else:
         q = power if kind == "e_q" else sp.Integer(1)
         integrand = x**m * (1 - x) ** n * (au + bu * x) * sp.exp(q * x)
-    if u != 1:
-        integrand = integrand / u
     const = const_latex(kind, power)
     r = frac_latex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
-    upper = "\\pi" if kind == "e_pi" else "1"
-    return f"{lhs} = \\int_0^{{{upper}}} {sp.latex(integrand)} \\mathrm{{d}} x > 0"
+    upper = "{\\pi}" if kind == "e_pi" else "1"
+    return f"{lhs} = \\int_0^{upper} {mul_latex(integrand, u)} \\mathrm{{d}} x > 0"

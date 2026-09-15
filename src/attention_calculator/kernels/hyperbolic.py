@@ -11,9 +11,9 @@ from math import comb, lcm
 
 import sympy as sp
 
-from ..engine import search
 from ..moment import Moment, add, combine, scale
-from .exp_family import emit, frac_latex, mn_order
+from ..engine import WrongDirection, mn_order, search
+from .exp_family import emit, frac_latex, mul_latex
 
 LIMIT = 10
 
@@ -62,11 +62,14 @@ def target_for(kind: str, comp: str, bound: Fraction) -> Moment:
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
-    """prove(kind, power, comp, bound) -> site /calculate shape."""
-    if power <= 0:
-        raise ValueError("左侧系数格式无效")
-    if bound <= 0:
-        raise ValueError("右侧有理数格式无效")
+    """prove(kind, power, comp, bound) -> site /calculate shape.
+
+    power==0: site reports 方向反了 for sinh/tanh (degenerate solve) and
+    a 500 for cosh/coth (1/q crash); reproduce both — the former by hand,
+    the latter by letting the Fraction division blow up.
+    """
+    if power == 0 and kind in ("sinh_q", "tanh_q"):
+        raise WrongDirection
     plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)])
              for m, n in mn_order(LIMIT))
     solved = search(plans, target_for(kind, comp, bound), True)
@@ -79,14 +82,13 @@ def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: 
     m, n = params["m"], params["n"]
     au, bu, cu, u = (params["au_val"], params["bu_val"], params["cu_val"], params["u_val"])
     integrand = x**m * (1 - x) ** n * (au + bu * x + cu * x**2) * sp.sinh(power * x)
-    if u != 1:
-        integrand = integrand / u
+    body = mul_latex(integrand, u)
     if kind == "tanh_q":
-        inner = f"\\dfrac{{1}}{{\\cosh({power})}} " + sp.latex(integrand)
+        inner = f"\\dfrac{{1}}{{\\cosh({power})}} " + body
     elif kind == "coth_q":
-        inner = f"\\dfrac{{1}}{{\\sinh({power})}} " + sp.latex(integrand)
+        inner = f"\\dfrac{{1}}{{\\sinh({power})}} " + body
     else:
-        inner = sp.latex(integrand)
+        inner = body
     const = const_latex(kind, power)
     r = frac_latex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
