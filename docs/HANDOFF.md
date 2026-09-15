@@ -30,13 +30,15 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 | 评测 | 数字 | 入口 |
 |---|---|---|
-| golden parity（/calculate + /get_integral_image，含响应体逐字节） | master：原 2969/2969 全绿；**wip 快照：3454/3454 status+body，仅 17 条 eq 文本 diff** | `bench/parity.py bench/data/golden.jsonl` |
+| golden parity（/calculate + /get_integral_image，含响应体逐字节） | **wip 全绿：3454/3454 status+body，eq_match 1588/1588** | `bench/parity.py bench/data/golden.jsonl` |
 | verify（恒等式数学真值，50dps） | 1391 成功记录中 1358 真 + **33 假=站点 bug 复现**（30 trig-bias + 3 gauss-window），0 未知 | `bench/verify.py` |
-| edge 重放（305 条边缘探针离线重放） | 273 match / 32 mismatch（30 条在修 + health/convex 页面） | `bench/replay_edge.py` |
-| fuzz 重放（922 条随机探针离线重放） | 906 match / 16 mismatch（全部 kernel-edge 范围） | `bench/replay_fuzz.py` |
-| decompose parity | 2/87——decompose.py 还没写 | `bench/parity_decompose.py` |
-| 页面字节级 | `/`、`/en`、`/attention` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
-| pytest | 460 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
+| edge 重放（376 条边缘探针离线重放） | 368 match / 8 mismatch（7 float-fidelity + 1 decompose nosolve） | `bench/replay_edge.py` |
+| fuzz 重放（922 条随机探针离线重放） | **922/922 全绿** | `bench/replay_fuzz.py` |
+| health parity（姊妹应用） | **420/420 字节级全绿** | `bench/parity_health.py` |
+| convex parity（姊妹应用，333 tags） | 79 match / 254 mismatch——求解器在收敛中 | `bench/parity_convex.py` |
+| decompose parity | combo+decompose 全集未绿——decompose.py 还没写 | `bench/parity_decompose.py` |
+| 页面字节级 | `/`、`/en`、`/attention`、`/convex`、`/health`、`/health/en` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
+| pytest | 566 绿 + 21 skip + 2 挂（fidelity direction_f 在制） | `.venv/bin/python -m pytest tests/` |
 
 全量评测一条命令：`bench/run_all.sh`（同步 devbox → parity → decompose parity →
 两份重放 → verify → 聚合报告）。
@@ -131,26 +133,25 @@ JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/h
 注意：`/convex/prove` 的 catch-all 目前用主站 500 文案（无句号），若 convex 探针
 发现站端 500 带「。」需换 `SIBLING_INTERNAL_ERROR`（已转告 convex-probe agent）。
 
-### 5. /convex 行为探测（进行中，数据是求解器的前提）
-- 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr）。
-- 待测绘：原子清单与报错全集、归一化拆边规则、凹凸分类边界、minimum 的数值方法
-  （x_text ~12 位有效数字，疑似 scipy minimize_scalar——对 scipy 输出版本敏感）、
-  **有理切点候选集与排除规则**（核心谜题：`e^x>=x+1` 的 x0=0 为何不被认可）、
-  provided_line 语义、全部 reason 原文。
-- 产出目标：`bench/data/convex-probes.jsonl`（~200-400 条）、
-  `bench/data/convex-golden.jsonl`、`docs/convex-behavior.md`。
-- 停前在找原作者关于凸性证明器的专栏文章（文章归档在
-  `~/Desktop/obsidian/output/zhihu-mathematical/`，那里没有的话可抓知乎原文）。
+### 5. /convex 行为探测 — ✅ 数据侧已完成
+- 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr；
+  注意 Python 3.14 `ast.dump` 需 `show_empty=True` 才与老版本逐字一致）。
+- 已落盘：`bench/data/convex-probes.jsonl`（333 tags，13 个探针族）、
+  `docs/convex-behavior.md`（错误面/原子表/归一化/分类/minimum/tangent 全谱）、
+  `bench/convex_model.py`（离线假设模型）。
+- 判官：`bench/parity_convex.py` 逐字节重放（79/333 起步）。
 
-### 6. /convex 求解器 — 骨架完成，等探测数据收尾
+### 6. /convex 求解器 — 骨架完成，按 parity_convex 收敛中
 - `src/attention_calculator/convex.py` 已写：ast 解析（错误串=`ast.dump` 逐字）、
   归一化、凹凸分类、状态机+全部 reason 原文、scipy brentq 数值引擎、
-  provided_line 处理、响应 dict 全字段；路由已挂（/convex/ + /convex/en +
-  POST /convex/prove + /convex/static/*）。
-- 样例精度：`minimum.value` 逐位一致，`x` 差 1 ulp——等 convex-probe 钉
-  bracket/xtol/候选集后对齐。全部待定点收在 `ProbeConfig` +
-  `convergent_candidates`（候选集假说：CF 渐近分数，样例 17/30 吻合）。
-- 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）。
+  provided_line 处理、响应 dict 全字段；路由已挂（/convex + /convex/ +
+  /convex/en + POST /convex/prove + /convex/static/*）。
+- parity_convex 暴露的缺口：边界最小值误判 proved（站端 failed）、缺原子
+  （ln/e^x 字面/x^sqrt(2)/sqrt(const)/加法组）、显示归一化（√x、x*x→2*x）、
+  域上界 2^27、err 族错串措辞（`expects one argument`/`expected numeric
+  constant`/`float division by zero`/`products of two non-constant atoms`）。
+- 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）；未匹配路径
+  一律 500 `服务器内部错误，请稍后再试。`（带句号）。
 
 ## 协作约定（照此执行过的）
 
