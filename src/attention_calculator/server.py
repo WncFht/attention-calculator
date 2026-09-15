@@ -124,9 +124,12 @@ def calculate():
     except engine.NoSolution:
         limit = EXPONENT_LIMIT.get(kind, 10)
         return fail(f"在指数不超过{limit}的范围内未找到{comp}方向的解", 404)
+    except engine.EqualClaim as exc:
+        return fail(str(exc), 404)
     except ValueError as exc:
         return fail(str(exc), 400)
-    except ModuleNotFoundError:
+    except Exception:
+        # 站端对一切内核异常走 catch-all 500（probe: e_q 0、ln_q_square 5/7）
         return fail(INTERNAL_ERROR, 500)
 
     params = dict(result["parameters"])

@@ -1,7 +1,9 @@
-"""Parity harness: run our solver over golden cases, compare with the site.
+"""Parity harness: replay golden cases through the real server endpoints.
 
-Metrics per bench/README.md: success agreement, parameter exact-match, and
-(when integrand.py is available) validity of our produced identity.
+Each record is POSTed to /calculate exactly as the browser would send it, so
+the comparison covers the site's full wire behavior — validation order, domain
+messages, 500 catch-all — not just the solver. On success the proof equation is
+fetched from /get_integral_image with the same fields the frontend sends.
 
 Usage:
     python bench/parity.py [golden.jsonl] [--limit N] [--type pi]
@@ -17,9 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from attention_calculator.engine import NoSolution, WrongDirection
-from attention_calculator.render import coerce_params, render_equation
-from attention_calculator.solve import prove
+from attention_calculator.server import IMAGE_KEYS, app
 
 
 def _norm(tex: str) -> str:
@@ -27,8 +27,8 @@ def _norm(tex: str) -> str:
     return "".join(tex.split())
 
 
-def compare_record(rec: dict) -> dict:
-    """Run our solver on one golden record; classify the outcome."""
+def compare_record(client, rec: dict) -> dict:
+    """Replay one golden record against the live endpoints; classify."""
     out = {
         "type": rec["type"],
         "power": rec["power"],
@@ -39,51 +39,51 @@ def compare_record(rec: dict) -> dict:
     }
     t0 = time.time()
     try:
-        res = prove(rec["type"], rec["power"], rec["comparison"], rec["rational"])
+        resp = client.post("/calculate", data={
+            "type": rec["type"], "power": rec["power"],
+            "comparison": rec["comparison"], "rational": rec["rational"]})
+        body = resp.get_json(silent=True) or {}
+    except Exception as exc:  # harness-level failure — record loudly
+        out["ours_success"] = False
+        out["ours_error"] = f"crash: {type(exc).__name__}: {exc}"
+        return out
+    out["elapsed_ms"] = round(1000 * (time.time() - t0), 1)
+    out["status_match"] = resp.status_code == rec.get("http_status")
+
+    if not body.get("success"):
+        out["ours_success"] = False
+        out["ours_error"] = body.get("error") or f"http {resp.status_code}"
+    else:
         out["ours_success"] = True
-        out["ours_parameters"] = res["parameters"]
-        out["elapsed_ms"] = round(1000 * (time.time() - t0), 1)
+        out["ours_parameters"] = body["parameters"]
         if rec["success"]:
-            ours = res["parameters"]
-            site = rec["parameters"]
-            out["param_match"] = all(
-                str(ours.get(k)) == str(site.get(k))
-                for k in ("m", "n", "a_val", "b_val", "c_val", "u_val")
-            )
+            rc = rec.get("raw_calculate") or {}
+            if isinstance(rc, str):
+                rc = json.loads(rc)
+            out["param_match"] = body["parameters"] == rc.get("parameters")
+            out["solution_match"] = (
+                body.get("equations", {}).get("solution")
+                == rc.get("equations", {}).get("solution"))
             if rec.get("equation"):
-                try:
-                    # 原文回显：站端不约分，golden 里的请求串直接传入
-                    eq = render_equation(
-                        coerce_params(ours), rec["type"], rec["power"],
-                        rec["comparison"], rec["rational"])
+                img = client.get("/get_integral_image", query_string={
+                    **{k: str(body["parameters"][k]) for k in IMAGE_KEYS},
+                    "type": rec["type"], "comparison": rec["comparison"],
+                    "coef": rec["power"], "rational": rec["rational"]})
+                eq = (img.get_json(silent=True) or {}).get("equation")
+                if eq is None:
+                    out["equation_match"] = None
+                    out["equation_error"] = f"image http {img.status_code}"
+                else:
                     out["equation_match"] = _norm(eq) == _norm(rec["equation"])
                     if not out["equation_match"]:
                         out["ours_equation"] = eq
-                except Exception as exc:
-                    out["equation_match"] = None
-                    out["equation_error"] = f"{type(exc).__name__}: {exc}"
-    except WrongDirection:
-        out["ours_success"] = False
-        out["ours_error"] = "要证明的式子不等号方向反了"
-    except NoSolution:
-        out["ours_success"] = False
-        # 与 server 同一口径，error_match 才有意义
-        from attention_calculator.server import EXPONENT_LIMIT
-        limit = EXPONENT_LIMIT.get(rec["type"], 10)
-        out["ours_error"] = f"在指数不超过{limit}的范围内未找到{rec['comparison']}方向的解"
-    except ValueError as exc:  # 域校验失败——与站点文案比对
-        out["ours_success"] = False
-        out["ours_error"] = str(exc)
-    except Exception as exc:  # solver bug — record loudly, don't hide
-        out["ours_success"] = False
-        out["ours_error"] = f"crash: {type(exc).__name__}: {exc}"
     if not out["ours_success"] and not rec["success"]:
         out["error_match"] = out["ours_error"] == rec.get("error")
     return out
 
 
 def main() -> None:
-    """Compare our solver against every golden record and print metrics."""
+    """Replay every golden record and print parity metrics."""
     ap = argparse.ArgumentParser()
     ap.add_argument("golden", nargs="?", default="bench/data/golden.jsonl")
     ap.add_argument("--limit", type=int, default=0)
@@ -97,7 +97,8 @@ def main() -> None:
     if args.limit:
         records = records[: args.limit]
 
-    results = [compare_record(r) for r in records]
+    client = app.test_client()
+    results = [compare_record(client, r) for r in records]
     if args.out:
         with open(args.out, "w") as f:
             for r in results:
@@ -112,6 +113,8 @@ def main() -> None:
         r for r in results if not r["site_success"] and r.get("ours_success")
     ]
     exact = sum(1 for r in results if r.get("param_match"))
+    sol = sum(1 for r in results if r.get("solution_match"))
+    stat = sum(1 for r in results if r.get("status_match"))
     crashes = [r for r in results if str(r.get("ours_error", "")).startswith("crash")]
 
     eq_match = sum(1 for r in results if r.get("equation_match"))
@@ -120,6 +123,7 @@ def main() -> None:
     err_match = sum(1 for r in both_fail if r.get("error_match"))
     print(f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
           f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
+          f"solution_match={sol} status_match={stat} "
           f"eq_match={eq_match}/{eq_total} both_fail={len(both_fail)} "
           f"err_match={err_match} crashes={len(crashes)}")
     err_diff = [r for r in both_fail if r.get("error_match") is False]

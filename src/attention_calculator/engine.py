@@ -24,6 +24,23 @@ class NoSolution(Exception):
     """No candidate within the exponent budget gave a sign-definite proof."""
 
 
+class InternalError(Exception):
+    """Reproduced site-side crash: maps to the site's generic 500.
+
+    Raised for inputs where zhuyidao.net itself errors out (probed behavior,
+    e.g. ln_q_square with q in {5, 7} always 500s) rather than for our own
+    bugs.
+    """
+
+
+class EqualClaim(ValueError):
+    """Bound equals the constant exactly; the site reports 404 '二者相等'.
+
+    Subclasses ValueError so kernel-level callers see the validation-style
+    contract, while the server maps it to 404 ahead of the 400 catch.
+    """
+
+
 def mn_order(limit: int) -> Iterator[tuple[int, int]]:
     """Yield (m, n) with m+n ascending, |m-n| ascending, then the parity rule.
 

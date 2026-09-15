@@ -27,7 +27,8 @@ from math import comb, gcd, lcm
 
 import sympy as sp
 
-from ..engine import mn_order, search
+from ..engine import InternalError, WrongDirection, mn_order, search
+from ..integrand import constant_mpf
 from ..moment import Moment, combine
 from ..render import rat_tex, wire_fraction
 
@@ -108,6 +109,13 @@ def check_input(power: Fraction, bound: Fraction, kind: str) -> None:
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     check_input(power, bound, kind)
+    if kind == "ln_q_square" and power in (Fraction(5), Fraction(7)):
+        # 站端 bug：q=5/7 的求解过程必崩（500），但命题为假时仍先走常规
+        # 的"方向反了"——golden 16/16 按命题真假分列。方向判定按站端 float64。
+        diff = float(constant_mpf(kind, power)) - float(bound)
+        if (diff < 0) if comp == ">" else (diff > 0):
+            raise WrongDirection
+        raise InternalError
     qt = qtilde(kind, power)
     c = qt - 1
     square = kind == "ln_q_square"

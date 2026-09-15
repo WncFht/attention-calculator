@@ -243,6 +243,9 @@ def test_render_equation_bytes(kind, power, comp, bound, equation):
     ("ln_q_square", "2", ">", "1/2"),   # ln^2 2 ≈ 0.480 < 1/2
     ("artanh_q", "1/2", ">", "11/20"),  # artanh(1/2) ≈ 0.549 < 0.55
     ("arcoth_q", "2", ">", "11/20"),    # same q~=3 identity, also false
+    # q=5 站端 bug 路径下命题为假（ln²5=2.590290394 > 5709/2204≈2.590290381），
+    # 仍先报"反了"而不是 500
+    ("ln_q_square", "5", "<", "5709/2204"),
 ])
 def test_wrong_direction(kind, power, comp, bound):
     with pytest.raises(engine.WrongDirection):
@@ -250,11 +253,20 @@ def test_wrong_direction(kind, power, comp, bound):
 
 
 @pytest.mark.parametrize("kind,power,comp,bound", [
+    # 站端 bug：ln_q_square 的 q=5/7 命题为真时求解器必崩 -> 500
+    # （5 > 5709/2204 仅真 1.3e-8，亦 500）
+    ("ln_q_square", "5", ">", "2"),
+    ("ln_q_square", "5", ">", "5709/2204"),
+    ("ln_q_square", "7", "<", "4"),
+])
+def test_internal_error(kind, power, comp, bound):
+    with pytest.raises(engine.InternalError):
+        solve.prove(kind, power, comp, bound)
+
+
+@pytest.mark.parametrize("kind,power,comp,bound", [
     ("ln_q", "22", "<", "2105/681"),   # true but needs exponents > 10
     ("ln_q", "64", ">", "83/20"),
-    # site answers 500 on ln^2 5 claims regardless of direction (its own bug);
-    # our search legitimately exhausts the budget on this 1e-8-tight bound
-    ("ln_q_square", "5", ">", "5709/2204"),
 ])
 def test_no_solution(kind, power, comp, bound):
     with pytest.raises(engine.NoSolution):

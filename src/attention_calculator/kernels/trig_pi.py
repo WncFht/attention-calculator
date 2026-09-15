@@ -34,7 +34,7 @@ from math import comb, lcm
 
 import sympy as sp
 
-from ..engine import mn_order, search
+from ..engine import EqualClaim, mn_order, search
 from ..moment import Moment, combine
 from ..render import rat_tex
 from .trig_q import add_term, join_product, pow_term
@@ -100,7 +100,7 @@ def check_input(q: Fraction, bound: Fraction, kind: str) -> tuple[Fraction, str]
         q_eff = q
     # Niven: the only rational values are sin(pi/6) = cos(pi/3) = 1/2.
     if q_eff == (Fraction(1, 6) if is_sin else Fraction(1, 3)) and bound == Fraction(1, 2):
-        raise ValueError("二者相等")
+        raise EqualClaim("二者相等")
     alpha = 1 - 2 * q_eff if is_sin else 2 * q_eff
     return alpha, "sin_pi_q" if is_sin else "cos_pi_q"
 
