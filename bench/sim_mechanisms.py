@@ -19,9 +19,10 @@ from mpmath import mp
 
 sys.path.insert(0, "src")
 sys.path.insert(0, "bench")
-from attention_calculator.engine import mn_order, solve_moment, poly_nonneg
-from attention_calculator.kernels import quadlog, exp_family, log_family, trig_q
-from sim_float_solve import gauss_float, f_nonneg, f_nonpos
+from sim_float_solve import f_nonneg, f_nonpos, gauss_float
+
+from attention_calculator.engine import mn_order, solve_moment
+from attention_calculator.kernels import exp_family, log_family, quadlog, trig_q
 
 
 def basis_and_target(kind, power_s, comp, bound_s):
@@ -49,7 +50,8 @@ def basis_and_target(kind, power_s, comp, bound_s):
             sym, coef, q, limit = "e", power, Fraction(1), 30
         sign = 1 if comp == ">" else -1
         target = {sym: sign * coef, "1": -sign * bound}
-        mk = lambda m, n: [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
+        def mk(m, n):
+            return [exp_family.basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
         return limit, mk, target, bound
     if kind in ("ln_q", "ln_q_square"):
         qt = log_family.qtilde(kind, power)
@@ -58,15 +60,17 @@ def basis_and_target(kind, power_s, comp, bound_s):
         sign = Fraction(1 if comp == ">" else -1)
         target = ({"ln2": sign, "1": -sign * bound} if square
                   else {"ln": sign, "1": -sign * bound})
-        mk = lambda m, n: [log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
-                           for j in range(3 if square else 2)]
+        def mk(m, n):
+            return [log_family.basis_moment(c, max(m, n, 1), m, n, j, square)
+                    for j in range(3 if square else 2)]
         return 10, mk, target, bound
     if kind in ("sin_q", "cos_q"):
         s = Fraction(1 if comp == ">" else -1)
         target = ({"sin_q": s, "1": -s * bound} if kind == "sin_q"
                   else {"cos_q": s, "1": -s * bound})
         moments = trig_q.sin_moments(22, power)
-        mk = lambda m, n: [trig_q.basis_moment(moments, m, n, j) for j in range(3)]
+        def mk(m, n):
+            return [trig_q.basis_moment(moments, m, n, j) for j in range(3)]
         return 10, mk, target, bound
     raise ValueError(kind)
 
@@ -87,7 +91,6 @@ def mech_affine(basis, target, rf):
     for the r-coefficient: rhs_r = coefficient of r in rhs.
     """
     keys = sorted(set(target) | {k for m in basis for k in m})
-    rows = [[m.get(k, Fraction(0)) for m in basis] for k in keys]
     # rhs entries: only the "1" component carries r (value -sign*r or bound^pd)
     rhs0, rhsr = [], []
     for k in keys:
@@ -99,11 +102,11 @@ def mech_affine(basis, target, rf):
             rhs0.append(v)
             rhsr.append(Fraction(0))
     try:
-        u0 = solve_moment(basis, dict(zip(keys, rhs0)))
-        ur = solve_moment(basis, dict(zip(keys, rhsr)))
+        u0 = solve_moment(basis, dict(zip(keys, rhs0, strict=True)))
+        ur = solve_moment(basis, dict(zip(keys, rhsr, strict=True)))
     except ValueError:
         return None
-    return [float(a) + float(b) * rf for a, b in zip(u0, ur)]
+    return [float(a) + float(b) * rf for a, b in zip(u0, ur, strict=True)]
 
 
 def mech_mp(basis, target, rf, dps):
