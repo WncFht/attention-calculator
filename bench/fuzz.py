@@ -1,4 +1,4 @@
-# ruff: noqa: RUF002, RUF003
+# ruff: noqa: RUF001, RUF002, RUF003
 """随机差分模糊测试：同一请求打 zhuyidao.net 与本机克隆，比对响应找分歧。
 
 /calculate 探针：type 从 29 个合法值里取（偶发非法串），power/rational 覆盖
@@ -32,8 +32,8 @@ from cases import true_value
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from attention_calculator.kernels import TYPES  # noqa: E402
-from attention_calculator.server import IMAGE_KEYS, app  # noqa: E402
+from attention_calculator.kernels import TYPES
+from attention_calculator.server import app
 
 BASE = "https://zhuyidao.net"
 DATA_DIR = Path(__file__).parent / "data"
