@@ -1,9 +1,11 @@
 # /convex/prove 行为规范
 
 zhuyidao.net `/convex/prove` 的完整行为规格，供字节级复现。全部结论来自实测：2026-09-15
-共约 330 次请求，≤1.05 req/s；原始语料 `bench/data/convex-probes.jsonl`（每行含完整请求、
-verbatim raw 响应、tag），对齐子集 `bench/data/convex-golden.jsonl`（239 行，覆盖全部分支
-与全部错误串模板）。本文档取代 `docs/sibling-apps.md` §1 的细节（其中两处实测修正见 §12）。
+共 333 次请求（平均约 0.125 req/s）；原始语料 `bench/data/convex-probes.jsonl`（333 行，每行含
+完整请求、verbatim raw 响应、tag），求解路径子集 `bench/data/convex-golden.jsonl`
+（323 行 = 全部 POST `/convex/prove` 记录：proved 135 / failed 65 / inconclusive 25 /
+400 错误 98，覆盖全部分支与全部错误串模板；其余 10 条为传输层路由/方法探针）。本文档
+取代 `docs/sibling-apps.md` §1 的细节（其中两处实测修正见 §12）。
 
 站点行为与作者开源参考实现 `lianghuatiaojiushi/ConvexConcaveProver` 的 `scripts/prove.py`
 逐位一致（文章例题本地复算 `left_gap_min=8.004855962417956e-06`、`x_min=0.567143290409784`、
@@ -244,7 +246,7 @@ right_gap_min_x, ok}`，**纯诊断，不回灌 proof/status**（`line=1` 对 `x
 
 ## 10. `status` / `reason` 全表
 
-五个 `reason` 原文（227 例 200 响应的全集）：
+五个 `reason` 原文（225 例携带 `result` 的 200 响应全集；另 2 条 200 为 OPTIONS 空响应与 `GET /convex/en` 页面）：
 
 | status | proof | 触发 | reason 原文 |
 |---|---|---|---|
