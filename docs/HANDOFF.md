@@ -32,11 +32,11 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 |---|---|---|
 | golden parity（/calculate + /get_integral_image，含响应体逐字节） | **wip 全绿：3454/3454 status+body，eq_match 1588/1588** | `bench/parity.py bench/data/golden.jsonl` |
 | verify（恒等式数学真值，50dps） | 1438 成功记录中 1438 真/假随数据集增长——verify 把复现的站点 bug 也计入假（30 trig-bias + 3 gauss-window 等） | `bench/verify.py` |
-| edge 重放（376 条边缘探针离线重放） | 375 match / 1 mismatch（仅 `mth2:dec-nosolve`，等 decompose.py） | `bench/replay_edge.py` |
+| edge 重放（376 条边缘探针离线重放） | **376/376 全绿** | `bench/replay_edge.py` |
 | fuzz 重放（922 条随机探针离线重放） | **922/922 全绿** | `bench/replay_fuzz.py` |
 | health parity（姊妹应用） | **420/420 字节级全绿** | `bench/parity_health.py` |
 | convex parity（姊妹应用，333 tags） | **333/333 字节级全绿** | `bench/parity_convex.py` |
-| decompose parity | combo 87 字节级 + decompose 182 JSON 级——decompose.py 三方竞速中 | `bench/parity_decompose.py` |
+| decompose parity | **全绿：combo 87/87 字节级 + decompose 182/182 JSON 级**（wip `6e9b850`） | `bench/parity_decompose.py` |
 | 页面字节级 | `/`、`/en`、`/attention`、`/convex`、`/health`、`/health/en` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
 | pytest | 603 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
 
@@ -73,17 +73,27 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 ## 暂停时的在制品（6 个任务，按文件归属续作）
 
-### 1. decompose.py（组合拆解）— 语义全钉死，三方竞速实现中
-- 行为模型已收敛并验证：`bench/decompose_model.py` 的界值分配机制对全部 182 条
-  decompose 记录逐步验证吻合；leader 另补齐完整响应语义（见 /tmp/decompose-brief.md：
-  kept/moved 归一化形、steps 序=reversed Add.make_args(R−lhs)、逐步 prove+render
-  接线、错误串目录、decomposition_latex 链尾规则）。
-- 剩余：写 `src/attention_calculator/decompose.py` + 过 `bench/parity_decompose.py`
-  （combo 87 条逐字节 + decompose 182 条 JSON 级；transport_error 记录只需 400+error 键）。
-- 竞速：decompose→/tmp/decompose_v1.py、decompose2→/tmp/decompose_v2.py、
-  decompose3（fresh，从 brief 起步）→/tmp/decompose_v3.py；胜者装入 src。
-- 文法情报（已验证）：`e^pi` 合法（e_pi 型）；`pi^e`、`sin(30°)`、`sin(pi/5)`、
-  `ln(2)^2`、`phi^2`、`sin(1)*pi`、`ln(10)/pi` 全 400；`ln(2)` 带括号合法、`ln2` 不带 400。
+### 1. decompose.py（组合拆解）— ✅ 已完成（wip `6e9b850`，双判官全绿）
+
+`src/attention_calculator/decompose.py` 落地：combo 87/87 字节级、decompose 182/182
+JSON 级（transport_error 记录只需 400+error 键）。钉死的关键机制：
+
+- **sympy 表示**：函数全部用 undefined `sp.Function`，创建序 ln,sin,cos,tan,
+  arctan,sinh,tanh,exp——未定义应用函数按类创建序排 canon，逐字节复刻站端项序；
+  常数全是 Symbol（e/pi/gamma/golden/catalan/gauss/varpi/zeta3），`π` 字面量→`_PI`。
+- **记录链 k_min（惰性）**：up 链从第一个满足 `ceil(vk)/k ≤ 6v/5` 的 k 起
+  （ln2/ln3→4、ln5→3、pi→2、gamma/golden→3、cos/arctan→5 全由此出）；lo 链从第一个
+  `floor(vk) ≥ 1` 的 k 起（e 在 k=1 即有界 2，`pi+e+phi>6` 实测钉死，否定 5v/6 对称律）。
+- **单原子 |coef|=1 项走原子自己的链**，其余走 |项值| 的 val_chain（k_min=1）——
+  flip 后落到 −1 系数的项曾误走 val_chain，是最后的批量 diff 根因。
+- **'<' 无乘积项 → 翻转到 '>' 域分配**：全部系数取负、R→−R 按 '>' 规则分配，
+  resid 位置仍按原 '<' 规则选（最后负系数位，否则位 0），done 界最后翻回。
+- **倒数/因子拆序** = sympy `Mul.make_args` canon 序：`pi/e`→(pi,1/e) 取分子侧、
+  `pi^2/e`→(1/e,pi²) 取分母侧、`e^2/pi`→(e²,1/pi) 取分子侧，`reciprocal_split(first_j=0)` 直通。
+- **SympifyError 是 ValueError 子类**——须重抛 RuntimeError 让路由 `except Exception`
+  兜到 500 `组合证明生成失败，请稍后再试`；其余 ValueError→400 原文回显。
+- 输入先做 `replace(" ","").replace("\n","")` 去空白再解析；文法情报同上（`e^pi` 合法、
+  `ln2` 不带括号 400 等，见 `bench/decompose_model.py` 与 judge 数据）。
 
 ### 2. kernel 边缘分歧 — ✅ 已完成（wip `b6af6b9`+`b3bb0ab`）
 
