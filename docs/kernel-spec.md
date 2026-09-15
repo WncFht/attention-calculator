@@ -17,13 +17,13 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 ```
 
 - `B_{m,n}` 是族基函数（如 `x^m(1-x)^n`、`x^{2m}(1-x^2)^n`、`sin^m x (1-sin x)^n`），在域上恒非负；
-- `P` 是带 2~3 个待定系数的小多项式 `a+bx` 或 `a+bx+cx^2`（偶核用 `a+bx^2`）；
+- `P` 是带 2~3 个待定系数的小多项式 `a+bx` 或 `a+bx+cx^2`（偶核用 `a+bx^2`；lemniscate 两型用 `a+bx^4`；[0,π] 与 [0,π/2] 域用 `a+b·sin x`）；
 - `K` 是核函数，使所有"矩" `∫ B·x^k·K dx` 落在 `span_Q{1, C, D_1, ...}` 有限维空间里。
 
-求解：矩对 (a,b,c) 线性 → 在 Q 上解小线性方程组
-- C 的系数 = ±1（± 号由方向定）
-- 每个寄生常数 D_j 系数 = 0
-- 常数项 = r
+求解：矩对 (a,b,c) 线性 → 在 Q 上解小线性方程组（engine.gauss_solve，要求唯一解）
+
+- 目标矩 = `s·(coef·C − r)`，s=+1 为 `>`、−1 为 `<`：C 的系数 = s·coef，常数项 = −s·r，寄生常数 D_j 系数 = 0；
+- coef 是请求的 power 系数——pi/catalan/zeta3/e/e_pi/golden/varpi/gauss 直接进目标；ln/trig/hyperbolic 各型为 1；artanh/arcoth 为 1/2（回报的 a,b 自带半因子）；pi_n 的 p/q 形把常数项换成 bound^q、coef 固定为 1。
 
 然后检查 `P` 在域上不变号；变号则换下一组 (m,n)。
 
@@ -31,10 +31,14 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 1. `m+n` 升序；
 2. 同 `m+n` 时 `|m-n|` 小的优先（即先取平衡的）；
-3. 同 `|m-n|` 时 **m 小者优先**（实测 pi>8/3 取 (0,1) 而非 (1,0)；全部非对称 pi golden 均 m<n；400+ 条参数逐位一致佐证）；
-4. e、π 两类型指数上限 30；其余类型上限 10（报错文案"在指数不超过10的范围内未找到…方向的解"）。**上限按单指数计**——m≤30 且 n≤30，非 m+n≤30（实测 pi 用到 (15,18)，m+n=33）。
+3. 同 `|m-n|` 的镜像对按 **m+n 奇偶**定向：和为奇数 m 小者先、和为偶数 m 大者先——sum=2 的序是 (1,1),(2,0),(0,2)，sum=3 是 (1,2),(2,1),(0,3),(3,0)，等价于沿 n = ⌈s/2⌉, ⌈s/2⌉−1, ⌈s/2⌉+1, ⌈s/2⌉−2, … 走（engine.mn_order）。实测：pi>8/3 取 (0,1)（奇数和）；ln²(3/2)<17/100 取 (2,0) 而非同样可行的 (0,2)（偶数和，决定性证据）。旧版"镜像对恒 m 小者优先"只覆盖了奇数和情形——以实测为准更正，全部 golden 参数逐位吻合。
+4. e、π 两类型指数上限 30；其余类型上限 10。**上限按单指数计**——m≤30 且 n≤30，非 m+n≤30（实测 pi 用到 (15,18)，m+n=33）。耗尽报错文案随类型上限插值："在指数不超过30的范围内…"（e/pi）/"…不超过10…"（其余）。
 
-方向反判定：搜索中命中"被积函数恒≤0"的候选**立即**抛 WrongDirection（抢在 NoSolution 之前）；恒变号则继续。**例外见下节 trig_pi**：该四型先做数值方向预检，扫描中恒≤0 解是跳过而非立即报错。
+方向反判定分三层：
+
+- **float64 预检**（仅核会崩的类型需要）：e_q（math.exp）、sinh/cosh/tanh/coth（math.*，coth 内部另有 1/tanh(0)）、arctan_q/arccot_q（除以 q）、pi_n（表外指数 KeyError）、gamma（coef·γ）、ln_q_square q∈{5,7}（站点自身崩溃）、trig_pi 四型（mpmath 50dps）。严格为假的断言在此直接 方向反了；真/等值继续——等值多由输入检查先报 `二者相等`（Niven 点）或随核内崩溃变 500。
+- **扫描中**：命中"被积函数恒≤0"的候选**立即**抛 WrongDirection（抢在 NoSolution 之前）；恒变号则继续。**例外见下节 trig_pi**：该四型恒≤0 解跳过继续找（engine.search defer），搜完仍无非负解才报方向反。
+- **耗尽兜底**（solve.prove）：NoSolution 后再用 float64 比较常数与界，命题为假 → 改报"方向反了"（实测 arctan 3>5/4）；为真 → 维持"未找到解"。float 差恰为 0 的边界（zeta3/gamma 精度持平的假命题）按不 falsify 处理，与站点一致。
 
 ## 非负性判据（作者亲述，只需判断 P）
 
@@ -47,7 +51,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 记 `M(...)` 为"矩 ∈ span{...}"。`s` 为分母幂（ln 类可升幂加速收敛，见技巧6）。
 
-**ln 类分母幂实测规则**：`s = max(m, n, 1)`（61 条 ln_q golden 逐一数值拟合全中；s 不在响应参数里，只体现在渲染方程与矩构造中）。
+**ln 类分母幂实测规则**：`s = max(m, n, 1)`（log 族全部参数记录逐一数值拟合全中，见 log-notes.md；s 不在响应参数里，只体现在渲染方程与矩构造中）。
 
 | type | 域 | 核 K(x) | 基 B_{m,n} | P | 矩空间 |
 |---|---|---|---|---|---|
@@ -61,7 +65,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 | cos_q | [0,1] | sin(qx) | x^m(1-x)^n | a+bx+cx² | {sin q, cos q, 1} |
 | tan_q | [0,1] | sin(qx)，结果整体除 cos q | x^m(1-x)^n | a+bx+cx² | 解 sin q − p·cos q |
 | cot_q | 同 tan | 同 tan（先取倒数） | | | |
-| sin_q_degree | [0,π/2] | sin((1-2q)x)，q=度数·π/180 | sin^m x(1-sin x)^n | a+b sin x | {sin(πq), 1} |
+| sin_q_degree | [0,π/2] | sin((1-2q)x)，q=度数/180 | sin^m x(1-sin x)^n | a+b sin x | {sin(πq), 1} |
 | cos_q_degree | [0,π/2] | sin(2qx) | sin^m x(1-sin x)^n | a+b sin x | {cos(πq), 1} |
 | sin_pi_q | [0,π/2] | sin((1-2q)x)，0<q<1/2 | sin^m x(1-sin x)^n | a+b sin x | {sin(πq), 1} |
 | cos_pi_q | [0,π/2] | sin(2qx) | sin^m x(1-sin x)^n | a+b sin x | {cos(πq), 1} |
@@ -80,6 +84,31 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 | e_pi | [0,π] | e^x | sin^m x(1-sin x)^n | a+b sin x | {e^π, 1} |
 | varpi (ϖ) | [0,1] | 上界：x^{4m+3}(1-x)/√(1-x⁴)；下界：x^{4m+1}(1-x)/(π√(1-x⁴)) | 固定形 | a+bx⁴ | {ϖ,1} 或 {ϖ⁻¹,1} |
 | gauss (G) | [0,1] | 下界：x^{4m}(1-x)/(π√(1-x⁴))；上界：x^{4m+2}(1-x)/√(1-x⁴) | 固定形 | a+bx⁴ | {G,1} 或 {G⁻¹,1} |
+
+## gamma（两段式复合核：主核 + ln 子证明）
+
+恒等式 = 主核积分 + ln(N+1) 的子证明积分，两段各分至少一半缺口：
+
+- **N=0** 当且仅当剩余已是非负常数：'<' 时 r ≥ s₀ = 3/4（常数尾 r−3/4）、'>' 时 r ≤ r₀ = 1/2。参数形 m=n=au=bu=cu=u=0，a_val = 该常数文本，c_val 是方向标志（'<'→"2"、'>'→"1"，非多项式系数）。
+- 否则取**最小 N ≥ 1** 使子积分 ≥ 主积分：'<' 判 `s_N − ln(N+1) ≤ (r+γ)/2`，'>' 判 `r_N − ln(N+1) ≥ (r+γ)/2`，全部 **float64** 比较；s_N = H_N + 1/(N+1) − 1/(2(N+2))，r_N = H_N + 1/(2(N+1))。实现侧 N 上限取 600（保证 H_N 分母可算；站点真实上限未探明，golden 内最大 N=17）。
+- 子证明委托 ln_q 核（q = N+1）：'<' 需 `ln(N+1) > s_N − r`，'>' 需 `ln(N+1) < r_N − r`。回报的 m, n, au_val, bu_val, u_val 全是子证明参数；N 塞在 cu_val，c_val="0"。
+- 边界：power=0 先过 float64 预检（假命题 方向反了，真/等值进 `bound/|power|` 除零 → 500）；power<0 交换方向后证 `|power|·γ ⋚ bound`。
+
+渲染怪癖（/get_integral_image）：
+
+- 等号空格随方向：'<' 排 `=\int_0^1`（无空格），'>' 排 `= \int_0^1`。
+- 主项 `coef·x^N(kernel)`：coef 为整数时级联前写（`2 x^{11}`）、coef=1 消失；coef 为真分数时**走 sympy 折叠** `\frac{x^{N}}{d}`（站点 1/2 实测，非 `\dfrac{1}{2}x^{N}`）；N=0 时只剩 coef 文本。
+- 子分数 `\frac{t·x^m(1-x)^n(au+bu·x)}{u'(Nx+1)^{s'}}`，s' = max(m,n,1)；**t/u' = coef/u 约分后的分子/分母**（coef=2、u=936 → 站点印 1/468；coef=3、u=3 → 4/1 印在分子）。s'=1 时分母展开 `u'N·x + u'`。
+- u=0 两退化：au=bu=0 → 方括号内 `主项 + rat_tex(a_val·coef)`（常数尾为 0 时连方括号都省，只剩主项）；au/bu ≠ 0 → sympy zoo×分子（站端显示 ~∞ 倍因子）。
+- /get_integral_image 对 gamma 的 u_val 下限放宽到 0（其余类型 ≥1）。
+
+## varpi / gauss（lemniscate 核，含兜底模板）
+
+- n 是方向标志（'>'→0、'<'→1）而非指数；指数在 x^{4m+res} 的 res（varpi '>'=1、'<'=3；gauss '>'=0、'<'=2）。'>' 方向 m 搜 0..10；**'<' 方向的正确解只搜 m ≤ LT_M_LIMIT**（gauss 4、varpi 10）。
+- '>' 耗尽 → 兜底模板 `∫ t·poly·√(1-x⁴)/π dx + b`（poly = (1−x) 对 gauss、x(1−x) 对 varpi；矩 {G:1/3,1:−1/8} 与 {ϖ⁻¹:−1/5,1:1/8}，t 由目标常数系数定，要求 t≥0 且 b>0）。参数形 m=n=0、a_val="0"、b_val=b、cu_val="1"、au_val/u_val = 约分后的 t。
+- '<' 耗尽 → 先同形模板（cu_val="2"；t·x^res(1−x)√(1-x⁴) + b，res=2 gauss/3 varpi；矩 {G⁻¹:1/5,1:−1/6} 与 {ϖ:−1/21,1:1/6}；要求 t≥0 且 **b>0 严格**——b=0 边界继续落到转置解）。
+- 再不行 → **转置坏解**：m = LT_M_LIMIT+1 单发，把两条基矩按 [符号, 1] 行当方程组解 rhs=target——恒等式本身不成立，站点只靠 a+bx⁴ 非负检查拦着。前提：命题数值为真（lhs_mpf>0）且解非负。gauss 转置解恒正 → (G, ~0.855] 窗口全落这里；varpi 恒 a<0 → 永不触发。
+- 渲染：cu_val 非零即兜底模板——`(au/u)·x^res(1-x)·√(1-x⁴)[/π] + b_val`，'>' 带 /π 分母、'<' 不带；gauss 的乘积括进 `\left(\right)`、varpi 裸排；`\int_0^1` 后空格数按 kind×comp 实测固定（gauss '>' 双空格、'<' 单空格；varpi 相反）。常规形里基底的 (1−x) 因子排在分母分数内：`\dfrac{(1-x)}{\pi\sqrt{1-x^4}}`（'>'）/ `\dfrac{(1-x)}{\sqrt{1-x^4}}`（'<'）；e=0 的 P 块回落 sympy 直排（会把 (au+bu·x⁴)/u 拆成两个分式）。
 
 ## trig_pi 四型（sin_pi_q / cos_pi_q / sin_q_degree / cos_q_degree）的站点实测行为
 
@@ -113,8 +142,9 @@ Mathematica 预计算管线）。674 条 golden 全部吻合以下模型：
 
 渲染侧：被积函数作为一个 sympy 乘积整体 latex，因子顺序为
 数值系数 → `(1-sin x)^n` → `(a+b sin x)` → `sin(αx)` → `sin^m x`；
-` \cdot ` 只插在前因子以数字或 `^{…}` 结尾、后因子以 `\left(` 开头处
-（裸 `\left(1-\sin x\right)` 后仍是空格）。
+` \cdot ` 只插在前一字符为数字或 `}`、后因子为 `\left(` 紧跟数字处
+（负号开头的 `\left(- …` 不加；裸 `\left(1-\sin x\right)` 作前因子时
+其后仍是空格——它以 `)` 结尾而非 `}`/数字）。
 
 实测样例（线上返回）：
 
@@ -127,6 +157,29 @@ Mathematica 预计算管线）。674 条 golden 全部吻合以下模型：
 - `sin(π/5) > 1/2` → `∫₀^{π/2} (1-sin x)(637 sin x+125) sin(3x/5)/750 dx`（1-2q=3/5）
 - `γ < 3/5` → `∫₀¹ [x⁵((2-x)/2-1/(1-x)-1/ln x) + x²(1-x)⁴(18460x+2811)/(168(5x+1)⁴)] dx`（前半给 γ+ln6 项、后半是 ln6 上界子证明）
 
+## 参数语义（a_val/b_val/c_val/au_val/bu_val/cu_val/u_val）
+
+常规模板：`u = lcm(a, b, c 的分母)`，`au_val = a·u` 等整分子，`a_val` 为约分文本；`m, n` 为基指数（响应里 int），`au/bu/cu/u_val` 为字符串。逐型复用：
+
+- trig_pi 四型：`c_val = α`（角度参数 1−2q 或 2q，非多项式系数）；degree 型回报的 type 归一为 sin_pi_q / cos_pi_q。
+- artanh_q / arcoth_q：a, b 自带 1/2 因子（u 不变）；`c_val = q~` 供渲染端还原分母。
+- gamma：见上节——N>0 时 m,n,au,bu,u 全是 ln_q 子证明参数，`cu_val = N`、`c_val = "0"`；N=0 时 a_val = 剩余常数、c_val 为方向标志。
+- varpi/gauss 兜底：`cu_val ∈ {1,2}` 是模板标志（非 c·u），`a_val = "0"`，b_val = 附加常数项；solution 串恒为 `a = 0, b = 0`（站点原样）。
+- `unified_form` 恒 {}。solution 串：`a = X, b = Y`；三系数族追加 `, c= Z`（`c=` 后无空格，站点原样）。
+
+## 渲染层怪癖（/get_integral_image，逐字节实测）
+
+- bound 与 coef **原样回显请求数位**（不约分：`3140/1000` → `\dfrac{3140}{1000}`），`\frac/\dfrac` 宏逐字回显；需要数值处宏按**无符数字**解析（`-\dfrac{6}{4}` 与 `\dfrac{6}{-4}` 都得 3/2）。
+- 系数位只消去规范形 "1"：`coef=1/1` 印 `1\pi`、`01` 印 `01\pi`、`2/4` 印 `\dfrac{2}{4}\pi`。
+- **零分子塌缩**：quadlog 族的 P=a+bx² 恒为乘积因子——a=b=0 时整个被积函数经 sympy 塌成裸 `0`（zeta3 印 `0\ln^2(x)`、catalan 印 `0\ln(1/x)`，皆实测）；golden 同样输出 `0`（实测）。
+- ` \cdot ` 规则各族不同（各自对齐站端 sympy 版本）：quadlog/beta 族——左因子 `}` 结尾且右因子是 `\left(`+数字…`\right)`；exp/hyperbolic——左为 Pow 且右为数字开头的 Add；trig_q/trig_pi——左以数字或 `}` 结尾、右 `\left(`+数字或 `\frac{d}{d}` 开头。
+- 空格微差：gamma '<' 排 `=\int`、`>' 排 `= \int`；pi '>' 句尾 `\mathrm{d}` 前双空格；pi_n 分指数 '>' 的 LHS 紧致排 `(π^{p/q})^q- (bound)^q`。
+- ln 尾因子：catalan `\ln(1/x)`、zeta3 `\ln^2(x)`、pi_n `(\ln(1/x))^{r}`（r=0 省略；指数为负不加花括号）。
+- golden 分子序：bu<0 时 P 排在 `\sqrt{x + 4}` 之前，否则在后。
+- tan_q/cot_q 把 `1/cos(q)`（`1/sin(q)`）以 `\dfrac{1}{\cos(n/d)}}` 前置于积分，q 用 raw n/d 文本（宏坍缩成无符号 `d/d`）；负 q 整体前加 `- `。tanh_q/coth_q 同构，但 `\cosh(...)`/`\sinh(...)` 内嵌的是 coef **原文**（宏逐字回显，不归一成 n/d）。
+- ln 族分母：s≥2 → `u'(dx+e)^s`（u'=1 省略）；s=1 → 展开 `Ax+B`（sympy 项序，如 `4 - 10 x`）。gamma 子分数同此精神（s'=1 → `u'Nx + u'`）。
+- 字段校验（站点实测）：m,n ∈ [0,30]，u_val ≥ 1（gamma 放宽到 0）；a/b/c_val 走与 /calculate 相同的 'n/d' 语法；coef/rational 完全不校验、原文进 LaTeX。
+
 ## 关键数学事实（实现矩计算时用）
 
 - `∫₀¹ x^k/(1+x²)dx`：偶 k → `±π/4 + 有理`；奇 k → `±(ln2)/2 + 有理`。递推 `J_k + J_{k-2} = 1/(k-1)`。
@@ -135,7 +188,7 @@ Mathematica 预计算管线）。674 条 golden 全部吻合以下模型：
 - `∫₀¹ x^k e^{qx} dx`：IBP 递推 `I_k = e^q/q − k/q·I_{k-1}` → `Q(q)e^q + Q(q)`。
 - `∫₀¹ x^k/(1+cx)^s dx`：部分分式 → `Q(c)·ln(1+c) + Q(c)`。
 - `∫₀^π e^x sin^j x dx`、 `∫₀^{π/2} sin^j x·sin(αx)dx`：积化和差展开逐项积分，全部落在 `Q·sin(πq)+Q` 或 `Q·e^{απ/2·…}+Q` 里（详见文章类型15/17/6的公式）。
-- `∫₀¹ x^{4k+r}/√(1-x⁴) dx = (1/4)B((4k+r+1)/4, 1/2)`：r=1 → `Q + Q·ϖ⁻¹`；r=3 → `Q + Q·ϖ`；r=0 → `Q·G + Q`（除以π）；r=2 → `Q·G⁻¹ + Q`。Γ(1/4) 换算见文章 35/36。
+- `∫₀¹ x^{4k+r}/√(1-x⁴) dx = (1/4)B((4k+r+1)/4, 1/2)`：J_{4k}∈Q·ϖ、J_{4k+1}∈Q·π、J_{4k+2}∈Q·G⁻¹、J_{4k+3}∈Q；基函数 x^{4m+res}(1−x) 取相邻两项，'>' 两型整体再除 π（符号映射 π→1、G⁻¹→ϖ⁻¹、ϖ→G，因 G=ϖ/π）→ 净落 span{r=1: Q+Q·ϖ⁻¹；r=3: Q+Q·ϖ；r=0: Q·G+Q；r=2: Q·G⁻¹+Q}。Γ(1/4) 换算见文章 35/36。
 - `∫₀¹ x^k √(4+x) dx`：直接公式 → `Q + Q·√5`。
 
 ## Padé 插值法（ln q、arctan q 的第二套方案，进阶教程文章）
@@ -161,5 +214,5 @@ GET /get_integral_image?m&n&a_val&b_val&c_val&u_val&au_val&bu_val&cu_val&compari
 → {equation: "LaTeX"}
 POST /decompose_inequality (problem)
 → {success, problem, normalized_latex, decomposition_latex, basic_count, steps:[{type,label,coefficient,comparison,bound,bound_latex,equation}], direct_basic}
-错误：{success:false, error:"要证明的式子不等号方向反了" | "在指数不超过10的范围内未找到<方向的解" | ...}
+错误：{success:false, error:"要证明的式子不等号方向反了" | "在指数不超过{上限}的范围内未找到<方向的解"（上限=10，e/pi 为 30） | ...}
 ```

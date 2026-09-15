@@ -1,8 +1,8 @@
 # /health 健康计算器克隆笔记
 
-线上行为由 `bench/data/health-probes.jsonl` 钉死：四批共 ~560 次 POST/GET
-（serial ≥1 req/s，429 自动重试），417 个唯一 tag 全部收到有效响应。
-`bench/parity_health.py` 逐条回放并做**字节级比对**：当前 417/417 一致
+线上行为由 `bench/data/health-probes.jsonl` 钉死：五批共 567 次 POST/GET
+（serial ≥1 req/s，429 自动重试），420 个唯一 tag 全部收到有效响应。
+`bench/parity_health.py` 逐条回放并做**字节级比对**：当前 420/420 一致
 （`record_id` 归一化后）。本文记录规则与残存歧义。
 
 ## 路由面
@@ -29,7 +29,8 @@ server.py 的 `in_sibling()` 按精确前缀判定，`/healthxyz` 不误伤。
 3. `nickname`：`str()` 强转 + strip；空 → `请填写昵称。`；**先长度**
    `昵称不能超过24个字符。` 后字符集 `昵称只能包含中文、字母、数字、下划线或短横线。`
    （`a`*24+`@` 实测报长度错）。字符集为 `\w`+CJK+`-`，日文/希腊文/café 均收。
-4. `sex`：`str().strip().lower()` 后须 ∈ {male,female}（`MALE`/` male ` 均收）。
+4. `sex`：`str().strip().lower()` 后须 ∈ {male,female}（`MALE`/` male ` 均收；
+   `["male"]` 这类非标量经 `str()` 强转后照样枚举拒，s5:sex-list 实测 400）。
 5. 数值字段统一三段式解析（label 各字段不同）：
    bool → `{label}格式不正确。`；float() 失败（含 list/dict）→ `{label}必须是数字。`；
    NaN/±Inf → `{label}必须是有限数字。`；再范围 `{label}应在 {lo}～{hi} 之间。`；
@@ -56,7 +57,8 @@ server.py 的 `in_sibling()` 按精确前缀判定，`/healthxyz` 不误伤。
   偏高区间 up / ≥alarm 报警 up）。
 - **不宜旗标**：CUN-BAE 与 Deurenberg 共用 **[0,70]** 闭区间，越界 →
   `结果超出公式的合理解释范围`（无方向）。低侧 bf=−0.1 触发 0.3/0.5 不触发；
-  高侧 bf=69.5 不触发 70.6 触发，deur=68.7 不触发 70.3 触发。
+  高侧 bf=69.5 不触发、70.18 触发（s4:cb-a120-w220 vs s5:cb-hi-flag 级联实测），
+  deur=69.5 不触发、70.3 触发（s5:deur-69.5 vs s4:deur-w189）。
 - CUN-BAE 旗标**级联停算** fat_mass/ffm/cunningham_ree（字段 null、卡片缺席、
   专属提示替换默认对照提示）；Deurenberg 旗标不级联。
 - 超龄（age>80）：状态改 `超出CUN-BAE原始18～80岁验证范围`（无方向），
@@ -106,7 +108,7 @@ whtr/whr 单独越界不触发）→ CUN-BAE 块（不宜替换默认对照；�
 - **限流未复现**：线上约 1 r/s 即 429 `{"error":"提交过于频繁，请稍后再试。","ok":false}`。
   属站点基础设施行为；复现会让 parity 回放自相残杀，故只记录不实现。
 - 探针覆盖盲点（实测不可得，按相邻规则推断）：
-  - CUN-BAE/Deurenberg 上界只钉到 (68.7,70.3]∩(69.5,70.6] → 取 70
+  - CUN-BAE/Deurenberg 上界钉到公共区间 (69.5,70.18] → 取 70
     （`>`/`>=` 的端点歧义在浮点上打不到）。
   - a>80 且 bf<0 时状态是 `超龄` 还是 `不宜` 未直接命中（实现取超龄优先、
     旗标照算——a120+旗标实测派生已停，状态超龄）。
