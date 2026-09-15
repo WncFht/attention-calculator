@@ -13,7 +13,6 @@ import argparse
 import json
 import sys
 import time
-from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -53,9 +52,10 @@ def compare_record(rec: dict) -> dict:
             )
             if rec.get("equation"):
                 try:
+                    # 原文回显：站端不约分，golden 里的请求串直接传入
                     eq = render_equation(
-                        coerce_params(ours), rec["type"], Fraction(rec["power"]),
-                        rec["comparison"], Fraction(rec["rational"]))
+                        coerce_params(ours), rec["type"], rec["power"],
+                        rec["comparison"], rec["rational"])
                     out["equation_match"] = _norm(eq) == _norm(rec["equation"])
                     if not out["equation_match"]:
                         out["ours_equation"] = eq

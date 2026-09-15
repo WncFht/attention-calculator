@@ -12,6 +12,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, add, combine, scale
+from ..render import rat_tex, wire_fraction
 
 LIMIT_E = 30  # e、pi 两类型指数上限 30
 LIMIT_OTHER = 10
@@ -83,20 +84,14 @@ def mul_latex(numer: sp.Expr, u: int) -> str:
     return rf"\frac{{{''.join(parts)}}}{{{u}}}"
 
 
-def frac_latex(r: Fraction) -> str:
-    """Site-style rational LaTeX: integers bare, fractions as \\dfrac."""
-    if r.denominator == 1:
-        return str(r.numerator)
-    return f"\\dfrac{{{r.numerator}}}{{{r.denominator}}}"
-
-
-def const_latex(kind: str, power: Fraction) -> str:
+def const_latex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: e.g. e, 2e, \\dfrac{1}{2}e, e^2, e^\\dfrac{1}{2}, e^{\\pi}."""
+    pv = wire_fraction(power)
     if kind == "e":
-        return "e" if power == 1 else f"{frac_latex(power)}e"
+        return "e" if pv == 1 else f"{rat_tex(power)}e"
     if kind == "e_q":
-        return "e^" + frac_latex(power)
-    return ("e^{\\pi}" if power == 1 else f"{frac_latex(power)}e^{{\\pi}}")
+        return "e^" + rat_tex(power)
+    return ("e^{\\pi}" if pv == 1 else f"{rat_tex(power)}e^{{\\pi}}")
 
 
 def emit(kind: str, m: int, n: int, coeffs: list[Fraction]) -> dict:
@@ -143,7 +138,8 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     return emit(kind, solved.m, solved.n, solved.coeffs)
 
 
-def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: Fraction) -> str:
+def render_equation(params: dict, kind: str, power: Fraction | str,
+                    comp: str, bound: Fraction | str) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     x = sp.symbols("x")
     m, n = params["m"], params["n"]
@@ -152,10 +148,10 @@ def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: 
         s = sp.sin(x)
         integrand = s**m * (1 - s) ** n * (au + bu * s) * sp.exp(x)
     else:
-        q = power if kind == "e_q" else sp.Integer(1)
+        q = wire_fraction(power) if kind == "e_q" else sp.Integer(1)
         integrand = x**m * (1 - x) ** n * (au + bu * x) * sp.exp(q * x)
     const = const_latex(kind, power)
-    r = frac_latex(bound)
+    r = rat_tex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
     upper = "{\\pi}" if kind == "e_pi" else "1"
     return f"{lhs} = \\int_0^{upper} {mul_latex(integrand, u)} \\mathrm{{d}} x > 0"

@@ -27,6 +27,7 @@ from math import comb, factorial, gcd, lcm
 
 from ..engine import mn_order, search
 from ..moment import Moment
+from ..render import rat_tex, wire_fraction
 
 # β(k)/pi^k for odd k (Euler numbers: β(2j+1) = (-1)^j E_{2j} pi^{2j+1}/(4^{j+1}(2j)!))
 BETA_PI = {1: Fraction(1, 4), 3: Fraction(1, 32), 5: Fraction(5, 1536),
@@ -141,28 +142,23 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
 
 # ---------------------------------------------------------------- LaTeX render
 
-def rat_tex(v: Fraction) -> str:
-    """'25' for integers, '\\dfrac{22}{7}' otherwise; sign stays in numerator."""
-    return (str(v.numerator) if v.denominator == 1
-            else f"\\dfrac{{{v.numerator}}}{{{v.denominator}}}")
-
-
-def const_tex(kind: str, power: Fraction) -> str:
+def const_tex(kind: str, power: Fraction | str) -> str:
     """The target constant as printed on the equation's left-hand side."""
+    pv = wire_fraction(power)
     if kind == "pi":
-        return "\\pi" if power == 1 else rat_tex(power) + "\\pi"
+        return "\\pi" if pv == 1 else rat_tex(power) + "\\pi"
     if kind == "pi_n":
-        if power.denominator != 1:
-            return f"\\left(\\pi^\\dfrac{{{power.numerator}}}{{{power.denominator}}}\\right)"
-        k = power.numerator
+        if pv.denominator != 1:
+            return f"\\left(\\pi^{rat_tex(power)}\\right)"
+        k = pv.numerator
         return f"\\pi^{{{k}}}" if k >= 10 else f"\\pi^{k}"
     if kind == "arctan_q":
         return "\\arctan" + rat_tex(power)
     if kind == "arccot_q":
         return "\\mathrm{arccot}" + rat_tex(power)
     if kind == "catalan":
-        return "C" if power == 1 else rat_tex(power) + "C"
-    return "\\zeta(3)" if power == 1 else rat_tex(power) + "\\zeta(3)"
+        return "C" if pv == 1 else rat_tex(power) + "C"
+    return "\\zeta(3)" if pv == 1 else rat_tex(power) + "\\zeta(3)"
 
 
 def paren_pow(inner: str, e: int) -> str:
@@ -245,22 +241,24 @@ def numerator_tex(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> str:
     return x + j1 + b + j2 + pp
 
 
-def render_equation(params: dict, kind: str, power: Fraction,
-                    comp: str, bound: Fraction) -> str:
+def render_equation(params: dict, kind: str, power: Fraction | str,
+                    comp: str, bound: Fraction | str) -> str:
     """Reproduce the site's /get_integral_image LaTeX string for this family."""
-    cfg = spec(kind, power)
+    pv = wire_fraction(power)
+    cfg = spec(kind, pv)
     m, n = int(params["m"]), int(params["n"])
     au, bu, u = int(params["au_val"]), int(params["bu_val"]), int(params["u_val"])
     q: Fraction = cfg["q"]
 
-    lhs = (f"{const_tex(kind, power)} - {rat_tex(bound)}" if comp == ">"
-           else f"{rat_tex(bound)} - {const_tex(kind, power)}")
+    btex = rat_tex(bound)  # raw 字符串原样回显数位（不约分）
+    lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"
+           else f"{btex} - {const_tex(kind, power)}")
     eq_sep = " = "
-    if kind == "pi_n" and power.denominator != 1:
+    if kind == "pi_n" and pv.denominator != 1:
         # fractional power p/q: LHS shows (pi^{p/q})^q - (bound)^q literally;
         # '>' uses the site's tight spacing, '<' the normal one
-        c = const_tex(kind, power) + f"^{{{power.denominator}}}"
-        b_ = f"\\left({rat_tex(bound)}\\right)^{{{power.denominator}}}"
+        c = const_tex(kind, power) + f"^{{{pv.denominator}}}"
+        b_ = f"\\left({btex}\\right)^{{{pv.denominator}}}"
         lhs, eq_sep = (f"{c}- {b_}", "= ") if comp == ">" else (f"{b_} - {c}", " = ")
 
     # scale t so the denominator u'·(1+q^2 x^2) has integer coefficients
@@ -271,7 +269,7 @@ def render_equation(params: dict, kind: str, power: Fraction,
     num = numerator_tex(m, n, cfg["odd"], au, bu, t)
 
     if kind == "pi_n":
-        r = power.numerator - 1
+        r = pv.numerator - 1
         ln = "" if r == 0 else "(\\ln(1/x))" if r == 1 else f"(\\ln(1/x))^{r}"
     elif kind == "catalan":
         ln = "\\ln(1/x)"

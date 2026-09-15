@@ -1,0 +1,127 @@
+"""gamma kernel family: prove ``power * gamma ⋚ bound`` for Euler's gamma.
+
+Two-part composite identity on [0,1] — the bracket integrand is
+
+    '<' (gamma < r):  x^N ((2-x)/2 - 1/(1-x) - 1/ln x) + sub
+    '>' (gamma > r):  x^N (1/(1-x) + 1/ln x - 1/2)       + sub
+
+with exact main-kernel values (digamma telescoping + a quadratic tail):
+
+    '<':  int main = s_N - ln(N+1) - gamma,  s_N = H_N + 1/(N+1) - 1/(2(N+2))
+    '>':  int main = gamma + ln(N+1) - r_N,  r_N = H_N + 1/(2(N+1))
+
+so the remainder is a plain ln(N+1) bound, proved by a second site kernel
+``x^{m'}(1-x)^{n'}(a+bx)/(1+Nx)^{s'}`` with ``s' = max(m', n', 1)`` — solved by
+delegating to log_family.ln_bound_proof on q = N+1:
+
+    '<':  sub = ln(N+1) - (s_N - r)   needs ln(N+1) > s_N - r
+    '>':  sub = (r_N - r) - ln(N+1)   needs ln(N+1) < r_N - r
+
+N selection (site convention, 79/79 probe parity): N = 0 iff the leftover is
+already a nonneg constant — r >= s_0 = 3/4 for '<' (constant r - 3/4), r <=
+r_0 = 1/2 for '>' (constant 1/2 - r); u_val = 0 then and c_val is 2 resp. 1.
+Otherwise the site takes the smallest N >= 1 whose sub-integral is at least
+the main-integral — i.e. each part gets at least half the total gap:
+
+    '<':  s_N - ln(N+1) <= (r + gamma)/2        (float64 compare)
+    '>':  r_N - ln(N+1) >= (r + gamma)/2
+
+The site reports the sub-proof's (m', n', a, b, u) as its parameters and
+stashes N in cu_val (c_val = 0).
+"""
+
+from fractions import Fraction
+from math import log
+
+from ..engine import NoSolution, WrongDirection
+from ..render import rat_tex, wire_fraction
+from .log_family import ln_bound_proof, numerator_latex
+
+EULER_F = 0.5772156649015329  # site compares in float64
+
+N_LIMIT = 600  # H_N denominators stay tractable well past this
+
+
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+    """prove(kind, power, comp, bound) -> site /calculate shape."""
+    # power*gamma ⋚ bound  ≡  gamma ⋚ bound/power (direction flips if power < 0)
+    if power < 0:
+        comp = ">" if comp == "<" else "<"
+    r = bound / abs(power)
+
+    upper = comp == "<"
+    n0_const = r - Fraction(3, 4) if upper else Fraction(1, 2) - r
+    if n0_const >= 0:
+        return {"parameters": {
+            "m": 0, "n": 0, "a_val": str(n0_const), "b_val": "0",
+            "c_val": "2" if upper else "1",
+            "au_val": "0", "bu_val": "0", "cu_val": "0", "u_val": "0",
+            "unified_form": {},
+        }, "solution": "a = 0, b = 0"}
+
+    h = Fraction(0)
+    for n in range(1, N_LIMIT + 1):
+        h += Fraction(1, n)
+        if upper:
+            s = h + Fraction(1, n + 1) - Fraction(1, 2 * n + 4)  # s_N
+            hit = float(s) - log(n + 1) <= (float(r) + EULER_F) / 2
+        else:
+            s = h + Fraction(1, 2 * n + 2)                       # r_N
+            hit = float(s) - log(n + 1) >= (float(r) + EULER_F) / 2
+        if not hit:
+            continue
+        try:
+            sub = ln_bound_proof(Fraction(n + 1),
+                                 ">" if upper else "<", s - r)
+        except (NoSolution, WrongDirection):
+            continue
+        sp = sub["parameters"]
+        return {"parameters": {
+            "m": sp["m"], "n": sp["n"],
+            "a_val": sp["a_val"], "b_val": sp["b_val"], "c_val": "0",
+            "au_val": sp["au_val"], "bu_val": sp["bu_val"],
+            "cu_val": str(n), "u_val": sp["u_val"], "unified_form": {},
+        }, "solution": sub["solution"]}
+    raise NoSolution
+
+
+# ------------------------------------------------------------------- rendering
+
+
+def render_equation(params: dict, kind: str, power: Fraction | str,
+                    comp: str, bound: Fraction | str) -> str:
+    """Rebuild the site's get_integral_image LaTeX for solved parameters."""
+    u = int(params["u_val"])
+    n = int(params["cu_val"])  # main-kernel exponent and sub denominator coef
+
+    ctex = ("\\gamma" if wire_fraction(power) == 1
+            else rat_tex(power) + "\\gamma")
+    btex = rat_tex(bound)
+    lhs = f"{btex} - {ctex}" if comp == "<" else f"{ctex} - {btex}"
+
+    kern = ("\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}" if comp == "<"
+            else "\\dfrac{1}{1-x}+\\dfrac{1}{\\ln(x)}-\\dfrac{1}{2}")
+    xp = "" if n == 0 else ("x" if n == 1 else f"x^{{{n}}}")
+    main = f"{xp}\\left({kern}\\right)"
+
+    if u == 0:  # N = 0: leftover is a bare constant, no ln sub-proof
+        const = Fraction(params["a_val"])
+        body = (main if const == 0
+                else f"\\left[{main}+{rat_tex(const)}\\right]")
+    else:
+        m, nn = int(params["m"]), int(params["n"])
+        au, bu = int(params["au_val"]), int(params["bu_val"])
+        s = max(m, nn, 1)
+        num = numerator_latex(m, nn, au, bu, 0, 1, Fraction(n), False)
+        if s == 1:
+            a_ = u * n
+            den = f"{a_} x + {u}" if a_ != 1 else f"x + {u}"
+        else:
+            inner = "x + 1" if n == 1 else f"{n} x + 1"
+            den = f"\\left({inner}\\right)^{{{s}}}"
+            if u != 1:
+                den = f"{u} {den}"
+        body = f"\\left[{main}+\\frac{{{num}}}{{{den}}}\\right]"
+
+    eq = " =\\int_0^1 " if comp == "<" else " = \\int_0^1 "
+    return f"{lhs}{eq}{body} \\mathrm{{d}} x > 0"

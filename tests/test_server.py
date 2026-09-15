@@ -206,8 +206,9 @@ def test_get_integral_image(client, monkeypatch):
     assert seen["params"]["m"] == 3
     assert seen["params"]["u_val"] == 120
     assert seen["params"]["a_val"] == Fraction(47, 120)
-    assert seen["power"] == Fraction(1)
-    assert seen["bound"] == Fraction(22, 7)
+    # coef/rational 原文传给渲染层（站端原样回显，不约分）
+    assert seen["power"] == "1"
+    assert seen["bound"] == "\\frac{22}{7}"
 
 
 def test_get_integral_image_errors(client, monkeypatch):

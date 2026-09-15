@@ -12,11 +12,13 @@ au_val, bu_val, cu_val, u_val). Raises WrongDirection or NoSolution from
 
 Each family module also defines::
 
-    def render_equation(params: dict, kind: str, power: Fraction,
-                        comp: str, bound: Fraction) -> str
+    def render_equation(params: dict, kind: str, power: Fraction | str,
+                        comp: str, bound: Fraction | str) -> str
 
 producing the same LaTeX proof string the site's /get_integral_image returns
-(e.g. "\\dfrac{22}{7} - \\pi = \\int_0^1 ... \\mathrm{d} x > 0").
+(e.g. "\\dfrac{22}{7} - \\pi = \\int_0^1 ... \\mathrm{d} x > 0"). Raw
+``power``/``bound`` request strings are echoed unreduced like the site does;
+``render.wire_fraction`` parses them where the numeric value is needed.
 """
 
 TYPES = [

@@ -28,9 +28,6 @@ EXPONENT_LIMIT = {"pi": 30, "e": 30}
 # 站端只接受 "n" 或 "n/d" (非负整数组成); 小数、负数、其它写法都算格式错误
 NUM_RE = re.compile(r"^\d+(/\d+)?$")
 
-# 前端把有理数显示成 LaTeX \frac{n}{d} 再回传给 /get_integral_image
-FRAC_RE = re.compile(r"^\\d?frac\{\s*(-?\d+)\s*\}\{\s*(-?\d+)\s*\}$")
-
 # 右侧有理数分子/分母必须 < 10^16 (probe: cap:*)
 RATIONAL_CAP = 10**16
 
@@ -53,15 +50,6 @@ def split_num(text: str) -> tuple[int, int] | None:
         return None
     num, _, den = text.partition("/")
     return int(num), int(den) if den else 1
-
-
-def parse_bound(text: str) -> Fraction:
-    """Parse 'n', 'n/d', or LaTeX '\\frac{n}{d}'/'\\dfrac{n}{d}' into a Fraction."""
-    text = text.strip()
-    m = FRAC_RE.match(text)
-    if m:
-        return Fraction(int(m.group(1)), int(m.group(2)))
-    return Fraction(text)
 
 
 def domain_error(kind: str, power: Fraction) -> str | None:
@@ -170,8 +158,12 @@ def get_integral_image():
         kind = request.args.get("type", "")
         comp = request.args.get("comparison", "")
         params = render.coerce_params({k: request.args.get(k, "") for k in IMAGE_KEYS})
-        power = parse_bound(request.args.get("coef", "1"))
-        bound = parse_bound(request.args.get("rational", ""))
+        # coef/rational 原文交给渲染层回显（站端不约分）；先解析一遍，
+        # 不可解析的输入和站端一样走 catch-all 500
+        power = request.args.get("coef", "1").strip()
+        bound = request.args.get("rational", "").strip()
+        render.wire_fraction(power)
+        render.wire_fraction(bound)
         equation = render.render_equation(params, kind, power, comp, bound)
     except Exception:
         return jsonify({"error": INTERNAL_ERROR}), 500

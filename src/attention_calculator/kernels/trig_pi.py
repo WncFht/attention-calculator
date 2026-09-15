@@ -36,7 +36,8 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, combine
-from .trig_q import add_term, dfrac, join_product, pow_term
+from ..render import rat_tex
+from .trig_q import add_term, join_product, pow_term
 
 LIMIT = 10
 
@@ -148,10 +149,10 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     alpha = Fraction(params["c_val"])
     s = sp.sin(x)
 
-    arg = dfrac(power) + ("^\\circ" if kind.endswith("_degree") else r"\pi")
+    arg = rat_tex(power) + ("^\\circ" if kind.endswith("_degree") else r"\pi")
     name = "sin" if kind.startswith("sin") else "cos"
     const = rf"\{name}\left({arg}\right)"
-    lhs = f"{const} - {dfrac(bound)}" if comp == ">" else f"{dfrac(bound)} - {const}"
+    lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
 
     terms = []
     poly = au + bu * s

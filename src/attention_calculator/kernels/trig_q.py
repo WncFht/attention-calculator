@@ -35,6 +35,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, combine
+from ..render import rat_tex, wire_fraction
 
 LIMIT = 10
 
@@ -123,22 +124,6 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     }
 
 
-def dfrac(v: Fraction | str) -> str:
-    """Render a rational the site's way: \\dfrac{n}{d}, plain n for integers.
-
-    A raw string is echoed verbatim (the site displays the user's input
-    unreduced, e.g. \\dfrac{314}{100}); a Fraction is reduced by construction.
-    """
-    if isinstance(v, str):
-        if "/" in v:
-            num, den = v.split("/", 1)
-            return rf"\dfrac{{{num}}}{{{den}}}"
-        return v
-    if v.denominator == 1:
-        return str(v.numerator)
-    return rf"\dfrac{{{v.numerator}}}{{{v.denominator}}}"
-
-
 def raw_ratio(v: Fraction | str) -> str:
     """Plain 'n/d' text, e.g. for \\cos(6/5) in the tan/cot divisor."""
     if isinstance(v, str):
@@ -197,11 +182,11 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     m, n = params["m"], params["n"]
     au, bu, cu = (Fraction(params[k]) for k in ("au_val", "bu_val", "cu_val"))
     u = Fraction(params["u_val"])
-    q = power if isinstance(power, Fraction) else Fraction(power)
+    q = wire_fraction(power)
     name = kind.removesuffix("_q")
 
-    const = rf"\{name}{dfrac(power)}"
-    lhs = f"{const} - {dfrac(bound)}" if comp == ">" else f"{dfrac(bound)} - {const}"
+    const = rf"\{name}{rat_tex(power)}"
+    lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
 
     terms = []
     poly = au + bu * x + cu * x**2

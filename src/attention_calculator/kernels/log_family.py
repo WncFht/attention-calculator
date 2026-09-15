@@ -29,6 +29,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, combine
+from ..render import rat_tex, wire_fraction
 
 LIMIT = 10
 
@@ -145,11 +146,10 @@ def ln_bound_proof(q: Fraction, comp: str, bound: Fraction) -> dict:
 # ------------------------------------------------------------------- rendering
 
 
-def const_latex(kind: str, power: Fraction) -> str:
+def const_latex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: ``\\ln2``, ``\\ln^2\\dfrac{3}{2}``,
     ``\\mathrm{artanh}\\dfrac{1}{2}``, ``\\mathrm{arcoth}2``."""
-    body = str(power.numerator) if power.denominator == 1 else (
-        f"\\dfrac{{{power.numerator}}}{{{power.denominator}}}")
+    body = rat_tex(power)
     if kind == "ln_q":
         return "\\ln" + body
     if kind == "ln_q_square":
@@ -217,13 +217,14 @@ def numerator_latex(m: int, n: int, au: int, bu: int, cu: int,
     return out
 
 
-def render_equation(params: dict, kind: str, power: Fraction,
-                    comp: str, bound: Fraction) -> str:
+def render_equation(params: dict, kind: str, power: Fraction | str,
+                    comp: str, bound: Fraction | str) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     m, n = int(params["m"]), int(params["n"])
     au, bu, cu = (int(params[k]) for k in ("au_val", "bu_val", "cu_val"))
     u = int(params["u_val"])
-    qt = Fraction(params["c_val"]) if kind in ("artanh_q", "arcoth_q") else power
+    qt = (Fraction(params["c_val"]) if kind in ("artanh_q", "arcoth_q")
+          else wire_fraction(power))
     c = qt - 1
     s = max(m, n, 1)
     d, e = c.numerator, c.denominator
@@ -245,7 +246,6 @@ def render_equation(params: dict, kind: str, power: Fraction,
     num = numerator_latex(m, n, au, bu, cu, t, c, kind == "ln_q_square")
 
     const = const_latex(kind, power)
-    r = str(bound.numerator) if bound.denominator == 1 else (
-        f"\\dfrac{{{bound.numerator}}}{{{bound.denominator}}}")
+    r = rat_tex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
     return (f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{den}}} \\mathrm{{d}} x > 0")

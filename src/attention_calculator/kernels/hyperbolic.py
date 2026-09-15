@@ -13,7 +13,8 @@ import sympy as sp
 
 from ..moment import Moment, add, combine, scale
 from ..engine import WrongDirection, mn_order, search
-from .exp_family import emit, frac_latex, mul_latex
+from ..render import rat_tex, wire_fraction
+from .exp_family import emit, mul_latex
 
 LIMIT = 10
 
@@ -38,10 +39,10 @@ def basis_moment(m: int, n: int, j: int, q: Fraction) -> Moment:
     return combine(coeffs, J[m + j : m + j + n + 1])
 
 
-def const_latex(kind: str, power: Fraction) -> str:
+def const_latex(kind: str, power: Fraction | str) -> str:
     """\\sinh1 / \\sinh\\dfrac{2}{3} etc."""
     name = {"sinh_q": "sinh", "cosh_q": "cosh", "tanh_q": "tanh", "coth_q": "coth"}[kind]
-    return f"\\{name}" + frac_latex(power)
+    return f"\\{name}" + rat_tex(power)
 
 
 def target_for(kind: str, comp: str, bound: Fraction) -> Moment:
@@ -76,12 +77,13 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     return emit(kind, solved.m, solved.n, solved.coeffs)
 
 
-def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: Fraction) -> str:
+def render_equation(params: dict, kind: str, power: Fraction | str,
+                    comp: str, bound: Fraction | str) -> str:
     """Rebuild the site's get_integral_image LaTeX for solved parameters."""
     x = sp.symbols("x")
     m, n = params["m"], params["n"]
     au, bu, cu, u = (params["au_val"], params["bu_val"], params["cu_val"], params["u_val"])
-    integrand = x**m * (1 - x) ** n * (au + bu * x + cu * x**2) * sp.sinh(power * x)
+    integrand = x**m * (1 - x) ** n * (au + bu * x + cu * x**2) * sp.sinh(wire_fraction(power) * x)
     body = mul_latex(integrand, u)
     if kind == "tanh_q":
         inner = f"\\dfrac{{1}}{{\\cosh({power})}} " + body
@@ -90,6 +92,6 @@ def render_equation(params: dict, kind: str, power: Fraction, comp: str, bound: 
     else:
         inner = body
     const = const_latex(kind, power)
-    r = frac_latex(bound)
+    r = rat_tex(bound)
     lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
     return f"{lhs} = \\int_0^1 {inner} \\mathrm{{d}} x > 0"
