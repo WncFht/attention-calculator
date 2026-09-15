@@ -76,7 +76,7 @@ def gauss_solve(rows: list[list[Fraction]], rhs: list[Fraction]) -> list[Fractio
     n = len(rhs)
     if len(rows) != n or any(len(r) != n for r in rows):
         raise ValueError("moment system is not square")
-    a = [r[:] + [b] for r, b in zip(rows, rhs)]
+    a = [[*r, b] for r, b in zip(rows, rhs, strict=True)]
     for col in range(n):
         piv = next((r for r in range(col, n) if a[r][col] != 0), None)
         if piv is None:
@@ -85,7 +85,7 @@ def gauss_solve(rows: list[list[Fraction]], rhs: list[Fraction]) -> list[Fractio
         for r in range(n):
             if r != col and a[r][col] != 0:
                 f = a[r][col] / a[col][col]
-                a[r] = [x - f * y for x, y in zip(a[r], a[col])]
+                a[r] = [x - f * y for x, y in zip(a[r], a[col], strict=True)]
     return [a[i][n] / a[i][i] for i in range(n)]
 
 
