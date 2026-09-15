@@ -24,6 +24,7 @@ even k needs odd powers (η(k) ~ pi^k) and odd k needs even powers (β(k) ~ pi^k
 import math
 from fractions import Fraction
 from functools import cache
+from itertools import pairwise
 from math import comb, factorial, gcd, lcm
 
 import sympy as sp
@@ -213,7 +214,7 @@ def factors_tex(num: sp.Expr) -> str:
     tex = [f"\\left({sp.latex(a)}\\right)" if a.is_Add and wrap else sp.latex(a)
            for a in args]
     out = tex[0]
-    for prev, cur in zip(tex, tex[1:]):
+    for prev, cur in pairwise(tex):
         cdot = (prev.endswith("}") and cur.startswith("\\left(")
                 and cur[6].isdigit() and cur.endswith("\\right)"))
         out += " \\cdot " if cdot else " "
