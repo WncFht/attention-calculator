@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="积分, 注意力积分, 量化调酒师, 注意力计算器，积分证明">
+    <meta name="author" content="量化调酒师">
+    <title>注意力计算器</title>
+    <!-- 添加 MathJax 支持 -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <!-- 在 head 中添加 html2canvas 库 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        body{
+            background:#f5f5f5 url("/static/bg1.png") repeat-y;
+            background-size: 100%;
+        }
+        .logo{
+            text-align: center;
+            margin: 30px 0;
+        }
+        .logo img{
+            width: 400px;
+        }
+        .title{
+            margin: 10px 0;
+            font-weight: 700;
+        }
+        .math-symbol{
+            margin: 10px 0;
+            font-weight: 700;
+        }
+        .main{
+            background:#fff url("/static/bg2.png") repeat-y;
+            background-size: 100%;
+            padding: 30px;
+            border-radius: 30px;
+        }
+        .custom-select {
+            position: relative;
+            width: 400px;
+            margin-bottom: 2rem;
+            padding: 0.8rem 1rem;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .selected {
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            z-index: 1000;
+            height: 240px;
+            overflow-y: scroll;
+        }
+
+        .option {
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .option:hover {
+            background: #f0f0f0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .pi-container {
+            position: relative;
+            font-size: 1.8rem;
+        }
+        select, input[type="number"] {
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            border: 0px solid #ccc;
+            border-radius: 4px;
+            background: #f5f5f5;
+        }
+
+        /* 添加π系数输入框的特定样式 */
+        #pi-decimal {
+            width: 5rem;  /* 与其他输入框保持一致 */
+        }
+
+        button {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(#095ad2, #5ca2ea);
+            color: white;
+            border: none;
+            border-radius: 46px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        button:hover {
+            background: linear-gradient(#095ad2, #5ca2ea);
+            color: #fff;
+        }
+
+        #result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+            position: relative;
+        }
+        .math-expr {
+            font-family: "Cambria Math", serif;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin: 1rem 0;
+        }
+        .params {
+            list-style: none;
+            padding: 0;
+        }
+        .params li {
+            margin: 0.8rem 0;
+        }
+        .error {
+            color: #dc3545;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #ffeef0;
+        }
+        .input-toggle {
+            margin-bottom: 0;  /* 移除底部边距 */
+            display: inline-flex;  /* 改为内联弹性布局 */
+            margin-left: 0.5rem;  /* 添加左侧边距 */
+        }
+        .toggle-btn {
+            padding: 0.5rem 2rem;  /* 减小内边距使按钮更紧凑 */
+            margin: 0 0.3rem;  /* 移除外边距 */
+            font-size: 0.9rem;  /* 稍微减小字体大小 */
+            background: white;  /* 添加回白色背景 */
+            border: 1px solid #ddd;  /* 添加回边框 */
+            border-radius: 34px;  /* 添加回圆角 */
+            cursor: pointer;  /* 添加回指针样式 */
+            color: black;  /* 添加回文字颜色 */
+        }
+        .toggle-btn.active {
+            background: linear-gradient(#095ad2, #5ca2ea);
+            color: white;
+            border-color: #007bff;
+        }
+        .fraction-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            position: relative;
+        }
+        .fraction-input input {
+            width: 8.5rem;
+            text-align: center;
+            margin: 0;
+            font-size: 0.72rem;
+            box-sizing: border-box;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+        .fraction-input input::placeholder {
+            font-size: 0.72rem;
+        }
+        .fraction-line {
+            width: 8.5rem;
+            height: 2px;
+            background-color: #333;
+            margin: 3px 0;
+            background: linear-gradient(#095ad2, #5ca2ea);
+        }
+        .input-container > div,
+        .pi-input-container > div {
+            display: none;
+        }
+        .input-container > div.active,
+        .pi-input-container > div.active {
+            display: block;
+        }
+        .info-text {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #666;
+        }
+        .math-example {
+            margin: 0.5rem 0;
+            color: #333;
+        }
+        /* 添加π系数容器的新样式 */
+        .pi-input-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;  /* 统一与右侧相同的间距 */
+        }
+
+        /* 修改π系数输入框的样式 */
+        .pi-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;  /* π符号与输入框的间距 */
+            font-size: 1.8rem;
+        }
+
+        /* 确保分数输入框正确显示 */
+        .input-container > div.active .fraction-input,
+        .pi-input-container > div.active .pi-fraction-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* π分数输入的样式 */
+        .pi-fraction-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .pi-fraction-input input {
+            width: 8.5rem;
+            text-align: center;
+            margin: 0;
+            font-size: 0.72rem;
+            box-sizing: border-box;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+        .pi-fraction-input input::placeholder {
+            font-size: 0.72rem;
+        }
+
+        .pi-fraction-line {
+            width: 8.5rem;
+            height: 2px;
+            background-color: #333;
+            margin: 3px 0;
+        }
+
+        /* 修改切换按钮组的样式，使用水平布局 */
+        .pi-input-toggle {
+            display: inline-flex;
+            flex-direction: row;
+            gap: 2px;
+            margin-right: 0.5rem;  /* 添加右边距 */
+        }
+
+        /* 统一两边按钮的样式 */
+        .pi-toggle-btn {
+            padding: 0.5rem 2rem;  /* 与右侧按钮保持一致 */
+            font-size: 0.9rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            cursor: pointer;
+            color: black;
+            margin-right: 0.5rem;
+        }
+
+        .pi-toggle-btn.active {
+            background-image: linear-gradient(#095ad2, #5ca2ea);
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* 统一所有数字输入框的样式 */
+        input[type="number"] {
+            width: 5rem;    /* 统一宽度 */
+            padding: 0.5rem 0;
+            font-size: 1.1rem;
+            border: 0px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            background: #f5f5f5;
+            padding-left: 0.8rem;
+        }
+
+        /* π分数输入的样式 */
+        .pi-fraction-input input {
+            text-align: center;
+            margin: 0;
+        }
+
+        .pi-fraction-line {
+            width: 5rem;  /* 与输入框同宽 */
+            height: 2px;
+            background-color: #333;
+            margin: 3px 0;
+            background: linear-gradient(#095ad2, #5ca2ea);
+        }
+
+        /* 统一分数线的宽度 */
+        .fraction-line,
+        .pi-fraction-line {
+            width: 5rem;  /* 与输入框同宽 */
+        }
+
+        /* 添加不等式类型选择器的样式 */
+        .proof-type-selector {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .proof-type-selector select {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .proof-type-selector select option {
+            font-family: "Times New Roman", serif;  /* 确保选项也使用相同字体 */
+            font-size: 1.1rem;
+        }
+
+        .math-option {
+            font-family: "MathJax_Math", "Times New Roman", serif;
+        }
+
+        /* 为不同类型的证明内容添加容器样式 */
+        .proof-content {
+            margin-top: 1rem;
+        }
+
+        .proof-section {
+            display: none;  /* 默认隐藏所有证明部分 */
+        }
+
+        .proof-section.active {
+            display: block;  /* 显示当前选中的证明部分 */
+        }
+
+        .math-symbol {
+            font-size: 1.8rem;
+            font-family: Arial, sans-serif;
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.5rem;
+        }
+
+        .proof-type-selector .math-symbol {
+            font-size: 1.8rem;
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.2rem;
+        }
+
+        /* 添加历史记录的样式 */
+        .history-panel {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 500px;  /* 增加高度以容纳更多内容 */
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex
+        ;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: #fff;
+            align-items: center;
+            margin: 10px 0;
+            box-shadow: 1px 1px 1px 1px #ddd;
+            border-radius: 10px;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-content {
+            flex-grow: 1;
+        }
+
+        .history-formula {
+            margin-bottom: 0.5rem;  /* 添加间距 */
+        }
+
+        .history-proof {
+            font-size: 0.9em;  /* 稍微小一点的字体 */
+            color: #555;  /* 稍微淡一点的颜色 */
+        }
+
+        .history-time {
+            color: #666;
+            font-size: 0.9rem;
+            margin-left: 1rem;
+            white-space: nowrap;  /* 防止时间换行 */
+        }
+
+        /* 添加导出按钮的样式 */
+        .export-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(#095ad2, #5ca2ea);
+            color: white;
+            border: none;
+            border-radius: 34px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+            float: none;
+            position: static;
+            white-space: nowrap;
+            margin: 0;
+        }
+
+        .show-tex-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(#095ad2, #5ca2ea);
+            color: white;
+            border: none;
+            border-radius: 34px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+            float: none;
+            position: static;
+            white-space: nowrap;
+            margin: 0;
+        }
+
+        .export-btn:hover {
+            background:  linear-gradient(#095ad2, #5ca2ea);
+        }
+        .show-tex-btn:hover {
+            background:  linear-gradient(#095ad2, #5ca2ea);
+        }
+
+        #math-output{
+            margin-top: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 20px;
+        }
+        .copyright{
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin: 20px 0;
+        }
+        .copyright a{
+            text-decoration: none;
+            color: #666;
+        }
+        .copyright span{
+            margin: 0 15px;
+        }
+        .main {
+            position: relative;
+        }
+        .language-switch {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .language-switch button {
+            display: inline-block;
+            margin: 0;
+            padding: 4px 8px;
+            border: 1px solid #111;
+            border-radius: 4px;
+            background: #fff;
+            color: #111;
+            font-size: 0.85rem;
+            line-height: 1.1;
+        }
+        .language-switch button.active {
+            background: #111;
+            color: #fff;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .combo-proof-section {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #ddd;
+        }
+        .combo-proof-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .combo-proof-form input {
+            flex: 1 1 320px;
+            min-width: 0;
+            min-height: 2.8rem;
+            padding: 0 0.85rem;
+            font-size: 1.05rem;
+        }
+        .combo-proof-form button {
+            width: auto;
+            min-width: 10rem;
+            margin: 0;
+        }
+        #combo-result {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .combo-step {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .combo-note {
+            color: #666;
+            font-size: 0.92rem;
+            margin-top: 0.5rem;
+        }
+        .combo-proof-render {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .combo-step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .combo-step-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .combo-step-actions button {
+            padding: 0.45rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="logo">
+    <img src="/static/title.png"/>
+</div>
+<div class="main">
+    <div class="language-switch" aria-label="Language switch">
+        <button type="button" class="lang-btn active" data-lang="zh">中文</button>
+        <button type="button" class="lang-btn" data-lang="en">English</button>
+    </div>
+
+    <div class="title" data-i18n="typeTitle">请选择不等式类型(共29种类型)</div>
+    <div class="custom-select">
+        <!-- 这个是选项显示内容 -->
+        <span class="option-selected" data-value="">请选择要证明的不等式类型</span>
+        <span class="option-selected" data-value="pi">比较 \(\pi\) 与有理数</span>
+        <span class="option-selected" data-value="e">比较 \(e\) 与有理数</span>
+        <span class="option-selected" data-value="pi_n">比较 \(\pi^q\) 与有理数</span>
+        <span class="option-selected" data-value="e_q">比较 \(e^q\) 与有理数</span>
+        <span class="option-selected" data-value="ln_q">比较 \(\ln q\) 与有理数</span>
+        <span class="option-selected" data-value="ln_q_square">比较 \((\ln_{}{q} )^{2}\) 与有理数</span>
+        <span class="option-selected" data-value="sin_q">比较 \(\sin q\) (弧度)与有理数</span>
+        <span class="option-selected" data-value="cos_q">比较 \(\cos q\) (弧度)与有理数</span>
+        <span class="option-selected" data-value="tan_q">比较 \(\tan q\) (弧度)与有理数</span>
+        <span class="option-selected" data-value="cot_q">比较 \(\cot q\) (弧度)与有理数</span>
+        <span class="option-selected" data-value="sin_q_degree">比较 \(\sin q^\circ\) (角度)与有理数</span>
+        <span class="option-selected" data-value="cos_q_degree">比较 \(\cos q^\circ\) (角度)与有理数</span>
+        <span class="option-selected" data-value="sin_pi_q">比较 \(\sin q\pi\) 与有理数</span>
+        <span class="option-selected" data-value="cos_pi_q">比较 \(\cos q\pi\) 与有理数</span>
+        <span class="option-selected" data-value="arctan_q">比较 \(\mathrm{arctan}\ q\) 与有理数</span>
+        <span class="option-selected" data-value="arccot_q">比较 \(\mathrm{arccot}\ q\) 与有理数</span>
+        <span class="option-selected" data-value="sinh_q">比较 \(\sinh q\) 与有理数</span>
+        <span class="option-selected" data-value="cosh_q">比较 \(\cosh q\) 与有理数</span>
+        <span class="option-selected" data-value="tanh_q">比较 \(\tanh q\) 与有理数</span>
+        <span class="option-selected" data-value="coth_q">比较 \(\coth q\) 与有理数</span>
+        <span class="option-selected" data-value="artanh_q">比较 \(\mathrm{artanh}\ q\) 与有理数</span>
+        <span class="option-selected" data-value="arcoth_q">比较 \(\mathrm{arcoth}\ q\) 与有理数</span>
+        <span class="option-selected" data-value="gamma">比较欧拉常数 \(\gamma\) 与有理数</span>
+        <span class="option-selected" data-value="golden">比较黄金分割率 \(\phi\) 与有理数</span>
+        <span class="option-selected" data-value="catalan">比较卡塔兰常数 \(C\) 与有理数</span>
+        <span class="option-selected" data-value="zeta3">比较阿培里常数 \( \zeta(3) \) 与有理数</span>
+        <span class="option-selected" data-value="e_pi">比较盖尔方德常数 \(e^{\pi}\) 与有理数</span>
+        <span class="option-selected" data-value="varpi">比较双纽线周率 \( \varpi\) 与有理数</span>
+        <span class="option-selected" data-value="gauss">比较高斯常数 \( G\) 与有理数</span>
+        <div class="options"><!-- 这个是选择后留下的内容 -->
+            <div class="option" data-value="">请选择要证明的不等式类型</div>
+            <div class="option" data-value="pi">比较 \(\pi\) 与有理数</div>
+            <div class="option" data-value="e">比较 \(e\) 与有理数</div>
+            <div class="option" data-value="pi_n">比较 \(\pi^q\) 与有理数</div>
+            <div class="option" data-value="e_q">比较 \(e^q\) 与有理数</div>
+            <div class="option" data-value="ln_q">比较 \(\ln q\) 与有理数</div>
+            <div class="option" data-value="ln_q_square">比较 \((\ln_{}{q} )^{2}\) 与有理数</div>
+            <div class="option" data-value="sin_q">比较 \(\sin q\) (弧度)与有理数</div>
+            <div class="option" data-value="cos_q">比较 \(\cos q\) (弧度)与有理数</div>
+            <div class="option" data-value="tan_q">比较 \(\tan q\) (弧度)与有理数</div>
+            <div class="option" data-value="cot_q">比较 \(\cot q\) (弧度)与有理数</div>
+            <div class="option" data-value="sin_q_degree">比较 \(\sin q^\circ\)(角度)与有理数</div>
+            <div class="option" data-value="cos_q_degree">比较 \(\cos q^\circ\)(角度)与有理数</div>
+            <div class="option" data-value="sin_pi_q">比较 \(\sin q\pi\) 与有理数</div>
+            <div class="option" data-value="cos_pi_q">比较 \(\cos q\pi\) 与有理数</div>
+            <div class="option" data-value="arctan_q">比较 \(\mathrm{arctan}\ q\) 与有理数</div>
+            <div class="option" data-value="arccot_q">比较 \(\mathrm{arccot}\ q\) 与有理数</div>
+            <div class="option" data-value="sinh_q">比较 \(\sinh q\) 与有理数</div>
+            <div class="option" data-value="cosh_q">比较 \(\cosh q\) 与有理数</div>
+            <div class="option" data-value="tanh_q">比较 \(\tanh q\) 与有理数</div>
+            <div class="option" data-value="coth_q">比较 \(\coth q\) 与有理数</div>
+            <div class="option" data-value="artanh_q">比较 \(\mathrm{artanh}\ q\) 与有理数</div>
+            <div class="option" data-value="arcoth_q">比较 \(\mathrm{arcoth}\ q\) 与有理数</div>
+            <div class="option" data-value="gamma">比较欧拉常数 \(\gamma\) 与有理数</div>
+            <div class="option" data-value="golden">比较黄金分割率 \(\phi\) 与有理数</div>
+            <div class="option" data-value="catalan">比较卡塔兰常数 \(C\) 与有理数</div>
+            <div class="option" data-value="zeta3">比较阿培里常数 \( \zeta(3) \) 与有理数</div>
+            <div class="option" data-value="e_pi">比较盖尔方德常数 \(e^{\pi}\) 与有理数</div>
+            <div class="option" data-value="varpi">比较双纽线周率 \( \varpi\) 与有理数</div>
+            <div class="option" data-value="gauss">比较高斯常数 \(G\) 与有理数</div>
+        </div>
+    </div>
+    <div id="basicInputTitle" class="title" data-i18n="inputTitle" style="display: none;">请输入整数或分数，选择 &gt; 或者 &lt;</div>
+    <!-- 通用有理数证明部分 -->
+    <div id="piProof" class="proof-section" style="display: none;">
+        <form id="calcForm">
+            <div class="input-group">
+                    <!-- 这个是前面显示的-->
+                    <span class="math-symbol" data-value="pi"> </span>
+                    <span class="math-symbol" data-value="e"></span>
+                    <span class="math-symbol" data-value="pi_n" data-power-prefix="pi">\(\pi\)的</span>
+                    <span class="math-symbol" data-value="e_q" data-power-prefix="e">\(e\)的</span>
+                    <span class="math-symbol" data-value="ln_q">\(\ln(\)</span>
+                    <span class="math-symbol" data-value="ln_q_square">\(\ln^2(\)</span>
+                    <span class="math-symbol" data-value="sin_q">\(\sin(\)</span>
+                    <span class="math-symbol" data-value="cos_q">\(\cos(\)</span>
+                    <span class="math-symbol" data-value="tan_q">\(\tan(\)</span>
+                    <span class="math-symbol" data-value="cot_q">\(\cot(\)</span>
+                    <span class="math-symbol" data-value="sin_q_degree">\(\sin(\)</span>
+                    <span class="math-symbol" data-value="cos_q_degree">\(\cos(\)</span>
+                    <span class="math-symbol" data-value="sin_pi_q">\(\sin(\)</span>
+                    <span class="math-symbol" data-value="cos_pi_q">\(\cos(\)</span>
+                    <span class="math-symbol" data-value="arctan_q">\(\mathrm{arctan}\)</span>
+                    <span class="math-symbol" data-value="arccot_q">\(\mathrm{arccot}\)</span>
+                    <span class="math-symbol" data-value="sinh_q">\(\sinh(\)</span>
+                    <span class="math-symbol" data-value="cosh_q">\(\cosh(\)</span>
+                    <span class="math-symbol" data-value="tanh_q">\(\tanh(\)</span>
+                    <span class="math-symbol" data-value="coth_q">\(\coth(\)</span>
+                    <span class="math-symbol" data-value="artanh_q">\(\mathrm{artanh}\)</span>
+                    <span class="math-symbol" data-value="arcoth_q">\(\mathrm{arcoth}\)</span>
+                    <span class="math-symbol" data-value="gamma"></span>
+                    <span class="math-symbol" data-value="golden"></span>
+                    <span class="math-symbol" data-value="catalan"></span>
+                    <span class="math-symbol" data-value="zeta3"></span>
+                    <span class="math-symbol" data-value="e_pi"></span>
+                    <span class="math-symbol" data-value="varpi"></span>
+            <div class="pi-input-group">
+                    <!-- π系数的切换按钮 -->
+                    <div class="pi-input-toggle">
+                        <button type="button" class="pi-toggle-btn active" data-input="pi-decimal">整数</button>
+                        <button type="button" class="pi-toggle-btn" data-input="pi-fraction">分数</button>
+                    </div>
+
+                    <div class="pi-container">
+                        <div class="pi-input-container">
+                            <!-- 整数输入 -->
+                            <div id="pi-decimal-input" class="active">
+                                <input type="number"
+                                       id="pi-decimal"
+                                       min="1"
+                                       step="1"
+                                       pattern="\d*"
+                                       placeholder="整数"
+                                       title="π的系数">
+                            </div>
+                            <!-- 分数输入 -->
+                            <div id="pi-fraction-input">
+                                <div class="pi-fraction-input">
+                                    <input type="number"
+                                           id="pi-numerator"
+                                           min="1"
+                                           step="1"
+                                           placeholder="分子"
+                                           title="分子">
+                                    <div class="pi-fraction-line"></div>
+                                    <input type="number"
+                                           id="pi-denominator"
+                                           min="1"
+                                           step="1"
+                                           placeholder="分母"
+                                           title="分母">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 这个是后面显示的-->
+                        <span class="math-symbol" data-value="pi">\(\pi\) </span>
+                        <span class="math-symbol" data-value="e">\(e\) </span>
+                        <span class="math-symbol" data-value="pi_n" data-power-suffix>次方</span>
+                        <span class="math-symbol" data-value="e_q" data-power-suffix>次方 </span>
+                        <span class="math-symbol" data-value="ln_q">\()\)</span>
+                        <span class="math-symbol" data-value="ln_q_square">\()\)</span>
+                        <span class="math-symbol" data-value="sin_q">\()\)</span>
+                        <span class="math-symbol" data-value="cos_q">\()\)</span>
+                        <span class="math-symbol" data-value="tan_q">\()\)</span>
+                        <span class="math-symbol" data-value="cot_q">\()\)</span>
+                        <span class="math-symbol" data-value="sin_q_degree">\(度)\)</span>
+                        <span class="math-symbol" data-value="cos_q_degree">\(度)\)</span>
+                        <span class="math-symbol" data-value="sin_pi_q">\(\pi)\)</span>
+                        <span class="math-symbol" data-value="cos_pi_q">\(\pi)\)</span>
+                        <span class="math-symbol" data-value="arctan_q">\(\)</span>
+                        <span class="math-symbol" data-value="arccot_q">\(\)</span>
+                        <span class="math-symbol" data-value="sinh_q">\()\)</span>
+                        <span class="math-symbol" data-value="cosh_q">\()\)</span>
+                        <span class="math-symbol" data-value="tanh_q">\()\)</span>
+                        <span class="math-symbol" data-value="coth_q">\()\)</span>
+                        <span class="math-symbol" data-value="artanh_q">\(\)</span>
+                        <span class="math-symbol" data-value="arcoth_q">\(\)</span>
+                        <span class="math-symbol" data-value="gamma">\(\gamma\)</span>
+                        <span class="math-symbol" data-value="golden">\(\phi\)</span>
+                        <span class="math-symbol" data-value="catalan">\(C\)</span>
+                        <span class="math-symbol" data-value="zeta3">\(ζ(3)\)</span>
+                        <span class="math-symbol" data-value="e_pi">\(e^{\pi}\) </span>
+                        <span class="math-symbol" data-value="varpi">\( \varpi \) </span>
+                        <span class="math-symbol" data-value="gauss">\( G \) </span>
+                    </div>
+                </div>
+
+                <select id="comparison">
+                    <option value=">">&gt;</option>
+                    <option value="<">&lt;</option>
+                </select>
+
+                <div class="input-container">
+                    <div id="decimal-input" class="active">
+                        <input type="number"
+                               id="decimal"
+                               step="1"
+                               pattern="\d*"
+                               placeholder="整数"
+                               title="整数">
+                    </div>
+                    <div id="fraction-input">
+                        <div class="fraction-input">
+                            <input type="number"
+                                   id="numerator"
+                                   min="1"
+                                   step="1"
+                                   placeholder="分子"
+                                   title="分子">
+                            <div class="fraction-line"></div>
+                            <input type="number"
+                                   id="denominator"
+                                   min="1"
+                                   step="1"
+                                   placeholder="分母"
+                                   title="分母">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 修改切换按钮文字 -->
+                <div class="input-toggle">
+                    <button type="button" class="toggle-btn active" data-input="decimal">整数</button>
+                    <button type="button" class="toggle-btn" data-input="fraction">分数</button>
+                </div>
+            </div>
+
+            <button type="submit">开始证明</button>
+        </form>
+    </div>
+    <div id="result" style="display: none;">
+        <div class="result-header">
+            <h3 style="text-align: left; color: black; margin: 0 0 20px 0;">证毕</h3>
+            <div class="result-actions">
+                <button id="showTexBtn" class="show-tex-btn">显示公式TeX</button>
+                <button id="exportBtn" class="export-btn">导出公式图片</button>
+            </div>
+        </div>
+        <div class="text-center" id="math-output" style="margin-top: 20px;">
+            <div id="loading"> </div>
+        </div>
+    </div>
+
+    <div class="combo-proof-section">
+        <div class="title" data-i18n="comboTitle">组合不等式证明</div>
+        <form id="comboForm" class="combo-proof-form">
+            <input type="text" id="comboProblem" placeholder="例如：e+pi>35/6" data-i18n-placeholder="comboPlaceholder">
+            <button type="submit" data-i18n="comboStart">拆解并证明</button>
+        </form>
+        <div class="combo-note" data-i18n="comboHelp">当前支持常用组合，例如 pi^2+8*pi&gt;35、e*pi^2&lt;27等。请尽量规范输入公式。</div>
+        <div id="combo-result"></div>
+    </div>
+
+    <!-- 在 body 中添加历史记录面板 -->
+    <div class="history-panel" style="display: none;">
+        <h3 data-i18n="history">历史记录</h3>
+        <div id="history-list"></div>
+    </div>
+</div>
+    <p class="copyright">
+        <div style="text-align: center;">
+            <p style="text-align: left; font-size: 0.9em; line-height: 1.5;">
+                <span data-i18n="authorLabel">作者：</span>量化调酒师 （<a href="https://www.zhihu.com/people/plel/" target="_blank" style="color: black; text-decoration: underline;"><strong><span data-i18n="authorLink">量化调酒师知乎地址</span></strong></a>）<br>
+                <span data-i18n="principleLabel">算法原理详见文章：</span> <a href="https://zhuanlan.zhihu.com/p/669285539" target="_blank" style="color: black; text-decoration: underline;"><strong>《如何优雅地"注意到"关于e、π的不等式》</strong></a><br>
+                <span data-i18n="introLabel">计算器介绍详见文章：</span> <a href="https://zhuanlan.zhihu.com/p/20960679909" target="_blank" style="color: black; text-decoration: underline;"><strong>《注意力计算器自动生成积分证明》</strong></a><br>
+                <span data-i18n="skillLabel">"注意力计算器.skill"介绍详见文章：</span> <a href="https://zhuanlan.zhihu.com/p/2035023183380746326" target="_blank" style="color: black; text-decoration: underline;"><strong data-i18n="skillArticleTitle">《注意力计算器.skill：把自动生成积分证明装进WorkBuddy》</strong></a><br>
+                <span data-i18n="convexLabel">凹凸不等式计算器：</span> <a href="/convex" target="_blank" style="color: black; text-decoration: underline;"><strong data-i18n="convexTitle">打开凹凸不等式计算器</strong></a><br>
+                <span data-i18n="healthLabel">健康计算器：</span> <a href="/health" target="_blank" style="color: black; text-decoration: underline;"><strong data-i18n="healthTitle">打开健康计算器</strong></a>
+            </p>
+        </div>
+    </p>
+<script>
+    let selectedType = '';  // 添加变量来记录 selectedType
+    let latestComboLatexItems = [];
+    const OPTION_LABELS = {
+        zh: {
+            '': '请选择要证明的不等式类型',
+            pi: '比较 \\(\\pi\\) 与有理数', e: '比较 \\(e\\) 与有理数', pi_n: '比较 \\(\\pi^q\\) 与有理数', e_q: '比较 \\(e^q\\) 与有理数',
+            ln_q: '比较 \\(\\ln q\\) 与有理数', ln_q_square: '比较 \\((\\ln q)^2\\) 与有理数',
+            sin_q: '比较 \\(\\sin q\\) (弧度)与有理数', cos_q: '比较 \\(\\cos q\\) (弧度)与有理数', tan_q: '比较 \\(\\tan q\\) (弧度)与有理数', cot_q: '比较 \\(\\cot q\\) (弧度)与有理数',
+            sin_q_degree: '比较 \\(\\sin q^\\circ\\) (角度)与有理数', cos_q_degree: '比较 \\(\\cos q^\\circ\\) (角度)与有理数', sin_pi_q: '比较 \\(\\sin q\\pi\\) 与有理数', cos_pi_q: '比较 \\(\\cos q\\pi\\) 与有理数',
+            arctan_q: '比较 \\(\\mathrm{arctan}\\ q\\) 与有理数', arccot_q: '比较 \\(\\mathrm{arccot}\\ q\\) 与有理数',
+            sinh_q: '比较 \\(\\sinh q\\) 与有理数', cosh_q: '比较 \\(\\cosh q\\) 与有理数', tanh_q: '比较 \\(\\tanh q\\) 与有理数', coth_q: '比较 \\(\\coth q\\) 与有理数',
+            artanh_q: '比较 \\(\\mathrm{artanh}\\ q\\) 与有理数', arcoth_q: '比较 \\(\\mathrm{arcoth}\\ q\\) 与有理数',
+            gamma: '比较欧拉常数 \\(\\gamma\\) 与有理数', golden: '比较黄金分割率 \\(\\phi\\) 与有理数', catalan: '比较卡塔兰常数 \\(C\\) 与有理数', zeta3: '比较阿培里常数 \\(\\zeta(3)\\) 与有理数',
+            e_pi: '比较盖尔方德常数 \\(e^{\\pi}\\) 与有理数', varpi: '比较双纽线周率 \\(\\varpi\\) 与有理数', gauss: '比较高斯常数 \\(G\\) 与有理数'
+        },
+        en: {
+            '': 'Choose an inequality type',
+            pi: 'Compare \\(\\pi\\) with a rational number', e: 'Compare \\(e\\) with a rational number', pi_n: 'Compare \\(\\pi^q\\) with a rational number', e_q: 'Compare \\(e^q\\) with a rational number',
+            ln_q: 'Compare \\(\\ln q\\) with a rational number', ln_q_square: 'Compare \\((\\ln q)^2\\) with a rational number',
+            sin_q: 'Compare \\(\\sin q\\) in radians with a rational number', cos_q: 'Compare \\(\\cos q\\) in radians with a rational number', tan_q: 'Compare \\(\\tan q\\) in radians with a rational number', cot_q: 'Compare \\(\\cot q\\) in radians with a rational number',
+            sin_q_degree: 'Compare \\(\\sin q^\\circ\\) in degrees with a rational number', cos_q_degree: 'Compare \\(\\cos q^\\circ\\) in degrees with a rational number', sin_pi_q: 'Compare \\(\\sin(q\\pi)\\) with a rational number', cos_pi_q: 'Compare \\(\\cos(q\\pi)\\) with a rational number',
+            arctan_q: 'Compare \\(\\mathrm{arctan}\\ q\\) with a rational number', arccot_q: 'Compare \\(\\mathrm{arccot}\\ q\\) with a rational number',
+            sinh_q: 'Compare \\(\\sinh q\\) with a rational number', cosh_q: 'Compare \\(\\cosh q\\) with a rational number', tanh_q: 'Compare \\(\\tanh q\\) with a rational number', coth_q: 'Compare \\(\\coth q\\) with a rational number',
+            artanh_q: 'Compare \\(\\mathrm{artanh}\\ q\\) with a rational number', arcoth_q: 'Compare \\(\\mathrm{arcoth}\\ q\\) with a rational number',
+            gamma: "Compare Euler's constant \\(\\gamma\\) with a rational number", golden: 'Compare the golden ratio \\(\\phi\\) with a rational number', catalan: "Compare Catalan's constant \\(C\\) with a rational number", zeta3: "Compare Apéry's constant \\(\\zeta(3)\\) with a rational number",
+            e_pi: "Compare Gelfond's constant \\(e^{\\pi}\\) with a rational number", varpi: 'Compare the lemniscate constant \\(\\varpi\\) with a rational number', gauss: "Compare Gauss's constant \\(G\\) with a rational number"
+        }
+    };
+    const UI_TEXT = {
+        zh: { typeTitle: '请选择不等式类型(共29种类型)', inputTitle: '请输入整数或分数，选择 > 或者 <', integer: '整数', fraction: '分数', numerator: '分子', denominator: '分母', start: '开始证明', notice: '注意到', qed: '证毕！', showTex: '显示TeX代码', exportImage: '导出公式图片', history: '历史记录', serverError: '服务器错误', renderFailed: '渲染公式失败', downloading: '正在下载公式图片', fileName: '注意力积分.png', authorLabel: '作者：', authorLink: '量化调酒师知乎地址', principleLabel: '算法原理详见文章：', introLabel: '计算器介绍详见文章：', skillLabel: '注意力计算器.skill介绍详见文章：', skillArticleTitle: '《注意力计算器.skill》', convexLabel: '凹凸不等式计算器：', convexTitle: '打开凹凸不等式计算器', healthLabel: '健康计算器：', healthTitle: '打开健康计算器', comboTitle: '组合不等式证明', comboPlaceholder: '例如：pi^2+8*pi>35', comboStart: '拆解并证明', comboHelp: '当前支持常用组合，例如 pi^2+8*pi>35、e*pi^2<27等。请尽量规范输入公式。', comboWorking: '正在拆解并生成证明...', comboResultTitle: '组合证明结果', comboDecomposition: '拆解方式', comboSteps: '基础不等式{index}的证明', comboBasicProofsBelow: '包含{count}个基本不等式的证明见下方，证毕！', close: '关闭' },
+        en: { pageTitle: 'Attention Calculator', typeTitle: 'Choose an inequality type (29 types)', inputTitle: 'Enter integers or fractions, then choose > or <', integer: 'Integer', fraction: 'Fraction', numerator: 'Numerator', denominator: 'Denominator', start: 'Generate Proof', notice: 'Notice that', qed: 'Q.E.D.', showTex: 'Show Tex', exportImage: 'Export Formula Image', history: 'History', serverError: 'Server error', renderFailed: 'Formula rendering failed', downloading: 'Downloading formula image', fileName: 'attention-integral.png', authorLabel: 'Author: ', authorLink: 'Zhihu Profile', principleLabel: 'About Algorithm: ', introLabel: 'About Calculator: ', skillLabel: 'About AttentionCalculator.skill: ', skillArticleTitle: 'AttentionCalculator.skill', convexLabel: 'Convex Concave Prover: ', convexTitle: 'Open Convex Concave Prover', healthLabel: 'Health Calculator: ', healthTitle: 'Open Health Calculator', comboTitle: 'Composite Inequality Proof', comboPlaceholder: 'Example: pi^2+8*pi>35', comboStart: 'Decompose and Prove', comboHelp: 'Currently supports common combinations, such as pi^2+8*pi>35 and e*pi^2<27. Please enter formulas in a standard form.', comboWorking: 'Decomposing and generating proofs...', comboResultTitle: 'Composite Proof Result', comboDecomposition: 'Decomposition', comboSteps: 'Proof of Basic Inequality {index}', comboBasicProofsBelow: 'The proofs of the {count} basic inequalities are as below. Q.E.D.', close: 'Close' }
+    };
+    // 系数缺省时各类型提示语：[整数模式, 分数模式]，逐字沿用原站文案
+    const POWER_PROMPTS = {
+        pi: ['请输入π的系数', '请输入π的系数的分子和分母'],
+        e: ['请输入e的系数', '请输入e的系数的分子和分母'],
+        pi_n: ['请输入π的次数', '请输入e的系数的分子和分母'],
+        e_q: ['请输入e的次数', '请输入e的次数的分子和分母'],
+        ln_q: ['请输入ln后的值', '请输入ln后的值的分子和分母'],
+        ln_q_square: ['请输入ln后的值', '请输入ln后的值的分子和分母'],
+        sin_q: ['请输入sin后的值', '请输入sin后的值的分子和分母'],
+        cos_q: ['请输入cos后的值', '请输入cos后的值的分子和分母'],
+        tan_q: ['请输入tan后的值', '请输入tan后的值的分子和分母'],
+        cot_q: ['请输入cot后的值', '请输入cot后的值的分子和分母'],
+        sin_q_degree: ['请输入sin后的度数', '请输入sin的度数值的分子和分母'],
+        cos_q_degree: ['请输入cos后的度数', '请输入cos的度数值的分子和分母'],
+        sin_pi_q: ['请输入sin(qπ)内的值', '请输入sin(qπ)内的值的分子和分母'],
+        cos_pi_q: ['请输入cos(qπ)内的值', '请输入cos(qπ)内的值的分子和分母'],
+        arctan_q: ['请输入arctan后的值', '请输入arctan后的值的分子和分母'],
+        arccot_q: ['请输入arccot后的值', '请输入arccot后的值的分子和分母'],
+        sinh_q: ['请输入sinh后的值', '请输入sinh后的值的分子和分母'],
+        cosh_q: ['请输入cosh后的值', '请输入cosh后的值的分子和分母'],
+        tanh_q: ['请输入tanh后的值', '请输入tanh后的值的分子和分母'],
+        coth_q: ['请输入coth后的值', '请输入coth后的值的分子和分母'],
+        artanh_q: ['请输入artanh后的值', '请输入artanh后的值的分子和分母'],
+        arcoth_q: ['请输入arcoth后的值', '请输入arcoth后的值的分子和分母'],
+        gamma: ['请输入欧拉常数γ的系数', '请输入卡塔兰常数γ的系数的分子和分母'],
+        golden: ['请输入黄金分割率φ的系数', '请输入黄金分割率φ的系数的分子和分母'],
+        catalan: ['请输入卡塔兰常数C的系数', '请输入卡塔兰常数C的系数的分子和分母'],
+        zeta3: ['请输入阿培里常数ζ(3)的系数', '请输入阿培里常数ζ(3)的系数的分子和分母'],
+        e_pi: ['请输入盖尔方德常数e^π的系数', '请输入盖尔方德常数e^π的系数的分子和分母'],
+        varpi: ['请输入双纽线周率ϖ的系数', '请输入双纽线周率ϖ的系数的分子和分母'],
+        gauss: ['请输入高斯常数G的系数', '请输入高斯常数G的系数的分子和分母']
+    };
+    let currentLang = window.location.pathname.replace(/\/+$/, '') === '/en' ? 'en' : 'zh';
+    function tr(key) { return (UI_TEXT[currentLang] && UI_TEXT[currentLang][key]) || UI_TEXT.zh[key] || key; }
+    function applyTranslations() {
+        document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
+        document.title = currentLang === 'en' ? tr('pageTitle') : '注意力计算器';
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = tr(el.dataset.i18nPlaceholder); });
+        document.querySelectorAll('.option, .option-selected').forEach(el => {
+            const key = el.getAttribute('data-value');
+            if (Object.prototype.hasOwnProperty.call(OPTION_LABELS[currentLang], key)) el.innerHTML = OPTION_LABELS[currentLang][key];
+        });
+        document.querySelectorAll('.pi-toggle-btn, .toggle-btn').forEach(el => { el.textContent = el.dataset.input.includes('fraction') ? tr('fraction') : tr('integer'); });
+        document.querySelectorAll('[data-power-prefix]').forEach(el => {
+            const base = el.dataset.powerPrefix === 'pi' ? '\\(\\pi\\)' : '\\(e\\)';
+            el.innerHTML = currentLang === 'en' ? `${base} to the` : `${base}的`;
+        });
+        document.querySelectorAll('[data-power-suffix]').forEach(el => {
+            el.textContent = currentLang === 'en' ? 'power' : '次方';
+        });
+        const submit = document.querySelector('button[type="submit"]');
+        if (submit) submit.textContent = tr('start');
+        document.querySelectorAll('input[placeholder="整数"], input[placeholder="Integer"]').forEach(el => { el.placeholder = tr('integer'); el.title = tr('integer'); });
+        document.querySelectorAll('input[placeholder="分子"], input[placeholder="Numerator"]').forEach(el => { el.placeholder = tr('numerator'); el.title = tr('numerator'); });
+        document.querySelectorAll('input[placeholder="分母"], input[placeholder="Denominator"]').forEach(el => { el.placeholder = tr('denominator'); el.title = tr('denominator'); });
+        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentLang));
+        if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise().catch(err => console.log('MathJax error:', err));
+    }
+    function setLanguage(lang) {
+        currentLang = lang === 'en' ? 'en' : 'zh';
+        const targetPath = currentLang === 'en' ? '/en' : '/';
+        if (window.location.pathname !== targetPath) {
+            window.history.pushState({}, '', targetPath);
+        }
+        applyTranslations();
+    }
+    window.addEventListener('popstate', () => {
+        currentLang = window.location.pathname.replace(/\/+$/, '') === '/en' ? 'en' : 'zh';
+        applyTranslations();
+    });
+    document.querySelectorAll('.option-selected').forEach(span => {
+        if (span.getAttribute('data-value') === "") {
+            span.style.display = 'inline-block';
+        } else {
+            span.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const customSelect = document.querySelector('.custom-select');
+        const options = document.querySelector('.options');
+
+        applyTranslations();
+        loadHistory();
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function(event) {
+                event.stopPropagation();
+                setLanguage(btn.dataset.lang);
+            });
+        });
+
+        customSelect.addEventListener('click', function() {
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        });
+
+        options.querySelectorAll('.option').forEach(option => {
+            option.addEventListener('click', function() {
+                // 更新 selectedType 变量
+                selectedType = option.getAttribute('data-value');
+                console.log(selectedType);
+
+                // 隐藏所有证明部分
+                document.querySelectorAll('.proof-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+
+                if(selectedType === ""){
+                    document.getElementById('basicInputTitle').style.display = 'none';
+                    document.getElementById('piProof').style.display = 'none';
+                }else{
+                    document.getElementById('basicInputTitle').style.display = 'block';
+                    document.getElementById('piProof').style.display = 'block';
+                }
+
+                document.querySelectorAll('.math-symbol').forEach(span => {
+                    if (span.getAttribute('data-value') === selectedType) {
+                        span.style.display = 'inline-block';
+                    } else {
+                        span.style.display = 'none';
+                    }
+                });
+
+                document.querySelectorAll('.option-selected').forEach(span => {
+                    if (span.getAttribute('data-value') === selectedType) {
+                        span.style.display = 'inline-block';
+                    } else {
+                        span.style.display = 'none';
+                    }
+                });
+
+                // 隐藏结果区域
+                document.getElementById('result').style.display = 'none';
+
+
+                // 清空输入的值
+                document.getElementById('pi-decimal').value = '';
+                document.getElementById('pi-numerator').value = '';
+                document.getElementById('pi-denominator').value = '';
+                document.getElementById('decimal').value = '';
+                document.getElementById('numerator').value = '';
+                document.getElementById('denominator').value = '';
+                setTimeout(() => {
+                    options.style.display = 'none';
+                }, 100);
+            });
+        });
+
+        // 点击页面其他地方隐藏选项
+        document.addEventListener('click', function(event) {
+            if (!customSelect.contains(event.target)) {
+                options.style.display = 'none';
+            }
+        });
+    });
+
+
+
+    // 切换输入方式
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 更新按钮状态
+            document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 更新输入框显示
+            document.querySelectorAll('.input-container > div').forEach(div => div.classList.remove('active'));
+            document.getElementById(`${btn.dataset.input}-input`).classList.add('active');
+        });
+    });
+
+    // 系数的切换功能
+    document.querySelectorAll('.pi-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 更新按钮状态
+            document.querySelectorAll('.pi-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 更新输入框显示
+            document.querySelectorAll('.pi-input-container > div').forEach(div => div.classList.remove('active'));
+            document.getElementById(`${btn.dataset.input}-input`).classList.add('active');
+        });
+    });
+
+    function showInlineError(message, targetId = 'result') {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        target.style.display = 'block';
+        target.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function showInlineWarning(message, targetId = 'result') {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        target.style.display = 'block';
+        target.innerHTML = `<div class="info-text">${message}</div>`;
+    }
+
+    document.getElementById('calcForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const resultDiv = document.getElementById('result');
+
+        try {
+            const formData = new FormData();
+
+            // 获取系数（幂/参数）
+            const piActiveInput = document.querySelector('.pi-toggle-btn.active').dataset.input;
+            const prompts = POWER_PROMPTS[selectedType] || ['请输入系数', '请输入系数的分子和分母'];
+            let piDisplay;
+
+            if (piActiveInput === 'pi-decimal') {
+                const pi_decimal = document.getElementById('pi-decimal').value;
+                if (!pi_decimal) {
+                    showInlineError(prompts[0]);
+                    return;
+                }
+                if (selectedType === 'pi_n' && pi_decimal > 10) {
+                    showInlineError('π的次数不要超过10');
+                    return;
+                }
+                if ((selectedType === 'ln_q' || selectedType === 'ln_q_square') && !(pi_decimal > 1)) {
+                    showInlineError('请输入大于1的值');
+                    return;
+                }
+                formData.append('power', pi_decimal);
+                piDisplay = pi_decimal;  // 直接使用整数值
+            } else {
+                const piNumerator = document.getElementById('pi-numerator').value;
+                const piDenominator = document.getElementById('pi-denominator').value;
+                if (!piNumerator || !piDenominator) {
+                    showInlineError(prompts[1]);
+                    return;
+                }
+                if (selectedType === 'pi_n') {
+                    if (piNumerator > 10) {
+                        showInlineError('π的次数的分子不要超过10');
+                        return;
+                    }
+                    if (piDenominator > 1) {
+                        alert('请注意：没有直接计算π的('+piNumerator+'/'+piDenominator+')次方的积分，我们计算π的'+piNumerator+'次方的积分');
+                        // 这个不需要return，可以继续计算
+                    }
+                }
+                formData.append('power', `${piNumerator}/${piDenominator}`);
+                // 如果分母是1，直接显示分子
+                piDisplay = piDenominator === '1' ? piNumerator : `\\frac{${piNumerator}}{${piDenominator}}`;
+            }
+
+            formData.append('comparison', document.getElementById('comparison').value);
+
+            // 获取当前激活的输入方式
+            const activeInput = document.querySelector('.toggle-btn.active').dataset.input;
+            let rationalDisplay;
+
+            if (activeInput === 'decimal') {
+                const decimal = document.getElementById('decimal').value;
+                if (!decimal) {
+                    showInlineError('请输入整数');
+                    return;
+                }
+                formData.append('rational', `${decimal}/1`);
+                rationalDisplay = decimal;  // 直接使用整数值
+            } else {
+                const numerator = document.getElementById('numerator').value;
+                const denominator = document.getElementById('denominator').value;
+                if (!numerator || !denominator) {
+                    showInlineError('请输入分子和分母');
+                    return;
+                }
+                formData.append('rational', `${numerator}/${denominator}`);
+                // 如果分母是1，直接显示分子
+                rationalDisplay = denominator === '1' ? numerator : `\\frac{${numerator}}{${denominator}}`;
+            }
+            formData.append('type', selectedType);
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                showInlineError(errorData.error || tr('serverError'));
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 保存 LaTeX 格式用于显示
+                data.power = piDisplay;
+                data.rational = rationalDisplay;
+                showResult(data, selectedType);
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+            }
+        } catch (err) {
+            resultDiv.innerHTML = `
+                    <div class="error">
+                        ⚠️ ${err.message}
+                    </div>
+                `;
+        }
+    });
+
+    document.getElementById('comboForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const input = document.getElementById('comboProblem');
+        const comboResult = document.getElementById('combo-result');
+        const problem = input.value.trim();
+        if (!problem) {
+            comboResult.style.display = 'block';
+            comboResult.innerHTML = `<div class="error">${currentLang === 'en' ? 'Please enter an inequality.' : '请输入一个组合不等式。'}</div>`;
+            return;
+        }
+
+        comboResult.style.display = 'block';
+        comboResult.innerHTML = `<div class="info-text">${tr('comboWorking')}</div>`;
+
+        const formData = new FormData();
+        formData.append('problem', problem);
+
+        try {
+            const response = await fetch('/decompose_inequality', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                comboResult.innerHTML = `<div class="error">${data.error || tr('serverError')}</div>`;
+                return;
+            }
+
+            latestComboLatexItems = data.direct_basic
+                ? data.steps.map(step => step.equation)
+                : [data.decomposition_latex, ...data.steps.map(step => step.equation)];
+            const steps = data.steps.map((step, index) => `
+                <div class="combo-step">
+                    <div class="combo-step-header">
+                        <strong>${tr('comboSteps').replace('{index}', index + 1)}</strong>
+                        <div class="combo-step-actions">
+                            <button type="button" class="show-tex-btn combo-step-tex" data-combo-index="${data.direct_basic ? index : index + 1}">${tr('showTex')}</button>
+                            <button type="button" class="export-btn combo-step-export">${tr('exportImage')}</button>
+                        </div>
+                    </div>
+                    <div>\\[${step.equation}\\]</div>
+                </div>
+            `).join('');
+            const decomposition = data.direct_basic ? '' : `
+                    <div class="combo-step">
+                        <div class="combo-step-header">
+                            <strong>${tr('notice')}</strong>
+                            <div class="combo-step-actions">
+                                <button type="button" class="show-tex-btn combo-step-tex" data-combo-index="0">${tr('showTex')}</button>
+                                <button type="button" class="export-btn combo-step-export">${tr('exportImage')}</button>
+                            </div>
+                        </div>
+                        <div>\\[${data.decomposition_latex}\\]</div>
+                        <div style="font-weight: 700; margin-top: 0.75rem;">${tr('comboBasicProofsBelow').replace('{count}', data.basic_count || data.steps.length)}</div>
+                    </div>`;
+
+            comboResult.innerHTML = `
+                <div class="result-header">
+                    <h3 style="margin: 0;">${tr('comboResultTitle')}</h3>
+                </div>
+                <div id="combo-proof-render" class="combo-proof-render">
+                    ${decomposition}
+                    ${steps}
+                </div>
+            `;
+            comboResult.setAttribute('data-latex', latestComboLatexItems.join('\n\n'));
+            bindComboStepButtons();
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([comboResult]).then(bindComboStepButtons).catch(err => console.log('MathJax error:', err));
+            }
+        } catch (err) {
+            comboResult.innerHTML = `<div class="error">${err.message}</div>`;
+        }
+    });
+
+    // 修改 showResult 函数以支持不同类型的证明
+    function showResult(data, type) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `
+            <div class="result-header">
+                <h3 style="text-align: left; color: black; margin: 0;">${tr('notice')}</h3>
+                <div class="result-actions">
+                    <button id="showTexBtn" class="show-tex-btn">${tr('showTex')}</button>
+                    <button id="exportBtn" class="export-btn">${tr('exportImage')}</button>
+                </div>
+            </div>
+            <div id="math-output" style="margin-top: 20px; overflow: auto;">
+                <!-- MathJax生成的公式会放在这里 -->
+            </div>
+            <div style="margin-top: 20px;">
+                <h3 style="text-align: left; color: black; margin: 0;">${tr('qed')}</h3>
+            </div>
+        `;
+
+        resultDiv.style.display = 'block';
+
+        // 构建请求 URL
+        const params = new URLSearchParams({
+            m: data.parameters.m,
+            n: data.parameters.n,
+            a_val: data.parameters.a_val,
+            b_val: data.parameters.b_val,
+            c_val: data.parameters.c_val,
+
+            u_val: data.parameters.u_val,
+            au_val: data.parameters.au_val,
+            bu_val: data.parameters.bu_val,
+            cu_val: data.parameters.cu_val,
+
+            comparison: document.getElementById('comparison').value,
+            rational: data.rational
+        });
+
+        params.append('coef', data.power);
+
+        params.append('type', type);
+
+
+        // 获取 LaTeX 字符串
+        fetch(`/get_integral_image?${params.toString()}`)
+            .then(response => response.json().then(payload => {
+                if (!response.ok || !payload.equation) {
+                    throw new Error(payload.error || tr('renderFailed'));
+                }
+                return payload;
+            }))
+            .then(latex => {
+                const mathOutput = document.getElementById('math-output');
+                // 保存原始的 LaTeX 公式，移除 \[ 和 \]
+                const cleanLatex = latex.equation.replace(/^\\\[|\\\]$/g, '');
+                mathOutput.setAttribute('data-latex', cleanLatex);
+
+                // 使用 MathJax 显示公式
+                mathOutput.innerHTML = `
+                        <div style="font-size: 1.4em; overflow-x: auto;">
+                            \\[${cleanLatex}\\]
+                        </div>
+                    `;
+
+                MathJax.typesetPromise([mathOutput]).then(() => {
+                    // 检查并缩放公式
+                    adjustMathSize(mathOutput);
+
+                    const exportBtn = document.getElementById('exportBtn');
+                    if (exportBtn) {
+                        exportBtn.onclick = handleExport;
+                    }
+                    // 绑定按钮点击事件
+                    const showTexBtn = document.getElementById('showTexBtn');
+                    if (showTexBtn) {
+                        showTexBtn.onclick = handleShowTex;
+                    }
+
+
+                });
+
+                addHistory(data, latex.equation);
+            })
+            .catch(error => {
+                document.getElementById('math-output').innerHTML = `
+                        <div class="error">${error.message || tr('renderFailed')}</div>
+                    `;
+            });
+
+        // 调整 MathJax 公式大小的函数
+        function adjustMathSize(element) {
+            const containerWidth = element.offsetWidth;
+            const mjxMath = element.querySelector('.mjx-math');
+            if (mjxMath) {
+                const svg = mjxMath.querySelector('svg');
+                if (svg) {
+                    const svgWidth = svg.getAttribute('width');
+                    if (svgWidth > containerWidth) {
+                        const scale = containerWidth / svgWidth;
+                        svg.setAttribute('viewBox', `0 0 ${svgWidth}${svg.getAttribute('height')}`);
+                        svg.style.width = `${containerWidth}px`;
+                        svg.style.height = `${scale * svg.getAttribute('height')}px`;
+                    }
+                }
+            }
+        }
+    }
+
+    // 历史记录管理（sessionStorage 持久化，最多 10 条）
+    const MAX_HISTORY = 10;
+    const HISTORY_KEY = 'attentionHistory';
+    let sessionHistory = [];
+
+    function loadHistory() {
+        try {
+            sessionHistory = JSON.parse(sessionStorage.getItem(HISTORY_KEY)) || [];
+        } catch (err) {
+            sessionHistory = [];
+        }
+        updateHistoryDisplay();
+    }
+
+    // 添加新的历史记录
+    function addHistory(data, proofLatex) {
+        const now = new Date();
+        const historyItem = {
+            type: selectedType,
+            timestamp: now.toLocaleTimeString(),
+            piValue: data.power,
+            comparison: document.getElementById('comparison').value,
+            rational: data.rational,
+            proofLatex: proofLatex  // 保存证明的完整公式
+        };
+
+        sessionHistory.unshift(historyItem);
+        if (sessionHistory.length > MAX_HISTORY) {
+            sessionHistory.pop();
+        }
+        sessionStorage.setItem(HISTORY_KEY, JSON.stringify(sessionHistory));
+
+        updateHistoryDisplay();
+    }
+
+    // 更新历史记录显示
+    function updateHistoryDisplay() {
+        const historyPanel = document.querySelector('.history-panel');
+        const historyList = document.getElementById('history-list');
+
+        if (sessionHistory.length > 0) {
+            historyPanel.style.display = 'block';
+            historyList.innerHTML = sessionHistory.map(item => {
+                return `
+                        <div class="history-item">
+                            <div class="history-content">
+                                <div class="history-proof">\\[${item.proofLatex}\\]</div>
+                            </div>
+                            <div class="history-time">${item.timestamp}</div>
+                        </div>
+                    `;
+            }).join('');
+
+            // 重新渲染数学公式
+            MathJax.typesetPromise([historyList]).catch((err) => console.log('MathJax error:', err));
+        }
+    }
+
+    // 修改导出函数
+    function handleExport() {
+        console.log('开始导出...');
+
+        // 创建一个新的容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+                background: white;
+                padding: 20px;
+                position: fixed;
+                left: -9999px;
+                top: -9999px;
+            `;
+
+        // 获取原始的 LaTeX 公式
+        const mathOutput = document.getElementById('math-output');
+        const latex = mathOutput.getAttribute('data-latex');
+
+        if (!latex) {
+            console.error('找不到 LaTeX 公式');
+            return;
+        }
+
+        try {
+            // 使用 KaTeX 渲染公式
+            katex.render(latex, container, {
+                displayMode: true,
+                throwOnError: false,
+                fontSize: '1.4em'
+            });
+
+            document.body.appendChild(container);
+
+            // 转换为图片
+            html2canvas(container, {
+                backgroundColor: 'white',
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                // 创建下载链接
+                alert(tr('downloading'));
+                const link = document.createElement('a');
+                link.download = tr('fileName');
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // 清理临时元素
+                document.body.removeChild(container);
+            }).catch(error => {
+                console.error('转换图片失败:', error);
+                document.body.removeChild(container);
+            });
+        } catch (error) {
+            console.error('KaTeX 渲染失败:', error);
+            if (document.body.contains(container)) {
+                document.body.removeChild(container);
+            }
+        }
+    }
+
+    function showTexDialog(latex) {
+        if (!latex) {
+            showInlineError('找不到 LaTeX 公式');
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '50%';
+        container.style.left = '50%';
+        container.style.transform = 'translate(-50%, -50%)';
+        container.style.padding = '20px';
+        container.style.backgroundColor = '#fff';
+        container.style.border = '1px solid #ccc';
+        container.style.borderRadius = '8px';
+        container.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        container.style.maxWidth = '80%';
+        container.style.maxHeight = '80%';
+        container.style.overflow = 'auto';
+        container.style.textAlign = 'center';
+        container.style.zIndex = '9999';
+
+        const codeDisplay = document.createElement('pre');
+        codeDisplay.textContent = latex;
+        codeDisplay.style.fontFamily = 'monospace';
+        codeDisplay.style.marginTop = '10px';
+        codeDisplay.style.whiteSpace = 'pre-wrap';
+        container.appendChild(codeDisplay);
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = tr('close');
+        closeButton.onclick = function() {
+            document.body.removeChild(container);
+        };
+        container.appendChild(closeButton);
+        document.body.appendChild(container);
+    }
+
+    function exportElementAsImage(renderTarget) {
+        html2canvas(renderTarget, {
+            backgroundColor: 'white',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true
+        }).then(canvas => {
+            alert(tr('downloading'));
+            const link = document.createElement('a');
+            link.download = tr('fileName');
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(error => {
+            console.error('转换图片失败:', error);
+        });
+    }
+
+    function bindComboStepButtons() {
+        document.querySelectorAll('.combo-step-tex').forEach(button => {
+            button.onclick = () => showTexDialog(latestComboLatexItems[Number(button.dataset.comboIndex)]);
+        });
+        document.querySelectorAll('.combo-step-export').forEach(button => {
+            button.onclick = () => {
+                const renderTarget = button.closest('.combo-step');
+                if (!renderTarget) {
+                    showInlineError('找不到 LaTeX 公式', 'combo-result');
+                    return;
+                }
+                exportElementAsImage(renderTarget);
+            };
+        });
+    }
+
+    function handleShowTex() {
+        const mathOutput = document.getElementById('math-output');
+        const latex = mathOutput.getAttribute('data-latex');
+        showTexDialog(latex);
+    }
+
+</script>
+</body>
+</html>
