@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 r"""第三波边缘探针：核行为消歧（fuzz/edge 两波遗留的内核分歧点）。
 
 目标：
@@ -13,6 +12,7 @@ r"""第三波边缘探针：核行为消歧（fuzz/edge 两波遗留的内核分
 记录格式与 edge_probe.py 相同，追加进同一个 edge-probes.jsonl。
 """
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -231,10 +231,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     if args.only:
         todo = [p for p in todo if args.only in p["id"]]
