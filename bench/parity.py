@@ -36,6 +36,7 @@ def compare_record(rec: dict) -> dict:
         "comparison": rec["comparison"],
         "rational": rec["rational"],
         "site_success": rec["success"],
+        "site_error": rec.get("error"),
     }
     t0 = time.time()
     try:
@@ -63,13 +64,18 @@ def compare_record(rec: dict) -> dict:
                     out["equation_error"] = f"{type(exc).__name__}: {exc}"
     except WrongDirection:
         out["ours_success"] = False
-        out["ours_error"] = "wrong_direction"
+        out["ours_error"] = "要证明的式子不等号方向反了"
     except NoSolution:
         out["ours_success"] = False
         out["ours_error"] = "no_solution"
+    except ValueError as exc:  # 域校验失败——与站点文案比对
+        out["ours_success"] = False
+        out["ours_error"] = str(exc)
     except Exception as exc:  # solver bug — record loudly, don't hide
         out["ours_success"] = False
         out["ours_error"] = f"crash: {type(exc).__name__}: {exc}"
+    if not out["ours_success"] and not rec["success"]:
+        out["error_match"] = out["ours_error"] == rec.get("error")
     return out
 
 
@@ -107,9 +113,18 @@ def main() -> None:
 
     eq_match = sum(1 for r in results if r.get("equation_match"))
     eq_total = sum(1 for r in results if r.get("equation_match") is not None)
+    both_fail = [r for r in results if not r["site_success"] and not r.get("ours_success")]
+    err_match = sum(1 for r in both_fail if r.get("error_match"))
     print(f"total={n} both_ok={both_ok} site_ok_ours_fail={len(site_ok_ours_fail)} "
           f"site_fail_ours_ok={len(site_fail_ours_ok)} param_exact={exact} "
-          f"eq_match={eq_match}/{eq_total} crashes={len(crashes)}")
+          f"eq_match={eq_match}/{eq_total} both_fail={len(both_fail)} "
+          f"err_match={err_match} crashes={len(crashes)}")
+    err_diff = [r for r in both_fail if r.get("error_match") is False]
+    if err_diff:
+        print("both fail but error text differs:")
+        for r in err_diff[:15]:
+            print(f"  {r['type']} {r['power']} {r['comparison']} {r['rational']}: "
+                  f"site={r.get('site_error','?')!r} ours={r.get('ours_error')!r}")
     if crashes:
         print("CRASHES (fix first):")
         for r in crashes[:20]:
