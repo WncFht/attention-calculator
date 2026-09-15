@@ -2,12 +2,15 @@
 
 Endpoints mirror the live site: POST /calculate, GET /get_integral_image,
 POST /decompose_inequality, plus GET / and /en serving the single-page UI.
+Error statuses/texts follow bench probes: format errors -> 400, domain and
+search failures -> 404, internal render failures -> 500 (site's catch-all).
 Run with ``python -m attention_calculator.server`` or
 ``waitress-serve --port=8080 attention_calculator.server:app``.
 """
 
 from __future__ import annotations
 
+import math
 import re
 from fractions import Fraction
 
@@ -22,41 +25,34 @@ app.json.ensure_ascii = False  # 错误文案为中文, 直接输出 UTF-8
 # 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
 EXPONENT_LIMIT = {"pi": 30, "e": 30}
 
-# 缺系数时的提示, 与原页 JS 的校验文案一致
-POWER_PROMPT = {
-    "pi": "请输入π的系数",
-    "e": "请输入e的系数",
-    "pi_n": "请输入π的次数",
-    "e_q": "请输入e的次数",
-    "ln_q": "请输入ln后的值",
-    "ln_q_square": "请输入ln后的值",
-    "sin_q": "请输入sin后的值",
-    "cos_q": "请输入cos后的值",
-    "tan_q": "请输入tan后的值",
-    "cot_q": "请输入cot后的值",
-    "sin_q_degree": "请输入sin后的度数",
-    "cos_q_degree": "请输入cos后的度数",
-    "sin_pi_q": "请输入sin(qπ)内的值",
-    "cos_pi_q": "请输入cos(qπ)内的值",
-    "arctan_q": "请输入arctan后的值",
-    "arccot_q": "请输入arccot后的值",
-    "sinh_q": "请输入sinh后的值",
-    "cosh_q": "请输入cosh后的值",
-    "tanh_q": "请输入tanh后的值",
-    "coth_q": "请输入coth后的值",
-    "artanh_q": "请输入artanh后的值",
-    "arcoth_q": "请输入arcoth后的值",
-    "gamma": "请输入欧拉常数γ的系数",
-    "golden": "请输入黄金分割率φ的系数",
-    "catalan": "请输入卡塔兰常数C的系数",
-    "zeta3": "请输入阿培里常数ζ(3)的系数",
-    "e_pi": "请输入盖尔方德常数e^π的系数",
-    "varpi": "请输入双纽线周率ϖ的系数",
-    "gauss": "请输入高斯常数G的系数",
-}
+# 站端只接受 "n" 或 "n/d" (非负整数组成); 小数、负数、其它写法都算格式错误
+NUM_RE = re.compile(r"^\d+(/\d+)?$")
 
 # 前端把有理数显示成 LaTeX \frac{n}{d} 再回传给 /get_integral_image
 FRAC_RE = re.compile(r"^\\d?frac\{\s*(-?\d+)\s*\}\{\s*(-?\d+)\s*\}$")
+
+# 右侧有理数分子/分母必须 < 10^16 (probe: cap:*)
+RATIONAL_CAP = 10**16
+
+INTERNAL_ERROR = "服务器内部错误，请稍后再试"  # noqa: RUF001 -- 站端原文
+
+
+def fail(message: str, status: int):
+    """A failure JSON body; the site sends just ``{"error": ...}``."""
+    return jsonify({"error": message}), status
+
+
+def split_num(text: str) -> tuple[int, int] | None:
+    """Split the site's 'n'/'n/d' wire format into (numerator, denominator).
+
+    Returns None on format violation (empty, non-digit, negative, decimal);
+    denominator 0 is returned as-is so the caller can pick the right message.
+    """
+    text = text.strip()
+    if not NUM_RE.match(text):
+        return None
+    num, _, den = text.partition("/")
+    return int(num), int(den) if den else 1
 
 
 def parse_bound(text: str) -> Fraction:
@@ -68,9 +64,19 @@ def parse_bound(text: str) -> Fraction:
     return Fraction(text)
 
 
-def invalid(message: str):
-    """A failed-input JSON body (HTTP 400), same shape as the site's errors."""
-    return jsonify({"success": False, "error": message}), 400
+def domain_error(kind: str, power: Fraction) -> str | None:
+    """Site's 404-level domain prechecks, with probed messages verbatim."""
+    if kind in ("ln_q", "ln_q_square") and power <= 1:
+        return "请在ln后输入一个大于1的数"
+    if kind == "sin_q" and not 0 < float(power) < math.pi:
+        return "请在sin后输入一个在(0,π)内的数"
+    if kind in ("cos_q", "tan_q", "cot_q") and not 0 < float(power) < math.pi / 2:
+        return f"请在{kind.split('_')[0]}后输入一个在(0,π/2)内的数"
+    if kind in ("sin_pi_q", "cos_pi_q") and (
+        power.denominator == 1 or not 0 < power < Fraction(1, 2)
+    ):
+        return "请在输入一个在(0,1/2)内的分数，本情况不支持整数"  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+    return None
 
 
 @app.get("/")
@@ -90,47 +96,49 @@ def calculate():
     rational = request.form.get("rational", "").strip()
 
     if kind not in TYPES:
-        return invalid("请选择要证明的不等式类型")
-    prompt = POWER_PROMPT[kind]
-    if not power:
-        return invalid(prompt)
-    try:
-        power_val = parse_bound(power)
-    except (ValueError, ZeroDivisionError):
-        return invalid(prompt)
-    if kind == "pi_n" and power_val.numerator > 10:
-        return invalid("π的次数的分子不要超过10" if "/" in power else "π的次数不要超过10")
-    if kind in ("ln_q", "ln_q_square") and power_val <= 1:
-        return invalid("请输入大于1的值")
+        return fail("无效的证明类型", 400)
     if comp not in (">", "<"):
-        return invalid("请选择 > 或者 <")
-    if not rational:
-        return invalid("请输入分子和分母")
-    try:
-        parse_bound(rational)
-    except (ValueError, ZeroDivisionError):
-        return invalid("请输入分子和分母")
+        return fail("无效的不等号方向", 400)
+
+    power_parts = split_num(power)
+    if power_parts is None or power_parts[1] == 0:
+        return fail("左侧系数格式无效", 400)
+    power_val = Fraction(*power_parts)
+    bound_parts = split_num(rational)
+    if bound_parts is None:
+        return fail("右侧有理数格式无效", 400)
+    if bound_parts[1] == 0:
+        return fail("右侧有理数分母不能为0", 400)
+    if bound_parts[0] >= RATIONAL_CAP or bound_parts[1] >= RATIONAL_CAP:
+        return fail("右侧有理数请输入小于10^16的整数或分数", 400)
+
+    err = domain_error(kind, power_val)
+    if err:
+        return fail(err, 404)
 
     try:
         result = solve.prove(kind, power, comp, rational)
-    except ModuleNotFoundError:
-        return jsonify(
-            {"success": False, "error": f"kernel family for type {kind!r} not available"}
-        ), 502
     except engine.WrongDirection:
-        return jsonify({"success": False, "error": "要证明的式子不等号方向反了"})
-    except ValueError as exc:
-        return invalid(str(exc))
+        return fail("要证明的式子不等号方向反了", 404)
     except engine.NoSolution:
         limit = EXPONENT_LIMIT.get(kind, 10)
-        return jsonify(
-            {"success": False, "error": f"在指数不超过{limit}的范围内未找到{comp}方向的解"}
-        )
+        return fail(f"在指数不超过{limit}的范围内未找到{comp}方向的解", 404)
+    except ValueError as exc:
+        return fail(str(exc), 400)
+    except ModuleNotFoundError:
+        return fail(INTERNAL_ERROR, 500)
+
+    params = dict(result["parameters"])
+    params.setdefault("unified_form", {})
+    # 线上响应里 m/n 是 int, au/bu/cu/u_val 是字符串
+    params["m"], params["n"] = int(params["m"]), int(params["n"])
+    for k in ("au_val", "bu_val", "cu_val", "u_val"):
+        params[k] = str(params[k])
     return jsonify(
         {
             "success": True,
             "type": kind,
-            "parameters": result["parameters"],
+            "parameters": params,
             "equations": {"solution": result["solution"]},
         }
     )
@@ -141,25 +149,19 @@ IMAGE_KEYS = ("m", "n", "a_val", "b_val", "c_val", "u_val", "au_val", "bu_val", 
 
 @app.get("/get_integral_image")
 def get_integral_image():
-    """Render the LaTeX proof equation for solved parameters via the kernel family."""
-    kind = request.args.get("type", "")
-    if kind not in TYPES:
-        return jsonify({"error": "unsupported type"}), 400
-    comp = request.args.get("comparison", "")
-    if comp not in (">", "<"):
-        return jsonify({"error": "bad comparison"}), 400
+    """Render the LaTeX proof equation for solved parameters via the kernel family.
+
+    The site answers every render failure with a generic 500; keep that.
+    """
     try:
+        kind = request.args.get("type", "")
+        comp = request.args.get("comparison", "")
         params = render.coerce_params({k: request.args.get(k, "") for k in IMAGE_KEYS})
         power = parse_bound(request.args.get("coef", "1"))
         bound = parse_bound(request.args.get("rational", ""))
-    except (ValueError, ZeroDivisionError):
-        return jsonify({"error": "bad parameters"}), 400
-    try:
         equation = render.render_equation(params, kind, power, comp, bound)
-    except ModuleNotFoundError:
-        return jsonify({"error": f"kernel family for type {kind!r} not available"}), 502
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        return jsonify({"error": INTERNAL_ERROR}), 500
     return jsonify({"equation": equation})
 
 
@@ -168,12 +170,13 @@ def decompose_inequality():
     """Decompose a composite inequality into basic-type sub-proofs."""
     problem = request.form.get("problem", "").strip()
     if not problem:
-        return invalid("请输入一个组合不等式。")
+        return fail("请输入一个组合不等式。", 400)
     from . import decompose
+
     try:
         result = decompose.decompose_inequality(problem)
     except ValueError as exc:
-        return jsonify({"success": False, "error": str(exc)}), 400
+        return fail(str(exc), 400)
     return jsonify(result)
 
 
