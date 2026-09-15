@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2029  # $DIR/$PY intentionally expand client-side into the ssh command string
 # 全量评测：同步代码到 devbox → parity + verify → 聚合报告。
 # 用法: bench/run_all.sh [devbox]
 # golden 数据由 harvest.py 采集；本脚本不重复采，缺数据时先跑 harvest。
