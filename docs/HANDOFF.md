@@ -80,9 +80,15 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 - 文法情报（已验证）：`e^pi` 合法（e_pi 型）；`pi^e`、`sin(30°)`、`sin(pi/5)`、
   `ln(2)^2`、`phi^2`、`sin(1)*pi`、`ln(10)/pi` 全 400；`ln(2)` 带括号合法、`ln2` 不带 400。
 
-### 2. kernel 边缘分歧 — 最大的一块
-文件：`kernels/*.py`、`render.py`、`tests/test_edge.py`、`tests/test_quadlog.py`。
-暂停时全部 8 个 kernel + render 已在编辑中（wip 快照里有中间态）。
+### 2. kernel 边缘分歧 — ✅ 已完成（wip `b6af6b9`+`b3bb0ab`）
+
+**验收全绿**：parity 3454/3454（eq_match 1588/1588）、replay_fuzz 922/922、
+replay_edge 剩余 10 条全属其他 agent（7 float + 1 decompose + 2 姊妹页）。
+钉死的机制（详见 git 历史与 test_edge.py 84 例）：'<' 退化模板在普通搜索耗尽后、
+转置尝试前发射（t≥0∧b>0 严格门）；崩溃型核先做 float64 方向预检
+（CONST_F/PRE_F 覆盖双曲/arctan/pi_n/e_q/gamma——q=0 不对称即由此产生）；
+pi_n `wire_pair` 不约分原对；gamma coef 折叠 + u=0 `\tilde\infty` + cf/u 约分显示；
+golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain→lt_bound→transposed。
 - **新 proof family（最重要）**：varpi/gauss「elementary + remainder」模板——
   宽松界走 m=n=0、`∫poly·(1-x)·√(1-x⁴)dx + 有理余项`（余项在积分号**外**）、
   cu_val∈{1,2}、x 幂按 4k+r 余数。触发条件（vs 主搜索谁先谁后）要探测钉死。
