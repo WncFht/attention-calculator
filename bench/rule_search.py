@@ -6,8 +6,6 @@ the product of factor bounds -- factor split analysed separately).
 
 from __future__ import annotations
 
-import json
-import re
 from fractions import Fraction
 from itertools import permutations
 from pathlib import Path
@@ -26,10 +24,7 @@ def term_specs(case):
     """Group steps into sum-terms: consecutive steps whose bounds multiply
     (product term) vs add.  We can't see grouping directly, so detect from
     the decomposition latex: '·' inside a term vs '+'/'-' between terms."""
-    decomp = case["decomp"]
-    lhs = decomp.split("<")[0].split(">")[0]
     # split on + or - at top level (decomp latex has no nested +- inside terms)
-    parts = re.split(r"(?<![}\\])([+-])", lhs)
     return None
 
 
@@ -57,7 +52,8 @@ CASES = [
     ("pi+e<5.86", [("pi", mp.pi), ("e", mp.e)], ["355/113", "193/71"], Fraction(293, 50)),
     ("pi+phi<5", [("phi", mp.phi), ("pi", mp.pi)], ["5/3", "10/3"], Fraction(5)),
     ("pi+phi<4.77", [("phi", mp.phi), ("pi", mp.pi)], ["13/8", "22/7"], Fraction(477, 100)),
-    ("pi+phi<4.7597", [("phi", mp.phi), ("pi", mp.pi)], ["233/144", "355/113"], Fraction(47597, 10000)),
+    ("pi+phi<4.7597", [("phi", mp.phi), ("pi", mp.pi)],
+     ["233/144", "355/113"], Fraction(47597, 10000)),
     ("pi+gamma<4", [("gamma", mp.euler), ("pi", mp.pi)], ["2/3", "10/3"], Fraction(4)),
     ("pi+gamma<3.73", [("gamma", mp.euler), ("pi", mp.pi)], ["7/12", "22/7"], Fraction(373, 100)),
     ("phi+gamma<2.3", [("phi", mp.phi), ("gamma", mp.euler)], ["13/8", "2/3"], Fraction(23, 10)),
@@ -71,7 +67,8 @@ CASES = [
     ("pi/2+e<4.3", [("pi/2", mp.pi / 2), ("e", mp.e)], ["11/7", "30/11"], Fraction(43, 10)),
     ("sin(2)+sin(1)<2", [("sin1", mp.sin(1)), ("sin2", mp.sin(2))], ["1", "1"], Fraction(2)),
     ("sin(1)+cos(1)<2", [("sin1", mp.sin(1)), ("cos1", mp.cos(1))], ["1", "3/5"], Fraction(2)),
-    ("cos(1)+sin(1)<1.39", [("sin1", mp.sin(1)), ("cos1", mp.cos(1))], ["16/19", "6/11"], Fraction(139, 100)),
+    ("cos(1)+sin(1)<1.39", [("sin1", mp.sin(1)), ("cos1", mp.cos(1))],
+     ["16/19", "6/11"], Fraction(139, 100)),
     ("pi+e+gamma<7", [("gamma", mp.euler), ("pi", mp.pi), ("e", mp.e)],
      ["2/3", "7/2", "11/4"], Fraction(7)),
     ("pi+e+phi<8", [("phi", mp.phi), ("pi", mp.pi), ("e", mp.e)],
