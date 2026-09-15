@@ -130,7 +130,7 @@ BAD_POWER_CAP = "左侧系数请输入小于10^16的整数或分数"
 BAD_RATIONAL = "右侧有理数格式无效"
 ZERO_DENOM = "右侧有理数分母不能为0"
 RATIONAL_TOO_BIG = "右侧有理数请输入小于10^16的整数或分数"
-INTERNAL_ERROR = "服务器内部错误，请稍后再试"  # noqa: RUF001 -- 站端原文
+INTERNAL_ERROR = "服务器内部错误，请稍后再试"
 
 
 def test_calculate_format_errors(client):
@@ -175,7 +175,7 @@ def test_calculate_format_errors(client):
 
 def test_calculate_domain_errors(client):
     """Out-of-domain parameters -> 404 with the site's probed texts."""
-    pi_frac_msg = "请在输入一个在(0,1/2)内的分数，本情况不支持整数"  # noqa: RUF001
+    pi_frac_msg = "请在输入一个在(0,1/2)内的分数，本情况不支持整数"
     cases = [
         ({"type": "ln_q", "power": "1"}, "请在ln后输入一个大于1的数"),
         ({"type": "ln_q", "power": "1/2"}, "请在ln后输入一个大于1的数"),
