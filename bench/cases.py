@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 """生成 golden case 列表与组合不等式问题清单。
 
 每个 (type, power) 组合用 mpmath 50 位精度算常数真值 v，取三类有理界：
