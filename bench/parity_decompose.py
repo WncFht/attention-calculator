@@ -55,7 +55,9 @@ def check_decompose(client, rec: dict) -> dict:
         if not out["body_match"]:
             out["ours_body"] = resp.get_data(as_text=True)
         return out
-    out["status_match"] = resp.status_code == 200
+    # records carry no http status; {"error":...} bodies are the site's 400s
+    want = 400 if "error" in site else 200
+    out["status_match"] = resp.status_code == want
     out["body_match"] = resp.get_json(silent=True) == site
     if not out["body_match"]:
         out["ours_body"] = resp.get_data(as_text=True)
