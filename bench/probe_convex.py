@@ -520,8 +520,12 @@ def followup2():
         prove("x<0", "dir:lt0"),
         prove("x^2-2*x+1=0", "dir:eqconvex"),
         prove("x>0", "dom:halfbad", extra={"domain": "0,"}),
+        prove("x>0", "dom:badlo", extra={"domain": "a,b"}),
         prove("x^2>x", "dom:inverted", extra={"domain": "10,0"}),
         prove("x^2+1>x", "tan:gt-affine"),
+        # 3001-term sum: collect_terms recursion depth ~3000 > 1000 -> RecursionError
+        # inside prove(); reveals whether the site's except covers non-ValueError.
+        prove("x+" * 3000 + "x", "err:recursion"),
     ]
 
 
@@ -565,6 +569,77 @@ def main():
         p.error("give batch names or --all")
     for name in names:
         run_batch(BATCHES[name](), skip_done=args.skip_done)
+
+def followup3():
+    """Length-guard threshold search + deep-recursion attempt under the cap."""
+    cases = [
+        prove("x" * 100 + ">0", "len:100"),
+        prove("x" * 500 + ">0", "len:500"),
+        prove("x" * 1000 + ">0", "len:1000"),
+        prove("x" * 1500 + ">0", "len:1500"),
+        prove("x" * 2000 + ">0", "len:2000"),
+        # 1 char of recursion depth per '-' (UnaryOp USub); needs cap > ~1001
+        prove("-" * 1100 + "x", "err:recursion2"),
+    ]
+    return cases
+
+
+BATCHES['followup3'] = followup3
+
+def followup4():
+    """Pin down the length cap and test length/recursion on the line param."""
+    return [
+        prove("x" * 198 + ">0", "len:200"),
+        prove("x" * 254 + ">0", "len:256"),
+        prove("x" * 298 + ">0", "len:300"),
+        prove("x" * 398 + ">0", "len:400"),
+        prove("x^2+1>0", "line:long", line="x+" * 1500 + "x"),
+        prove("x>0", "dom:long", extra={"domain": "0" * 3000}),
+    ]
+
+
+BATCHES['followup4'] = followup4
+
+def followup5():
+    """Pin the inequality length cap: total chars in (400, 502]."""
+    return [
+        prove("x" * 448 + ">0", "len:450"),
+        prove("x" * 478 + ">0", "len:480"),
+        prove("x" * 498 + ">0", "len:500"),
+        prove("x" * 499 + ">0", "len:501"),
+    ]
+
+
+BATCHES['followup5'] = followup5
+
+def followup6():
+    """Exact cap: 482 chars ok, 501 rejected. Probe 500 and 490."""
+    return [
+        prove("x" * 498 + ">0", "len:cap500"),
+        prove("x" * 488 + ">0", "len:cap490"),
+        prove("x" * 499 + ">0", "len:cap501b"),
+    ]
+
+
+BATCHES['followup6'] = followup6
+
+def followup7():
+    """Check order of length-guard vs blank-guard, and line-length guard edge."""
+    return [
+        prove(" " * 501, "len:blank501"),
+        prove(" " * 500, "len:blank500"),
+        prove("x^2+1>0", "line:len600", line="x" * 600),
+    ]
+
+
+BATCHES['followup7'] = followup7
+
+def followup8():
+    """501 raw chars that strip to 500: raw-length check -> 输入过长."""
+    return [prove("x" * 500 + " ", "len:raw501")]
+
+
+BATCHES['followup8'] = followup8
 
 
 if __name__ == "__main__":
