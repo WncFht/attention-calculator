@@ -34,11 +34,18 @@ from math import comb, lcm
 
 import sympy as sp
 
-from ..engine import mn_order, search
+from ..engine import NoSolution, Solved, gauss_solve, mn_order, poly_nonneg, search
+from ..integrand import lhs_mpf
 from ..moment import Moment, combine
 from ..render import rat_tex, wire_fraction
 
 LIMIT = 10
+
+# '<' correct-solve m range per kind; the transposed fallback sits at m+1.
+# gauss: site solves correctly only for m<=4, then the m=5 buggy-transposed
+# shot. varpi: the plain loop runs to 10 and the (never-firing) fallback slot
+# would be m=11.
+LT_M_LIMIT = {"gauss": 4, "varpi": 10}
 
 
 # --------------------------------------------------------------------- golden
@@ -120,14 +127,21 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
                  for m, n in mn_order(LIMIT))
         sign = Fraction(1 if comp == ">" else -1)
         target = {"phi": sign * power, "1": -sign * bound}
+        solved = search(plans, target, True)
     else:
         # n is a direction flag here: 0 proves '>', 1 proves '<'
         flag = 0 if comp == ">" else 1
         plans = ((m, flag, [lemniscate_basis(kind, comp, m, 0),
                             lemniscate_basis(kind, comp, m, 1)])
-                 for m in range(LIMIT + 1))
+                 for m in range(LT_M_LIMIT[kind] + 1
+                                if comp == "<" else LIMIT + 1))
         target = lemniscate_target(kind, comp, power, bound)
-    solved = search(plans, target, True)
+        try:
+            solved = search(plans, target, True)
+        except NoSolution:
+            if comp == ">":
+                return sqrt_bound_proof(kind, target)
+            solved = transposed_lt_proof(kind, power, bound, target)
 
     a, b = solved.coeffs
     u = lcm(a.denominator, b.denominator)
@@ -139,6 +153,62 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
             "u_val": str(u), "unified_form": {},
         },
         "solution": f"a = {a}, b = {b}",
+    }
+
+
+def transposed_lt_proof(kind: str, power: Fraction, bound: Fraction,
+                        target: Moment) -> Solved:
+    """The site's '<' last resort: a single solve at m = LT_M_LIMIT[kind] + 1
+    whose rows are the two basis-moment vectors themselves, rhs = target in
+    [symbol, "1"] order — i.e. the transpose of the correct system.
+
+    The identity it claims is mathematically false, but the site only checks
+    a+bx^4 nonneg before emitting it. Reached only when the '<' claim is
+    numerically true (false claims 404 with 方向反了 without it). For gauss
+    the m=5 transposed solution is always positive, so every true bound the
+    plain m<=4 search misses (the (G, ~0.855] window) lands here; for varpi
+    the transposed solution always has a<0, so it never fires.
+    """
+    if lhs_mpf(kind, "<", power, bound) <= 0:
+        raise NoSolution
+    sym = next(s for s in target if s != "1")
+    m = LT_M_LIMIT[kind] + 1
+    basis = [lemniscate_basis(kind, "<", m, i) for i in (0, 1)]
+    rows = [[b.get(sym, Fraction(0)), b.get("1", Fraction(0))] for b in basis]
+    coeffs = gauss_solve(rows, [target[sym], target["1"]])
+    if not poly_nonneg(coeffs):
+        raise NoSolution
+    return Solved(m, 1, coeffs, +1)
+
+
+# '>' last-resort kernel moments: t * poly(x) * sqrt(1-x^4) / pi integrates to
+# {symbol: t*alpha, "1": t*beta}. gauss uses poly=(1-x), varpi uses x(1-x).
+SQRT_BOUND_MOMENT = {
+    "gauss": ("gauss", Fraction(1, 3), Fraction(-1, 8)),
+    "varpi": ("varpi_inv", Fraction(-1, 5), Fraction(1, 8)),
+}
+
+
+def sqrt_bound_proof(kind: str, target: Moment) -> dict:
+    """The site's '>' last resort: ``∫ t·poly·sqrt(1-x^4)/pi + b == target``.
+
+    t is fixed by the constant's coefficient, and the leftover b is emitted as
+    an additive term; the form ``∫(>=0) + b > 0`` needs b > 0 to be a proof, so
+    false or barely-true bounds still fail. The site reports this family with
+    a_val=0, au/u = t in lowest terms, b_val = b, bu_val=0, cu_val=1, m=n=0.
+    """
+    sym, alpha, beta = SQRT_BOUND_MOMENT[kind]
+    t = target[sym] / alpha
+    b = target["1"] - t * beta
+    if t < 0 or b <= 0:
+        raise NoSolution
+    return {
+        "parameters": {
+            "m": 0, "n": 0, "a_val": "0", "b_val": str(b), "c_val": "0",
+            "au_val": str(t.numerator), "bu_val": "0", "cu_val": "1",
+            "u_val": str(t.denominator), "unified_form": {},
+        },
+        "solution": "a = 0, b = 0",
     }
 
 
@@ -230,6 +300,21 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
 
     res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {
         "varpi": 3, "gauss": 2}[kind]
+    if int(params["cu_val"]):
+        # '>' last resort: (au/u)·x^k(1-x)·sqrt(1-x^4)/pi + b_val, with k=0 for
+        # gauss and k=1 for varpi; au=0 prints a bare 0. gauss keeps the '>'
+        # double space after \int_0^1, varpi's fallback uses one.
+        x = sp.symbols("x")
+        if kind == "gauss":
+            body = ("0" if au == 0
+                    else f"\\left({sp.latex(au * (1 - x))}\\right)")
+            gap = "  "
+        else:
+            body = sp.latex(sp.Rational(au, u) * x * (1 - x))
+            gap = " "
+        return (f"{lhs} = \\int_0^1{gap}{body}"
+                f"\\dfrac{{\\sqrt{{1-x^4}}}}{{\\pi}} \\mathrm{{d}} x"
+                f"+{rat_tex(params['b_val'])} > 0")
     num = lemniscate_numerator(4 * m + res, au, bu, u)
     tail = ("\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}}" if comp == ">"
             else "\\dfrac{(1-x)}{\\sqrt{1-x^4}}")

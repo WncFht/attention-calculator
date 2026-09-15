@@ -138,15 +138,22 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
             * polyx2 * sp.log(x) ** 2 / (1 + x**2)
         return f, *DOMAIN_UNIT
     if kind == "varpi":
+        # '>' 兜底（cu_val=1 标记）：∫ (au/u)·x(1-x)·√(1-x⁴)/π dx + b_val，
+        # 而非 1/√ 核矩空间；正常路径即使 a_val=0（如 varpi>0 的 (0,1)）
+        # 也走下方矩空间核。
+        if comp == ">" and int(p["cu_val"]) != 0:
+            f = frac(p["au_val"]) / frac(p["u_val"]) * x * (1 - x) \
+                * sp.sqrt(1 - x**4) / sp.pi + frac(p["b_val"])
+            return f, *DOMAIN_UNIT
         e = 4 * int(p["m"]) + (3 if comp == "<" else 1)
         f = x**e * (1 - x) * polyx4 / sp.sqrt(1 - x**4)
         if comp == ">":
             f /= sp.pi
         return f, *DOMAIN_UNIT
     if kind == "gauss":
-        # 特例（仅观测到 '>' r=0 一条）：a_val=0 时站点改用初等积分
-        # ∫ au·(1-x)·√(1-x⁴)/π dx + b_val，而非 1/√ 核矩空间。
-        if comp == ">" and frac(p["a_val"]) == 0:
+        # 同上 '>' 兜底：∫ au·(1-x)·√(1-x⁴)/π dx + b_val；正常路径
+        # a_val=0 的记录（如 gauss>3/4 的 (0,6)）cu_val=0，不受影响。
+        if comp == ">" and int(p["cu_val"]) != 0:
             f = frac(p["au_val"]) * (1 - x) * sp.sqrt(1 - x**4) / sp.pi \
                 + frac(p["b_val"])
             return f, *DOMAIN_UNIT
@@ -217,8 +224,10 @@ def constant_mpf(kind: str, power: Fraction):
         "catalan": lambda: mp.catalan,
         "zeta3": lambda: mp.zeta(3),
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
-        "varpi": lambda: mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
-        "gauss": lambda: mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
+        # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
+        # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。
+        "varpi": lambda: q * mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)),
+        "gauss": lambda: q * mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi ** 3)),
     }[kind]()
     return const
 
