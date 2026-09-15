@@ -135,7 +135,7 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
     module = importlib.import_module(f"attention_calculator.kernels.{FAMILY[kind]}")
     q, r = parse_rational(power), parse_rational(rational)
     # 负界在站端被表层格式校验挡掉（右侧有理数格式无效），不进方向预检
-    c = None if (kind == "zeta3" and comp == ">" or r < 0) else direction_f(kind, q)
+    c = None if ((kind == "zeta3" and comp == ">") or r < 0) else direction_f(kind, q)
     if c is not None and ((r > c) if comp == ">" else (r < c)):
         raise WrongDirection
     try:
@@ -144,7 +144,7 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
         # '<' 扫描途中的非正解在站端是"未找到解"而非"方向反了"——
         # 站端 '<' 的方向判定只在 bound<c 预检发生，扫描里的非正 P 直接耗尽
         if comp == "<" and c is not None:
-            raise NoSolution
+            raise NoSolution from None
         raise
     except NoSolution:
         if c is not None:
@@ -159,5 +159,5 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
         diff = float(constant_mpf(kind, q)) - float(r)
         claim_false = (diff < 0) if comp == ">" else (diff > 0)
         if claim_false:
-            raise WrongDirection
+            raise WrongDirection from None
         raise
