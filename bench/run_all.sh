@@ -5,7 +5,7 @@
 
 set -eo pipefail
 REMOTE=${1:-devbox}
-DIR=~/attention-calculator
+DIR=~/src/attention-calculator
 PY=.venv/bin/python
 
 rsync -az --exclude .venv --exclude __pycache__ --exclude .git ./ "$REMOTE:$DIR/"
