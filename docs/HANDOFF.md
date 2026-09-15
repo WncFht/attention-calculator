@@ -17,8 +17,12 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 - `master` = 最后一个全绿提交 `1a3f283`（golden 原 2969 条全字节 parity）。
 - `wip/pause-2026-09-15`（当前 checkout）= 暂停时刻 6 个 agent 的在制品快照
-  `cd73188`—— kernels/render/tests/scipy 依赖/模板/探测脚本都在里面。
+  `882b717`（含 handoff 文档）—— kernels/render/tests/scipy 依赖/模板/探测脚本都在里面。
   续作直接在 wip 分支上继续；完成并验证后合回 master。
+- **wip 快照的 parity 实测（devbox，3454 条全量）：status_match=3454/3454、
+  body_exact=3454/3454、err_match=1866/1866、crashes=0、param/solution 1588/1588，
+  仅剩 eq_match 1571/1588 = 17 条方程文本 diff**——kernel-edge 停前已把
+  「elementary+remainder」新模板和大部分边缘修复做到接近完工，wip 比看起来更接近收敛。
 - `bench/data/*.jsonl` 是 gitignored 数据资产，不进 git 但 rsync 会带；
   golden.jsonl 现 **3454 条**。
 
@@ -26,7 +30,7 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 | 评测 | 数字 | 入口 |
 |---|---|---|
-| golden parity（/calculate + /get_integral_image，含响应体逐字节） | 原 2969/2969 全绿；新 484 条有 ~30 条待修分歧 | `bench/parity.py bench/data/golden.jsonl` |
+| golden parity（/calculate + /get_integral_image，含响应体逐字节） | master：原 2969/2969 全绿；**wip 快照：3454/3454 status+body，仅 17 条 eq 文本 diff** | `bench/parity.py bench/data/golden.jsonl` |
 | verify（恒等式数学真值，50dps） | 1391 成功记录中 1358 真 + **33 假=站点 bug 复现**（30 trig-bias + 3 gauss-window），0 未知 | `bench/verify.py` |
 | edge 重放（305 条边缘探针离线重放） | 273 match / 32 mismatch（30 条在修 + health/convex 页面） | `bench/replay_edge.py` |
 | fuzz 重放（922 条随机探针离线重放） | 906 match / 16 mismatch（全部 kernel-edge 范围） | `bench/replay_fuzz.py` |
