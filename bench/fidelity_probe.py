@@ -11,6 +11,7 @@ For each type we sweep the bound at sub-ulp granularity around float64(C):
 
 Appends to bench/data/fidelity-probes.jsonl; resumable via id skip.
 """
+import contextlib
 import json
 import math
 import sys
@@ -21,7 +22,7 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from attention_calculator.integrand import constant_mpf  # noqa: E402
+from attention_calculator.integrand import constant_mpf
 
 BASE = "https://zhuyidao.net"
 OUT = Path(__file__).parent / "data" / "fidelity-probes.jsonl"
@@ -72,7 +73,8 @@ def f(kind, power):
 
 
 # ---------------- pi ----------------
-K = "pi"; P = "1"
+K = "pi"
+P = "1"
 # '>' TRUE float-equal sweep: r = Cf - 10^-k  (gap = (C-Cf) + 10^-k ~ 1.2e-16..)
 for k in (17, 20, 24, 28, 30, 32, 34):
     calc(f"fid:pi-gt-true-{k}", f"pi> r=Cf-10^-{k} true floateq", type=K, power=P,
@@ -100,7 +102,8 @@ calc("fid:pi-lt-cf", "pi< r=Cf exact false", type=K, power=P,
      comparison="<", rational=bound_str(cf_frac(K, P)))
 
 # ---------------- e ----------------
-K = "e"; P = "1"
+K = "e"
+P = "1"
 for k in (17, 24, 30, 34):
     calc(f"fid:e-gt-true-{k}", f"e> r=Cf-10^-{k}", type=K, power=P,
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
@@ -116,7 +119,8 @@ calc("fid:e-lt-1ulpdn", "e< r=Cf-1ulp", type=K, power=P,
      comparison="<", rational=bound_str(cf_nextafter(K, P, -1)))
 
 # ---------------- sin_q ----------------
-K = "sin_q"; P = "1"
+K = "sin_q"
+P = "1"
 for k in (17, 25, 32):
     calc(f"fid:sin-gt-true-{k}", f"sin> r=Cf-10^-{k}", type=K, power=P,
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
@@ -133,7 +137,8 @@ calc("fid:sin-lt-1ulpdn", "sin< r=Cf-1ulp", type=K, power=P,
      comparison="<", rational=bound_str(cf_nextafter(K, P, -1)))
 
 # ---------------- ln_q(2) ----------------
-K = "ln_q"; P = "2"
+K = "ln_q"
+P = "2"
 for k in (17, 25, 32):
     calc(f"fid:ln-gt-true-{k}", f"ln> r=Cf-10^-{k}", type=K, power=P,
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
@@ -145,7 +150,8 @@ calc("fid:ln-lt-true-a", "ln< r=Cf+4e-17 true floateq", type=K, power=P,
      comparison="<", rational=bound_str(cf_plus(K, P, 4, 17)))
 
 # ---------------- e_q(1) ----------------
-K = "e_q"; P = "1"
+K = "e_q"
+P = "1"
 calc("fid:eq1-gt-false-a", "e_q1> r=Cf+1.5e-16 false floateq", type=K, power=P,
      comparison=">", rational=bound_str(cf_plus(K, P, 15, 17)))
 for k in (17, 30):
@@ -155,15 +161,18 @@ calc("fid:eq1-lt-false-30", "e_q1< r=Cf-10^-30 false floateq", type=K, power=P,
      comparison="<", rational=bound_str(cf_minus(K, P, 30)))
 
 # ---------------- e_q(3): Cf > C ----------------
-K = "e_q"; P = "3"
+K = "e_q"
+P = "3"
 calc("fid:eq3-gt-false-a", "e_q3> r=Cf-1e-16 false floateq (Cf>C)", type=K,
      power=P, comparison=">", rational=bound_str(cf_minus(K, P, 16)))
 for k in (17, 30):
-    calc(f"fid:eq3-gt-true-{k}", f"e_q3> r=Cf-10^-{k}... wait Cf>C so r=Cf-1e-17 could be >C", type=K, power=P,
-         comparison=">", rational=bound_str(cf_minus(K, P, k)))
+    calc(f"fid:eq3-gt-true-{k}",
+         f"e_q3> r=Cf-10^-{k}... wait Cf>C so r=Cf-1e-17 could be >C",
+         type=K, power=P, comparison=">", rational=bound_str(cf_minus(K, P, k)))
 
 # ---------------- cos_q(1): Cf > C ----------------
-K = "cos_q"; P = "1"
+K = "cos_q"
+P = "1"
 calc("fid:cos-gt-cf", "cos> r=Cf exact: FALSE floateq (Cf>C)", type=K, power=P,
      comparison=">", rational=bound_str(cf_frac(K, P)))
 calc("fid:cos-lt-cf", "cos< r=Cf exact: TRUE floateq", type=K, power=P,
@@ -173,7 +182,8 @@ for k in (17, 30):
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
 
 # ---------------- zeta3 ----------------
-K = "zeta3"; P = "1"
+K = "zeta3"
+P = "1"
 calc("fid:zeta-gt-false-a", "zeta> r=Cf+8e-17 false floateq", type=K, power=P,
      comparison=">", rational=bound_str(cf_plus(K, P, 8, 17)))
 for k in (17, 30):
@@ -181,14 +191,16 @@ for k in (17, 30):
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
 
 # ---------------- arctan_q(3): Cf > C by 2.2e-18 ----------------
-K = "arctan_q"; P = "3"
+K = "arctan_q"
+P = "3"
 calc("fid:atan-gt-false-a", "atan3> r=Cf-1e-18 false floateq", type=K, power=P,
      comparison=">", rational=bound_str(cf_minus(K, P, 18)))
 calc("fid:atan-gt-true-30", "atan3> r=Cf-10^-30 true", type=K, power=P,
      comparison=">", rational=bound_str(cf_minus(K, P, 30)))
 
 # ---------------- ln_q_square(2): Cf > C ----------------
-K = "ln_q_square"; P = "2"
+K = "ln_q_square"
+P = "2"
 calc("fid:lnsq-gt-false-a", "lnsq> r=Cf-1e-17 false floateq", type=K, power=P,
      comparison=">", rational=bound_str(cf_minus(K, P, 17)))
 for k in (18, 30):
@@ -196,7 +208,8 @@ for k in (18, 30):
          comparison=">", rational=bound_str(cf_minus(K, P, k)))
 
 # ---------------- pi_n(5/2) ----------------
-K = "pi_n"; P = "5/2"
+K = "pi_n"
+P = "5/2"
 calc("fid:pin-gt-false-a", "pi_n> r=Cf+5e-16 false floateq", type=K, power=P,
      comparison=">", rational=bound_str(cf_plus(K, P, 5, 16)))
 calc("fid:pin-gt-true-30", "pi_n> r=Cf-10^-30 true", type=K, power=P,
@@ -210,10 +223,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     print(f"{len(done)} done, {len(todo)} to probe", flush=True)
     last = 0.0
