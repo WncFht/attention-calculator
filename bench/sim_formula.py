@@ -17,9 +17,10 @@ from fractions import Fraction
 
 sys.path.insert(0, "src")
 sys.path.insert(0, "bench")
-from attention_calculator.engine import mn_order, solve_moment
-from sim_mechanisms import basis_and_target
 from sim_float_solve import f_nonneg, f_nonpos
+from sim_mechanisms import basis_and_target
+
+from attention_calculator.engine import mn_order, solve_moment
 
 
 def cramer_forms(basis, target):
@@ -91,7 +92,7 @@ def detn(M):
 
 def scan_formula(kind, pw, comp, rs, evalkind, limit=None):
     """evalkind: 'cramer' -> (P+Q*Bf)/Df ; 'affine' -> float(P/D)+float(Q/D)*Bf."""
-    power, bound = Fraction(pw), Fraction(rs)
+    bound = Fraction(rs)
     limit_, mk, target, B = basis_and_target(kind, pw, comp, bound)
     if limit:
         limit_ = limit
@@ -108,7 +109,7 @@ def scan_formula(kind, pw, comp, rs, evalkind, limit=None):
             continue
         P, Q, D = f
         u = []
-        for p, q in zip(P, Q):
+        for p, q in zip(P, Q, strict=True):
             if evalkind == "cramer":
                 u.append((float(p) + float(q) * Bf) / float(D))
             elif evalkind == "affine":
