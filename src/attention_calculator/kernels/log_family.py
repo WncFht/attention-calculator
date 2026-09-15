@@ -101,9 +101,9 @@ def check_input(power: Fraction, bound: Fraction, kind: str) -> None:
     if kind in ("ln_q", "ln_q_square") and power <= 1:
         raise ValueError("请在ln后输入一个大于1的数")
     if kind == "artanh_q" and (power.denominator == 1 or not 0 < power < 1):
-        raise ValueError("请在输入一个在(0,1)内的分数，本情况不支持整数")  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+        raise ValueError("请在输入一个在(0,1)内的分数，本情况不支持整数")
     if kind == "arcoth_q" and power <= 1:
-        raise ValueError("请在输入一个大于1的数")  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+        raise ValueError("请在输入一个大于1的数")
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
