@@ -20,6 +20,9 @@ ssh "$REMOTE" "cd $DIR && $PY bench/parity_decompose.py --out bench/out/parity_d
 echo "=== edge/fuzz replay ==="
 ssh "$REMOTE" "cd $DIR && $PY bench/replay_edge.py && $PY bench/replay_fuzz.py" | tee bench/out/replay_summary.txt
 
+echo "=== sibling parity (health + convex) ==="
+ssh "$REMOTE" "cd $DIR && $PY bench/parity_health.py && $PY bench/parity_convex.py" | tee bench/out/sibling_summary.txt
+
 echo "=== verify ==="
 ssh "$REMOTE" "cd $DIR && $PY bench/verify.py bench/data/golden.jsonl --out bench/out/verify.jsonl" | tee bench/out/verify_summary.txt
 
