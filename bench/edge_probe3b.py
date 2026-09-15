@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 """第三波补探：方向预检的作用域与次序。
 
 已确认 e_q/arctan_q/arccot_q/hyperbolic/gamma 在核前先按 float64 常量值判定
@@ -115,5 +114,5 @@ def main():
 
 
 if __name__ == "__main__":
-    import json  # noqa: E402
+    import json
     main()
