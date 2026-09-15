@@ -14,6 +14,12 @@ ssh "$REMOTE" "cd $DIR && $PY -m pip list >/dev/null 2>&1 || true"
 echo "=== parity ==="
 ssh "$REMOTE" "cd $DIR && $PY bench/parity.py bench/data/golden.jsonl --out bench/out/parity.jsonl" | tee bench/out/parity_summary.txt
 
+echo "=== decompose parity ==="
+ssh "$REMOTE" "cd $DIR && $PY bench/parity_decompose.py --out bench/out/parity_decompose.jsonl" | tee bench/out/parity_decompose_summary.txt
+
+echo "=== edge/fuzz replay ==="
+ssh "$REMOTE" "cd $DIR && $PY bench/replay_edge.py && $PY bench/replay_fuzz.py" | tee bench/out/replay_summary.txt
+
 echo "=== verify ==="
 ssh "$REMOTE" "cd $DIR && $PY bench/verify.py bench/data/golden.jsonl --out bench/out/verify.jsonl" | tee bench/out/verify_summary.txt
 
