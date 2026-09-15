@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 """礼貌采集 zhuyidao.net，产出 bench/data/golden.jsonl 与 bench/data/combo.jsonl。
 
 golden 每条 case：POST /calculate → 成功则 GET /get_integral_image 取渲染式；
