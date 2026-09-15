@@ -29,9 +29,9 @@ def respond(payload: dict, status: int = 200) -> Response:
     """JSON body matching the live site byte-for-byte: compact separators,
     \\uXXXX escapes (ensure_ascii), alphabetically sorted keys, and the
     trailing newline old Flask's jsonify appended."""
-    body = json.dumps(payload, ensure_ascii=True, sort_keys=True,
-                      separators=(",", ":")) + "\n"
+    body = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")) + "\n"
     return Response(body, status=status, mimetype="application/json")
+
 
 # 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
 EXPONENT_LIMIT = {"pi": 30, "e": 30}
@@ -54,8 +54,7 @@ NOT_FOUND = "请求的页面不存在"
 def in_sibling(path: str) -> bool:
     """路径是否落在姊妹应用挂载点内；'/healthxyz' 这类前缀兄弟不算
     （probe: GET /healthxyz -> 主站 404 裸包络）。"""
-    return any(path == p or path.startswith(p + "/")
-               for p in ("/convex", "/health"))
+    return any(path == p or path.startswith(p + "/") for p in ("/convex", "/health"))
 
 
 def fail(message: str, status: int):
@@ -316,10 +315,12 @@ def decompose_inequality():
 # ===== 姊妹应用 /convex（凹凸不等式计算器，docs/sibling-apps.md §1） =====
 
 
+@app.get("/convex")
 @app.get("/convex/")
 @app.get("/convex/en")
 def convex_page():
-    """站端 /convex/ 与 /convex/en 返回同一份字节（语言由前端 JS 切换）。"""
+    """站端 /convex、/convex/ 与 /convex/en 返回同一份字节（语言由前端 JS 切换；
+    无斜杠路径直接 200 不做跳转，probe page2:convex 实测）。"""
     return render_template("convex.html")
 
 
@@ -342,10 +343,11 @@ def convex_prove():
     line = request.form.get("line") or None  # 隐藏参数，缺席与空串同等处理
     try:
         result = convex.prove(inequality, line)
-    except ValueError as exc:
+    except Exception as exc:
+        # 站端 prove 包装器把一切内核异常（不限 ValueError）包成 400 str(exc)：
+        # "x/0>0"→"float division by zero"、x^1e309→"cannot convert Infinity
+        # to integer ratio"、line 超长→"maximum recursion depth exceeded"
         return fail(str(exc), 400)
-    except Exception:
-        return fail(INTERNAL_ERROR, 500)
     return respond({"ok": True, "result": result})
 
 
@@ -377,8 +379,9 @@ def health_calculate():
     fields, err = health.validate(data)
     if err:
         return fail(err, 400)
-    return respond({"ok": True, "record_id": health.next_record_id(),
-                    "results": health.calculate(fields)})
+    return respond(
+        {"ok": True, "record_id": health.next_record_id(), "results": health.calculate(fields)}
+    )
 
 
 def main():
