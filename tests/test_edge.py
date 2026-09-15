@@ -17,8 +17,8 @@ from attention_calculator.kernels import (
     gamma,
     log_family,
     quadlog,
-    trig_q,
     trig_pi,
+    trig_q,
 )
 from attention_calculator.render import coef_tex, coerce_params, rat_tex, wire_pair
 
