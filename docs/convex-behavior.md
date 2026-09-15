@@ -76,10 +76,12 @@ JSON 包络 + latex 渲染层。
 `2^x`、`(-x)^2`、`(x+1)^2`、`exp(x)^2`、`x*(x+1)` 等。
 
 数值常量（`parse_number`）：int/float 字面量（含 `0x10`、`1_000`、`1e3`）、一元负号、
-`a/b`、`a**b`（即 `a^b`，**只用于常量**）、`sqrt(const)`（`sqrt(4)` → 2；
-`x^sqrt(2)` → 指数 1.41421356…）。`1e309` → inf → 渲染时
-`cannot convert Infinity to integer ratio`；`x^(1/0)`、`x/0` → `float division by zero`；
-`nan`/`pi` 等名字不是常量也不是 `x` → `unsupported atom Name(...)`。
+`a/b`、`a**b`（即 `a^b`，**只用于常量**）、`sqrt(<数值常量表达式>)`（`sqrt(4)` → 2、
+`x^sqrt(2)` → 指数 1.41421356…、`x^sqrt(2/4)` → 指数 √0.5）。**不含** `+`/`-`/`*`/
+一元 `+`：`x^(1+2)`、`x^(2*3)`、`x^+2` → `expected numeric constant, got {ast.dump}`；
+`x^sqrt(-1)` → `math domain error`（ValueError 穿透 atom 解析；均源层推断、未单独实测）。
+`1e309` → inf → 渲染时 `cannot convert Infinity to integer ratio`；`x^(1/0)`、`x/0` →
+`float division by zero`；`nan`/`pi` 等名字不是常量也不是 `x` → `unsupported atom Name(...)`。
 
 项收集（`collect_terms`）：`a+b`/`a-b` 按符号递归；`a*b` 任一侧是数值常量则把系数乘进去
 继续递归（`2*(x+1)` → `2x+2`，`(x+1)*3` → `3x+3`——**常数系数对和式可分配**）；两侧都
@@ -140,6 +142,11 @@ scipy**（修正 `sibling-apps.md` §1）：
 - `x_text`/`value_text` = `%.12g`；JSON 数值为原生 float repr（`1e-08`、`134217728.0`、
   `0.75`）。`x=0` 这种单调式最小值落在 `1e-08`（下界钳制）。
 - 反向区间合法：`domain="10,0"` 时 `d(10) ≥ 0` → 直接报边界 `x=10, value=90`。
+- **argmin 落在边界不影响判定**——`x*2>0`（x=1e-8、f_min=2e-8）、`100>x`（argmin
+  恰在 hi=10.0）、`x^2>x`/`x^2-sqrt(x)+0.5>0`（argmin 恰在 lo）均 proved；门只是
+  §6 的 f_min 阈值。`x>0` 的 failed 是因为边界值恰好 =1e-8 未过严格门。
+- 求值/求导是**朴素顺序累加**（站端跑旧 CPython 的 `sum` 语义；Python ≥3.12 的
+  `sum` 改 Neumaier 补偿求和，末位 ulp 会差——复现须手写 for 循环）。
 
 ## 6. 判定与容差
 
@@ -243,6 +250,8 @@ right_gap_min_x, ok}`，**纯诊断，不回灌 proof/status**（`line=1` 对 `x
 `could not convert string to float: '...'`（裸 ValueError 透出）。空字段 → 默认
 `(1e-8, None)`。**原始 `lo` 用于候选排除（`x0 ≤ lo_raw`），而最小化用
 `max(lo, 1e-8)`**——两套界并存是 `domain="-1,inf"` 怪异行为的根源（见 §7）。
+解析顺序：`prove()` 内 `domain` 先解析、不等式后解析——`inequality='foo('` +
+`domain='bad'` 报 domain 错而非语法错（但路由层的空/超长检查仍最先）。
 
 ## 10. `status` / `reason` 全表
 
@@ -266,7 +275,10 @@ literal`（`2x`）、`invalid character '≥'|'−'|'×'`、`'(' was never close
 `unsupported atom {ast.dump}`（Name/Call/BinOp/UnaryOp 基、Compare/Tuple/List/Dict）、
 `{name} expects one argument`、`{name} only supports argument x`、
 `expected numeric constant, got {ast.dump}`、`products of two non-constant atoms are
-unsupported`、`float division by zero`、`cannot convert Infinity to integer ratio`、
+unsupported`、`float division by zero`、`cannot convert Infinity to integer ratio`
+（inf 系数/指数穿过解析，在 `normalized` 渲染的 `Fraction(...)` 处才抛——先于模板判定，
+如 `1e309*x>0`、`x^1e309>0`；inf 指数自身来自 `1e309` 常量）、
+`math domain error`（`x^sqrt(-1)`；源层推断、未实测）、
 `0.0 cannot be raised to a negative power`（负 lo domain + 凹侧含 √x 时 x0=0 求切线）、
 `maximum recursion depth exceeded`（`line` 送 3001 字符的 `x+x+…`）。
 
