@@ -74,7 +74,7 @@ def parse_atom(expr):
             return "e_pi", Fraction(1)
         if b in BASE and e.is_Rational:
             return {"pi": "pi_n", "e": "e_q"}[BASE[b][0]], Fraction(e.p, e.q)
-        if b == VARPI or b == GAUSS:
+        if b in (VARPI, GAUSS):
             raise ValueError("varpi/gauss powers unsupported")
     if expr.is_Function:
         name = expr.func.__name__
@@ -102,10 +102,10 @@ def merge_atoms(atoms):
     for kind, arg in atoms:
         if out and fam.get(out[-1][0]) == fam.get(kind) == "pi" \
                 and kind != "e_pi":
-            k, a = out.pop()
+            a = out.pop()[1]
             out.append(("pi_n", a + arg))
         elif out and fam.get(out[-1][0]) == fam.get(kind) == "e":
-            k, a = out.pop()
+            a = out.pop()[1]
             out.append(("e_q", a + arg))
         else:
             out.append((kind, arg))
@@ -553,18 +553,19 @@ def predict(problem, resp_steps, verbose=False):
                 if t == ti:
                     pred[idx] = fsplit[j]
     site = [Fraction(s["bound"]) for s in resp_steps]
-    matched = all(p == s for p, s in zip(pred, site))
+    matched = pred == site
     if verbose or not matched:
         detail = [(terms[flat[order_flat[i]][0]][1][flat[order_flat[i]][1]][0],
                    str(p), str(s))
-                  for i, (p, s) in enumerate(zip(pred, site))]
+                  for i, (p, s) in enumerate(zip(pred, site, strict=False))]
         return matched, detail
     return matched, pred
 
 
 def load(path="bench/data/decompose.jsonl"):
-    for line in open(path):
-        yield json.loads(line)
+    with open(path) as fh:
+        for line in fh:
+            yield json.loads(line)
 
 
 def report():
