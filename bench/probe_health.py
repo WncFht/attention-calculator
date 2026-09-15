@@ -757,6 +757,22 @@ def supplement4():
     ]
 
 
+def supplement5():
+    """Fifth pass: leader-authorized 3-probe bound pin (see health-notes.md).
+
+    - s5:cb-hi-flag: a120 h170 w223 -> CUN-BAE bf=70.18; splits (69.5,70.6]
+      on whether the 不宜 cascade drops fat_mass/cunningham_ree.
+    - s5:deur-69.5: h170 w187 a35 -> deurenberg 69.497 (display 69.5);
+      flagged would prove bound < 69.5, unflagged keeps [69.5,70.3).
+    - s5:sex-list: non-scalar sex -> does the enum reject via str() coercion?
+    """
+    return [
+        j("s5:cb-hi-flag", age=120, height_cm=170, weight_kg=223),
+        j("s5:deur-69.5", height_cm=170, weight_kg=187),
+        j("s5:sex-list", sex=["male"]),
+    ]
+
+
 BATCHES = {
     "baseline": baseline,
     "transport": transport,
@@ -771,6 +787,7 @@ BATCHES = {
     "supplement": supplement,
     "supplement3": supplement3,
     "supplement4": supplement4,
+    "supplement5": supplement5,
 }
 
 
