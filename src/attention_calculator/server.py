@@ -337,9 +337,13 @@ def convex_prove():
     """凹凸不等式证明端点；convex 模块惰性导入（scipy 重）。"""
     from . import convex
 
-    inequality = request.form.get("inequality", "")
+    # 前置校验按 strip 后文本：空 -> 400；strip 后 >500 -> 输入过长（恰好 500 通过）。
+    # line/domain 无长度限制（probe: line 3001 字符照常进解析）
+    inequality = request.form.get("inequality", "").strip()
     if not inequality:
         return fail("请输入一个不等式。", 400)
+    if len(inequality) > 500:
+        return fail("输入过长，请输入一个较短的单变量不等式", 400)
     line = request.form.get("line") or None  # 隐藏参数，缺席与空串同等处理
     try:
         result = convex.prove(inequality, line)
