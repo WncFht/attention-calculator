@@ -1,6 +1,8 @@
 # 复现路线图与分工
 
-目标产物：与 zhuyidao.net 行为一致的完整实现（solver + Web + 组合拆解），全部结论由 `bench/data/golden.jsonl` 上的 parity/verify 数字背书。
+目标产物：与 zhuyidao.net 行为一致的完整实现（solver + Web + 组合拆解 + 姊妹应用 /convex、/health），全部结论由 `bench/data/golden.jsonl` 上的 parity/verify 数字背书。
+
+**范围（2026-09-15 用户确认）**：主站注意力计算器 29 型 + `/convex` 凹凸不等式求解器 + `/health` 健康计算器。契约见 `docs/sibling-apps.md`；`/convex` 按同一方法学走「探测 → golden → parity」路线（`docs/convex-behavior.md` 测绘中），`/health` 是纯表单算术（公式印在页面上，`site-health-en.html` 内含全部翻译表）。
 
 ## 阶段
 
@@ -38,7 +40,7 @@
 - **ln_q_square q∈{5,7} 的 500 按命题真假分裂**（golden 16/16）：命题为真→500（站端求解器 bug），为假→404"方向反了"。实现：check_input 后先做 float64 方向判定，假→WrongDirection，否则 InternalError→500。
 - **相等报 404**：界恰等于常数时（Niven 点 sin30°=1/2、sin(π/6)=1/2 等）站端返回 404 `二者相等`，不在 400 格式层。实现：engine.EqualClaim(ValueError) 先于 ValueError→400 被捕获。
 - **/calculate 有 catch-all**：内核未分类异常（如 e_q 0 的 1/q 除零）一律 500 `服务器内部错误，请稍后再试`。
-- **parity 即端到端**：bench/parity.py 用 app.test_client() 重放全部 2969 条 golden——POST /calculate 再 GET /get_integral_image，比对参数整 dict、solution 文本、http_status、equation、错误文案、**响应体全字节**（sorted keys + \uXXXX + 尾随 \n）。**当前基线（7c408b5，devbox 复测）：全绿——both_ok=1391、param_exact=1391/1391、solution_match=1391、eq_match=1391/1391、status_match=2969/2969、body_exact=2969/2969、err_match=1578/1578、crashes=0**。/calculate + /get_integral_image 已达成站点行为的完整复现（含全部已知站点 bug：gauss'<'转置解、trig_pi (1,8) 损坏公式、ln_q_square q∈{5,7} 500、verbatim 回显）。
+- **parity 即端到端**：bench/parity.py 用 app.test_client() 重放全部 golden——POST /calculate 再 GET /get_integral_image，比对参数整 dict、solution 文本、http_status、equation、错误文案、**响应体全字节**（sorted keys + \uXXXX + 尾随 \n）。**基线：原 2969 条全绿（both_ok=1391、param_exact=1391/1391、eq_match=1391/1391、body_exact=2969/2969、err_match=1578/1578、crashes=0）**。数据集已扩到 **3454 条**（薄类型系数 {0,1,2,3,1/2} + 文章算例 π<14885392687/4738167652），新增 484 条暴露的分歧全部归 kernel-edge：varpi/gauss 「elementary+remainder」模板（m=n=0、√(1-x⁴) 进分子、有理余项在积分号外、cu_val∈{1,2}）、gamma 系数折叠进首段渲染、power=0 渲染不对称、gamma 0>正数方向预检。/calculate + /get_integral_image 已达成站点行为的完整复现（含全部已知站点 bug：gauss'<'转置解、trig_pi (1,8) 损坏公式、ln_q_square q∈{5,7} 500、verbatim 回显）。
 - **trig_pi 不积分**：sin_pi_q/cos_pi_q/sin_q_degree/cos_q_degree 四型站点不现场积分，而是把 α 代入 Mathematica 预存闭式；(1,8) 的 j=0 存式带 δ(α)·(C−1) 伪项（δ=(α−1)(α−2)Q₁₆(α)/(256α∏(α²−k²))，33 点有理插值恢复）。另有 50dps 方向预检（bound vs cos(πα/2)，先于搜索）与非正方案延迟判负（engine.search defer=True）。详见 docs/kernel-spec.md。
 - **unified_form 恒 {}**：76 个成功响应全部如此——死字段。
 - **服务端确定性**：同请求重复返回完全相同参数。
