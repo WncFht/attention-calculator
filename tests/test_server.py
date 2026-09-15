@@ -302,6 +302,8 @@ def test_get_integral_image_errors(client, monkeypatch):
         ({"m": "abc"}, "m必须是整数"),
         ({"m": "3.5"}, "m必须是整数"),
         ({"m": "3/2"}, "m必须是整数"),
+        ({"m": "+3"}, "m必须是整数"),  # int() 会吃 '+'，站端 strip+regex 拒绝
+        ({"m": "3 0"}, "m必须是整数"),  # 内部空白拒绝
         ({"m": None}, "m必须是整数"),
         ({"n": None}, "n必须是整数"),
         ({"u_val": "x"}, "u_val必须是整数"),
@@ -315,8 +317,8 @@ def test_get_integral_image_errors(client, monkeypatch):
     ]:
         resp = get(**over)
         assert resp.status_code == 400 and resp.get_json() == {"error": err}, over
-    for ok in ({"m": "30"}, {"n": "30"}, {"au_val": "-5"}, {"cu_val": "9"},
-               {"u_val": "10" + "0" * 16}):
+    for ok in ({"m": "30"}, {"n": "30"}, {"m": " 3 "}, {"m": "\t3\n"},
+               {"au_val": "-5"}, {"cu_val": "9"}, {"u_val": "10" + "0" * 16}):
         assert get(**ok).status_code == 200, ok
 
     # fraction fields: format + denominator-0, no numerator cap

@@ -221,6 +221,9 @@ def calculate():
 # 顺序 type -> comparison -> 整数字段 m,n,u,au,bu,cu -> 分数字段 a,b,c；
 # coef/rational 完全不校验、原文回显（coef=x -> x\pi，rational 缺席 -> 0）。
 IMG_FRAC_RE = re.compile(r"^-?\d+(/\d+)?$")
+# 整数字段语法 = strip() 后 ^-?\d+$：两端空白（含 tab）可、"+3"/内部空白/下划线拒
+# （probe: m=+3 → m必须是整数——站端不是裸 int()，int() 会吃掉 '+'）
+IMG_INT_RE = re.compile(r"^-?\d+$")
 IMG_INT_KEYS = ("m", "n", "u_val", "au_val", "bu_val", "cu_val")
 IMG_FRAC_KEYS = ("a_val", "b_val", "c_val")
 IMG_INT_BOUNDS = {"m": (0, 30), "n": (0, 30)}
@@ -241,11 +244,10 @@ def get_integral_image():
     params = {}
     for k in IMG_INT_KEYS:
         v = request.args.get(k, "")
-        # 整数字段站端就是 int()：两端空白（含 tab）可、内部空白不可
-        try:
-            params[k] = int(v)
-        except ValueError:
+        # 先 strip() 再过 ^-?\d+$（见 IMG_INT_RE 注释）
+        if not IMG_INT_RE.match(v.strip()):
             return fail(f"{k}必须是整数", 400)
+        params[k] = int(v)
         lo, hi = IMG_INT_BOUNDS.get(k, (None, None))
         if k == "u_val":
             lo = IMG_U_MIN.get(kind, 1)
