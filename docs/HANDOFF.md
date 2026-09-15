@@ -122,16 +122,14 @@ golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain�
 - 注意 `solve.py` 已有 NoSolution 后的 float64 兜底（`float(C)−float(r)` 严格判号）——
   要改的是**扫描途中**的 P 定号路径。
 
-### 4. /health 克隆（低难度，纯算术）
-- 契约：`docs/sibling-apps.md` §2 全钉死；~20 个公式印在页面上；
-  `site-health-en.html` 里有全部 status/unit/reference/name 的翻译表（照抄）。
-- 现状：模板已就位（`templates/health.html`/`health-en.html`）、
-  `bench/probe_health.py` + `bench/data/health-probes.jsonl` 已采首批；
-  `health.py` 还没写（agent 停在被杀前正要写）。
-- 剩余：校验序与错误文案钉死（已知 6 条原文）、36-key items 表、逐指标舍入模式
-  （bmi 1 位/whr 3 位/bri 2 位/心率整数）、tips 触发规则、record_id 自建计数器、
-  路由（GET /health/ + /health/en、POST /health/calculate 仅 JSON）、
-  `bench/parity_health.py`。预计一天内。
+### 4. /health 克隆 — ✅ 已完成（wip `349646a`）
+
+**417/417 字节级 parity**（`bench/parity_health.py`，~560 次探测去重后 417 个 tag）；
+568 测试绿。`health.py` = 校验链 + ~20 公式 + 36-key items + tips/tips_en +
+JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/health-notes.md`。
+残留 4 处不可判定/假设点已记录（70 边界 ≥vs>、超龄优先级、bool 报错一致性、429 限流不复现）。
+注意：`/convex/prove` 的 catch-all 目前用主站 500 文案（无句号），若 convex 探针
+发现站端 500 带「。」需换 `SIBLING_INTERNAL_ERROR`（已转告 convex-probe agent）。
 
 ### 5. /convex 行为探测（进行中，数据是求解器的前提）
 - 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr）。
