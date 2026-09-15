@@ -8,12 +8,12 @@ in the rendered equation (kernel-spec.md).
 
 import math
 from fractions import Fraction
-from math import comb, lcm
+from math import comb
 
 import sympy as sp
 
-from ..moment import Moment, add, combine, scale
 from ..engine import WrongDirection, mn_order, search
+from ..moment import Moment, add, combine, scale
 from ..render import rat_tex, wire_fraction
 from .exp_family import emit, mul_latex
 
@@ -35,7 +35,7 @@ def sinh_moments(q: Fraction, upto: int) -> tuple[list[Moment], list[Moment]]:
 
 def basis_moment(m: int, n: int, j: int, q: Fraction) -> Moment:
     """∫_0^1 x^{m+j}(1-x)^n sinh(qx) dx = sum_i (-1)^i C(n,i) J_{m+j+i}."""
-    J, C = sinh_moments(q, m + j + n)
+    J = sinh_moments(q, m + j + n)[0]
     coeffs = [Fraction((-1) ** i * comb(n, i)) for i in range(n + 1)]
     return combine(coeffs, J[m + j : m + j + n + 1])
 
