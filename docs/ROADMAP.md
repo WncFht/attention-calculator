@@ -34,6 +34,11 @@
 - **校验顺序（成对探针钉死）**：type（缺省→pi 回退；显式空串→400）→ comparison → **右侧整组**（格式 `^\d+(/\d+)?$` → 分母 0 → 分子或分母 ≥10^16）→ **左侧整组**（同三项，文案"左侧系数…"）→ 类型值域 404 → 求解。
 - **/get_integral_image 只接受 GET+query**：对它 POST 表单一律 500（grid:*:img 探针曾误判为类型覆盖缺失；pi_n 等全类型 GET 均正常返回方程）。
 - **方向假优先于无解（float64 判定）**：命题数值为假时报"方向反了"——即使搜索耗尽都没搜出恒≤0 的 P（实测 arctan_q 3：`>5/4`→方向反了，`<5/4`→未找到解；arctan3≈1.2490）。判定在 **float64** 精度进行：对 zeta3/gamma 发送 float 与常数相等但方向为假的界，站端放行进入搜索最终报"未找到解"（float 差严格 <0 才算反）。实现：solve.prove 捕获 NoSolution 后做 `float(C)−float(r)` 严格判号，假则重抛 WrongDirection；恒等式精确成立保证真命题永远搜不出恒≤0 的 P，此路径只触达假命题。
+- **渲染原文回显**：/get_integral_image 不约分、不换宏——`rational=3140/1000`→`\dfrac{3140}{1000}`，`rational=\frac{3140}{1000}`→逐字 `\frac{3140}{1000}`，`coef=2/4`→`\dfrac{2}{4}\pi`。前端发送的就是 `power`/`rational` 的 LaTeX 展示形（templates/index.html 的 piDisplay/rationalDisplay），站端原样嵌回。实现：server 只校验可解析性（render.wire_fraction），把原文串交给 kernel；显示走 render.rat_tex。
+- **ln_q_square q∈{5,7} 的 500 按命题真假分裂**（golden 16/16）：命题为真→500（站端求解器 bug），为假→404"方向反了"。实现：check_input 后先做 float64 方向判定，假→WrongDirection，否则 InternalError→500。
+- **相等报 404**：界恰等于常数时（Niven 点 sin30°=1/2、sin(π/6)=1/2 等）站端返回 404 `二者相等`，不在 400 格式层。实现：engine.EqualClaim(ValueError) 先于 ValueError→400 被捕获。
+- **/calculate 有 catch-all**：内核未分类异常（如 e_q 0 的 1/q 除零）一律 500 `服务器内部错误，请稍后再试`。
+- **parity 即端到端**：bench/parity.py 用 app.test_client() 重放全部 2969 条 golden——POST /calculate 再 GET /get_integral_image，比对参数整 dict、solution 文本、http_status、equation、错误文案。当前基线：both_ok=1387、err_match=1578/1578、status_match=2965/2969、param_exact=1357、eq_match=1305/1379（余量全部在 trig degree/pi_q 选型、quadlog 渲染边角、gauss'<'——agent 在修）。
 - **unified_form 恒 {}**：76 个成功响应全部如此——死字段。
 - **服务端确定性**：同请求重复返回完全相同参数。
 - **恒等式可信**：verify 50dps 全量 574/574 valid + 抽样精验——站点输出数学上全部成立，parity 参数可直接信任。

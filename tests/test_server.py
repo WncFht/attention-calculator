@@ -211,6 +211,29 @@ def test_get_integral_image(client, monkeypatch):
     assert seen["bound"] == "\\frac{22}{7}"
 
 
+def test_get_integral_image_echoes_raw(client):
+    """The site echoes request digits unreduced, even the \\frac macro verbatim."""
+    base = {
+        "type": "pi",
+        "comparison": "<",
+        "coef": "1",
+        **{k: str(PARAMS[k]) for k in server.IMAGE_KEYS},
+    }
+    resp = client.get("/get_integral_image",
+                      query_string={**base, "rational": "3140/1000"})
+    assert "\\dfrac{3140}{1000}" in resp.get_json()["equation"]
+
+    resp = client.get("/get_integral_image",
+                      query_string={**base, "rational": "\\frac{3140}{1000}"})
+    eq = resp.get_json()["equation"]
+    assert "\\frac{3140}{1000}" in eq and "dfrac{3140" not in eq
+
+    resp = client.get("/get_integral_image",
+                      query_string={**base, "rational": "3",
+                                    "coef": "2/4", "comparison": ">"})
+    assert "\\dfrac{2}{4}\\pi" in resp.get_json()["equation"]
+
+
 def test_get_integral_image_errors(client, monkeypatch):
     """Every render failure -> the site's generic 500."""
     resp = client.get("/get_integral_image", query_string={"type": "bogus"})

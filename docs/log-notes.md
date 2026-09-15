@@ -70,9 +70,9 @@ m+n 升序 → |m−n| 升序 → **同 |m−n| 时 m+n 为奇数则 m 小者先
 - **无 Padé 形态**——所有 ln 输出都是 (1+cx)^s 核。
 - 0<q<1 的 ln_q 域拒绝（不是核内变换）。
 
-## 待办/已标记
+## 待办/已标记（全部已解决）
 
-1. `engine.mn_order` 纯 m-升序与站点奇偶规则冲突——log 族已用本地 `mn_order_log`；其它族若出现偶数和镜像分歧应切同规则。
-2. `server.domain_error` 缺 artanh_q/arcoth_q 域规则（上文文案）。
-3. bound 原样渲染需要未约分数位——`render_equation` 的 bound 参数与 parity.py 链路都要透传。
-4. ln_q_square q=5/7 站点 500——无法对齐，双败计。
+1. ~~`engine.mn_order` 纯 m-升序与站点奇偶规则冲突~~ —— 奇偶规则已提升为 engine.mn_order 全局规则（commit 6e87f69），本地 `mn_order_log` 已删除。
+2. ~~`server.domain_error` 缺 artanh_q/arcoth_q 域规则~~ —— 已补齐全部域文案（03734b1）。
+3. ~~bound 原样渲染~~ —— render.rat_tex 透传原文串（不约分、连 \frac 宏都逐字回显），parity 走 test_client 传 golden 请求原文。
+4. ~~ln_q_square q=5/7 站点 500~~ —— 已精确复现：golden 16/16 显示 500 只发生在命题为真时，为假仍报"方向反了"（float64 预判方向先行，真→InternalError→500）。
