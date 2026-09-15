@@ -3,6 +3,7 @@
 import importlib
 from fractions import Fraction
 
+from .engine import NoSolution, WrongDirection
 from .kernels import TYPES
 
 # type -> module under attention_calculator.kernels
@@ -52,4 +53,19 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
     if kind not in TYPES:
         raise ValueError(f"unsupported type {kind!r}")
     module = importlib.import_module(f"attention_calculator.kernels.{FAMILY[kind]}")
-    return module.prove(kind, parse_rational(power), comp, parse_rational(rational))
+    q, r = parse_rational(power), parse_rational(rational)
+    try:
+        return module.prove(kind, q, comp, r)
+    except NoSolution:
+        # 站点在搜索耗尽后仍按数值真假区分报错：命题为假时报"方向反了"而非
+        # "未找到解"（实测 arctan 3 > 5/4 → 方向反了；真命题 < 5/4 → 未找到解）。
+        # 恒等式 ∫f = ±(C−r) 精确成立，真命题不可能搜出恒≤0 的 P，
+        # 故仅在 NoSolution 后补判不会误伤已验证路径。
+        # 判定精度是 float64：zeta3/gamma 对 float 相等但方向为假的界仍报
+        # "未找到解"（float 差为 0 → 放行进入搜索 → 耗尽），故用 float 比较差。
+        from .integrand import constant_mpf
+        diff = float(constant_mpf(kind, q)) - float(r)
+        claim_false = (diff < 0) if comp == ">" else (diff > 0)
+        if claim_false:
+            raise WrongDirection
+        raise
