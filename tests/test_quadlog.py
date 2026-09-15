@@ -321,9 +321,11 @@ def test_no_solution(kind, power, comp, bound):
 
 
 def test_pin_power_out_of_range():
-    with pytest.raises(ValueError):
+    # the site has no range guard: out-of-range exponents die on the moment
+    # table lookup -> KeyError -> the generic 500 (probe: pi_n 11>1 -> 500)
+    with pytest.raises(KeyError):
         quadlog.prove("pi_n", F(11), ">", F(1))
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         quadlog.prove("pi_n", F(11, 2), ">", F(1))
 
 

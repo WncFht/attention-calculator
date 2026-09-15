@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="An adult health calculator for BMI, body fat, resting energy, daily energy, waist measures, blood pressure, sleep duration, and exercise heart rate.">
+    <meta name="keywords" content="health calculator, BMI, body fat, resting energy expenditure, Mifflin-St Jeor, TDEE, blood pressure, sleep duration, target heart rate">
+    <meta name="author" content="量化调酒师">
+    <title>Health Calculator</title>
+    <style>
+        :root {
+            --blue: #1769df;
+            --blue-dark: #0f4ea8;
+            --blue-soft: #eaf3ff;
+            --green: #17875d;
+            --green-soft: #e9f8f1;
+            --amber: #a66700;
+            --amber-soft: #fff6df;
+            --red: #c43b50;
+            --red-soft: #fff0f3;
+            --ink: #111827;
+            --muted: #5d6778;
+            --line: #dce3ec;
+            --paper: rgba(255, 255, 255, 0.94);
+            --shadow: 0 18px 50px rgba(32, 73, 128, 0.11);
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 10% 12%, rgba(95, 175, 255, 0.23), transparent 26rem),
+                radial-gradient(circle at 88% 6%, rgba(57, 200, 151, 0.15), transparent 24rem),
+                linear-gradient(145deg, #f7fbff 0%, #f5f8fc 52%, #edf5ff 100%);
+            background-attachment: fixed;
+        }
+        a { color: var(--blue-dark); }
+        button, input, select { font: inherit; }
+        .page { width: min(94vw, 1180px); margin: 0 auto; padding: 1.6rem 0 3rem; }
+        .site-header { position: relative; text-align: center; padding: 0.6rem 0 1.2rem; }
+        h1 { margin: 0; color: #2f7bdc; font-size: clamp(1.8rem, 3.3vw, 2.7rem); }
+        .language-switch { position: absolute; top: 0.55rem; right: 0; display: inline-flex; padding: 0.2rem; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, 0.9); }
+        .language-switch a { min-width: 3.1rem; padding: 0.42rem 0.7rem; border-radius: 999px; color: var(--muted); font-size: 0.88rem; font-weight: 700; text-decoration: none; }
+        .language-switch a.active { color: #fff; background: var(--blue); }
+        .panel {
+            margin-top: 1.2rem;
+            padding: clamp(1rem, 3vw, 1.7rem);
+            border: 1px solid rgba(202, 213, 227, 0.95);
+            border-radius: 14px;
+            background: var(--paper);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(8px);
+        }
+        .panel-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin-bottom: 1rem; }
+        .panel-title { margin: 0; font-size: 1.3rem; }
+        .panel-kicker { margin: 0.18rem 0 0; color: var(--muted); font-size: 0.93rem; line-height: 1.6; }
+        .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+        .field { min-width: 0; }
+        .field.span-2 { grid-column: span 2; }
+        label { display: block; margin-bottom: 0.42rem; font-weight: 700; font-size: 0.95rem; }
+        .required { color: var(--red); }
+        input, select {
+            width: 100%;
+            min-height: 2.85rem;
+            padding: 0 0.78rem;
+            border: 1px solid #aebaca;
+            border-radius: 7px;
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.98);
+            outline: none;
+        }
+        input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(23, 105, 223, 0.12); }
+        .field-note { margin: 0.34rem 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
+        .optional-box { margin-top: 1.15rem; border: 1px solid var(--line); border-radius: 9px; background: #fbfdff; }
+        .optional-box summary { padding: 0.85rem 1rem; cursor: pointer; font-weight: 700; }
+        .optional-inner { padding: 0 1rem 1rem; }
+        .submit-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .primary-btn {
+            min-height: 3rem;
+            padding: 0 1.5rem;
+            border: 0;
+            border-radius: 999px;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            background: linear-gradient(180deg, #1568df, #5aa8ee);
+            box-shadow: 0 9px 18px rgba(23, 105, 223, 0.22);
+        }
+        .primary-btn:disabled { opacity: 0.62; cursor: wait; }
+        .form-error { color: var(--red); font-weight: 700; }
+        .honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
+        #results { display: none; }
+        .result-hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 11px;
+            background: linear-gradient(110deg, #edf6ff, #effbf7);
+            border: 1px solid #cfe1f2;
+        }
+        .result-hero h2 { margin: 0 0 0.3rem; font-size: 1.35rem; }
+        .result-hero p { margin: 0; color: var(--muted); line-height: 1.6; }
+        .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+        .metric-card { min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+        .metric-card.is-alert .metric-value { color: var(--red); }
+        .metric-arrow { display: inline-block; margin-right: 0.18rem; color: var(--red); font-weight: 900; }
+        .metric-label { color: var(--muted); font-size: 0.88rem; }
+        .metric-value { margin: 0.38rem 0 0.3rem; color: var(--blue-dark); font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 800; overflow-wrap: anywhere; }
+        .metric-unit { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+        .metric-status { font-size: 0.88rem; font-weight: 700; line-height: 1.45; }
+        .metric-range { margin-top: 0.35rem; color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+        .result-group { margin-top: 1.4rem; }
+        .result-group h3 { margin: 0 0 0.75rem; font-size: 1.08rem; }
+        .tips { margin: 0; padding-left: 1.25rem; line-height: 1.75; }
+        .tips li + li { margin-top: 0.45rem; }
+        .disclaimer { margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 9px; color: #754a00; background: var(--amber-soft); line-height: 1.65; }
+        .reference-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+        .reference-table th, .reference-table td { padding: 0.78rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.55; }
+        .reference-table th { color: #34445c; background: #f5f8fc; }
+        .formula-list { display: grid; gap: 0.7rem; }
+        .formula-item { border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+        .formula-item summary { padding: 0.85rem 1rem; cursor: pointer; font-weight: 800; }
+        .formula-content { padding: 0 1rem 1rem; color: #303b4c; line-height: 1.72; }
+        .formula {
+            padding: 0.75rem 0.9rem;
+            border-left: 4px solid var(--blue);
+            border-radius: 5px;
+            background: #f4f8fd;
+            color: #123a6b;
+            font-family: Consolas, "Courier New", monospace;
+            overflow-x: auto;
+        }
+        .source { margin-top: 0.65rem; font-size: 0.9rem; }
+        .footer { margin-top: 1.5rem; color: var(--muted); text-align: center; line-height: 1.8; font-size: 0.9rem; }
+        .footer-links { color: #111; text-align: left; line-height: 1.6; }
+        .footer-links a { color: #111; text-decoration: underline; }
+        @media (max-width: 900px) {
+            .form-grid, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 600px) {
+            .page { width: min(95vw, 1180px); }
+            .form-grid, .metric-grid { grid-template-columns: 1fr; }
+            .field.span-2 { grid-column: span 1; }
+            .panel-head, .result-hero { align-items: flex-start; flex-direction: column; }
+            .reference-table { font-size: 0.84rem; }
+            .reference-table th, .reference-table td { padding: 0.58rem; }
+            .site-header { padding-top: 3.5rem; }
+            .language-switch { top: 0; left: 50%; right: auto; transform: translateX(-50%); }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="site-header">
+            <nav class="language-switch" aria-label="Language switch">
+                <a href="/health/" class="" lang="zh-CN">中文</a>
+                <a href="/health/en" class="active" lang="en">English</a>
+            </nav>
+            <h1>Health Calculator</h1>
+        </header>
+
+        <section class="panel" aria-labelledby="inputTitle">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title" id="inputTitle">Enter basic information</h2>
+                    <p class="panel-kicker">Required fields are used by the core formulas. If an optional field is blank, its related result will not be generated.</p>
+                </div>
+            </div>
+            <form id="healthForm">
+                <div class="form-grid">
+                    <div class="field span-2">
+                        <label for="nickname">Nickname <span class="required">Required</span></label>
+                        <input id="nickname" name="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Example: BlueWhale07" required pattern="[A-Za-z0-9_\-\u4e00-\u9fff]+">
+                        <p class="field-note">Up to 24 characters: Chinese characters, letters, numbers, underscores, and hyphens.</p>
+                    </div>
+                    <div class="field">
+                        <label for="sex">Sex <span class="required">Required</span></label>
+                        <select id="sex" name="sex" required>
+                            <option value="" selected disabled>Please select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                        <p class="field-note">Some formulas use different sex-specific constants.</p>
+                    </div>
+                    <div class="field">
+                        <label for="age">Age (years) <span class="required">Required</span></label>
+                        <input id="age" name="age" type="number" min="18" max="120" step="1" placeholder="Example: 35" required>
+                        <p class="field-note">The current formulas are intended for adults aged 18–120.</p>
+                    </div>
+                    <div class="field">
+                        <label for="height_cm">Height (cm) <span class="required">Required</span></label>
+                        <input id="height_cm" name="height_cm" type="number" min="1" max="250" step="0.1" placeholder="Example: 175" required>
+                        <p class="field-note">Hard validation range: 1–250 cm. Clearly unusual values trigger a formula-applicability warning.</p>
+                    </div>
+                    <div class="field">
+                        <label for="weight_kg">Weight (kg) <span class="required">Required</span></label>
+                        <input id="weight_kg" name="weight_kg" type="number" min="1" max="500" step="0.1" placeholder="Example: 70" required>
+                        <p class="field-note">Use current weight. Valid range: 1–500 kg.</p>
+                    </div>
+                    <div class="field">
+                        <label for="waist_cm">Waist circumference (cm)</label>
+                        <input id="waist_cm" name="waist_cm" type="number" min="1" max="300" step="0.1" placeholder="Optional, e.g. 82">
+                        <p class="field-note">Used for waist assessment, WHtR, WHR, RFM, ABSI, BRI, and conicity index.</p>
+                    </div>
+                    <div class="field">
+                        <label for="hip_cm">Hip circumference (cm)</label>
+                        <input id="hip_cm" name="hip_cm" type="number" min="1" max="300" step="0.1" placeholder="Optional, e.g. 96">
+                        <p class="field-note">Used for WHR and BAI.</p>
+                    </div>
+                    <div class="field">
+                        <label for="resting_hr">Resting heart rate (bpm)</label>
+                        <input id="resting_hr" name="resting_hr" type="number" min="20" max="250" step="1" placeholder="Optional, e.g. 62">
+                        <p class="field-note">Measure after quiet rest. Used for Karvonen heart rate, heart-rate reserve, and estimated VO₂max.</p>
+                    </div>
+                    <div class="field span-2">
+                        <label for="pal">Daily activity level <span class="required">Required</span></label>
+                        <select id="pal" name="pal" required>
+                            <option value="1.55">Sedentary or light activity (PAL 1.55)</option>
+                            <option value="1.85">Moderate activity (PAL 1.85)</option>
+                            <option value="2.20">High activity (PAL 2.20)</option>
+                        </select>
+                        <p class="field-note">TDEE uses midpoint values from the FAO activity-level ranges.</p>
+                    </div>
+                </div>
+
+                <details class="optional-box">
+                    <summary>Optional: assess blood pressure and sleep duration</summary>
+                    <div class="optional-inner">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="bp_context">Blood-pressure measurement setting</label>
+                                <select id="bp_context" name="bp_context">
+                                    <option value="" selected>Please select</option>
+                                    <option value="clinic">Clinic measurement</option>
+                                    <option value="home">Home measurement</option>
+                                </select>
+                                <p class="field-note">The measurement setting changes the hypertension screening threshold.</p>
+                            </div>
+                            <div class="field">
+                                <label for="systolic_bp">Systolic pressure (mmHg)</label>
+                                <input id="systolic_bp" name="systolic_bp" type="number" min="50" max="300" step="1" placeholder="Example: 118">
+                                <p class="field-note">Commonly called the upper reading.</p>
+                            </div>
+                            <div class="field">
+                                <label for="diastolic_bp">Diastolic pressure (mmHg)</label>
+                                <input id="diastolic_bp" name="diastolic_bp" type="number" min="30" max="200" step="1" placeholder="Example: 76">
+                                <p class="field-note">Measurement setting, systolic pressure, and diastolic pressure must be entered together.</p>
+                            </div>
+                            <div class="field">
+                                <label for="sleep_hours">Average nightly sleep duration (hours)</label>
+                                <input id="sleep_hours" name="sleep_hours" type="number" min="0" max="24" step="0.1" placeholder="Example: 7.5">
+                                <p class="field-note">Enter a representative recent average.</p>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="optional-box">
+                    <summary>Optional: estimate calories burned in one exercise session</summary>
+                    <div class="optional-inner">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="exercise_type">Exercise type</label>
+                                <select id="exercise_type" name="exercise_type">
+                                    <option value="" selected>Please select an exercise</option>
+                                    <option value="walking_slow">Slow walking</option>
+                                    <option value="walking_moderate">Moderate walking</option>
+                                    <option value="walking_brisk">Brisk walking</option>
+                                    <option value="jogging">Jogging</option>
+                                    <option value="running_8kph">Running (about 8 km/h)</option>
+                                    <option value="cycling_easy">Easy cycling</option>
+                                    <option value="cycling_moderate">Moderate cycling</option>
+                                    <option value="swimming_leisure">Leisure swimming</option>
+                                    <option value="strength_training">General strength training</option>
+                                    <option value="yoga">General yoga</option>
+                                    <option value="badminton">Recreational badminton</option>
+                                    <option value="table_tennis">Table tennis</option>
+                                    <option value="stair_climbing">Moderate stair climbing</option>
+                                    <option value="jump_rope">Jumping rope</option>
+                                </select>
+                                <p class="field-note">The calculator automatically matches a typical activity intensity to the exercise type.</p>
+                            </div>
+                            <div class="field">
+                                <label for="exercise_minutes">Exercise duration (minutes)</label>
+                                <input id="exercise_minutes" name="exercise_minutes" type="number" min="1" max="1440" step="1" placeholder="Example: 30">
+                                <p class="field-note">Exercise type and duration must be entered together.</p>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="honeypot" aria-hidden="true">
+                    <label for="website">Website</label>
+                    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+                </div>
+                <div class="submit-row">
+                    <button class="primary-btn" id="submitBtn" type="submit">Calculate</button>
+                    <span class="form-error" id="formError" role="alert"></span>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel" id="results" aria-live="polite" aria-labelledby="resultTitle">
+            <div id="resultContent"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="rangeTitle">
+            <div class="panel-head"><div><h2 class="panel-title" id="rangeTitle">Health reference ranges</h2><p class="panel-kicker">Chinese adult standards are used where available. Different ages, populations, and special conditions may require separate assessment.</p></div></div>
+            <div style="overflow-x:auto">
+                <table class="reference-table">
+                    
+                    <thead><tr><th>Measure</th><th>Reference range or threshold</th><th>Interpretation</th></tr></thead>
+                    <tbody>
+                        <tr><td>BMI</td><td>&lt;18.5 underweight; 18.5–23.9 normal; 24.0–27.9 overweight; ≥28.0 obesity</td><td>Screening thresholds for Chinese adults aged 18 and above.</td></tr>
+                        <tr><td>Waist circumference</td><td>85–89.9 cm for men and 80–84.9 cm for women indicate pre-central obesity; ≥90 cm for men and ≥85 cm for women indicate central obesity</td><td>Measurement site and technique affect the result.</td></tr>
+                        <tr><td>Waist-to-height ratio</td><td>0.5 is a commonly used simple adult threshold</td><td>“Keep your waist below half your height” is a screening message, not a diagnosis.</td></tr>
+                        <tr><td>Waist-to-hip ratio</td><td>0.90 for men and 0.85 for women are commonly used reference thresholds</td><td>Interpret together with waist circumference, BMI, and other risk factors.</td></tr>
+                        <tr><td>Estimated body fat</td><td>20%–25% for men and 25%–30% for women indicate higher body fat; ≥25% for men and ≥30% for women are high-body-fat alert values</td><td>Formula error can be substantial and cannot replace a body-composition assessment.</td></tr>
+                        <tr><td>Resting heart rate</td><td>About 60–100 bpm is common for most adults</td><td>Athletes may be below 60; medication, emotion, and illness can also affect heart rate.</td></tr>
+                        <tr><td>Blood pressure</td><td>Ideal below 120/80 mmHg; clinic readings ≥140/90 and home readings ≥135/85 meet hypertension screening thresholds</td><td>Below 90/60 suggests low blood pressure. One reading cannot diagnose a condition; repeat correctly.</td></tr>
+                        <tr><td>Sleep duration</td><td>Generally 7–8 hours for adults; generally 6–7 hours for adults aged 65 and above</td><td>Duration is only one screening dimension; also consider sleep quality and how you feel after waking.</td></tr>
+                        <tr><td>BMR, TDEE, BSA</td><td>No single universal “healthy range”</td><td>These are mainly estimates and trend-comparison measures, not stand-alone health thresholds.</td></tr>
+                        <tr><td>BRI, conicity index, body water, blood volume, VO₂max</td><td>No universal alert threshold is applied on this page</td><td>These formulas are mainly for estimation or population comparison and cannot replace measurement or medical assessment.</td></tr>
+                    </tbody>
+                    
+                </table>
+            </div>
+            
+            <p class="source">Main range sources: <a href="https://www.nhc.gov.cn/wjw/ylyjs/202412/b3d40e0141834897808ce6c9dce76a60.shtml" target="_blank" rel="noopener">National Health Commission, Weight Management Guidelines (2024)</a>; <a href="https://www.nhc.gov.cn/xcs/c100122/202503/27b26d397f4941ff8ff3846ef40026ee.shtml" target="_blank" rel="noopener">National Health Commission weight-management guidance</a>; <a href="https://www.nhc.gov.cn/cms-search/downFiles/63f752a17cfd4b4781f744477561866f.pdf" target="_blank" rel="noopener">Chinese primary-care hypertension guideline</a>; <a href="https://www.nhc.gov.cn/guihuaxxs/c100133/202503/70d5836afe804a858b899ee951a24a13.shtml" target="_blank" rel="noopener">National Health Commission sleep-health information</a>; and the <a href="https://www.who.int/publications/i/item/9789241501491" target="_blank" rel="noopener">WHO waist circumference and waist–hip ratio report</a>.</p>
+            
+        </section>
+
+        <section class="panel" aria-labelledby="formulaTitle">
+            <div class="panel-head"><div><h2 class="panel-title" id="formulaTitle">Formulas and sources</h2><p class="panel-kicker">Expand each section to view formulas, input units, intended use, and original references.</p></div></div>
+            
+            <div class="formula-list">
+                <details class="formula-item" open>
+                    <summary>1. BMI, BMI-based target weight, fat mass, and fat-free mass</summary>
+                    <div class="formula-content">
+                        <div class="formula">BMI = weight (kg) ÷ height (m)²<br>Weight at a specified BMI = specified BMI × height (m)²<br>Weight gain needed when underweight = weight at BMI 18.5 − current weight<br>Weight loss needed when overweight or obese = current weight − weight at BMI 23.9<br>Fat mass = weight × body-fat percentage ÷ 100<br>Fat-free mass = weight − fat mass</div>
+                        <p>BMI screens weight relative to height and does not directly distinguish fat from muscle. The gain or loss figure is only a mathematical conversion of the BMI reference range; no adjustment is shown when BMI is within range.</p>
+                        <p class="source">Sources: <a href="https://www.cdc.gov/bmi/about/index.html" target="_blank" rel="noopener">CDC BMI information</a>; Chinese thresholds are from the National Health Commission guideline.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>2. Primary CUN-BAE body-fat estimate and Deurenberg comparison</summary>
+                    <div class="formula-content">
+                        <div class="formula">CUN-BAE body fat (%) = −44.988 + 0.503×age + 10.689×S + 3.172×BMI − 0.026×BMI² + 0.181×BMI×S − 0.02×BMI×age − 0.005×BMI²×S + 0.00021×BMI²×age<br>For men S=0; for women S=1.<br><br>Deurenberg for men = 1.2×BMI + 0.23×age − 16.2<br>Deurenberg for women = 1.2×BMI + 0.23×age − 5.4</div>
+                        <p>The page uses CUN-BAE as the primary body-fat estimate and retains Deurenberg for comparison. The original CUN-BAE study covered ages 18–80 and a broad BMI range, but its sample was White. Either formula may differ from an individual measurement by several percentage points.</p>
+                        <p class="source">Sources: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3263863/" target="_blank" rel="noopener">CUN-BAE development and validation study</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/2043597/" target="_blank" rel="noopener">Deurenberg et al., 1991</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>3. WHtR, WHR, RFM, BAI, and ABSI</summary>
+                    <div class="formula-content">
+                        <div class="formula">Waist-to-height ratio = waist circumference ÷ height<br>Waist-to-hip ratio = waist circumference ÷ hip circumference<br>RFM for men = 64 − 20×height÷waist circumference<br>RFM for women = 76 − 20×height÷waist circumference<br>BAI = hip circumference (cm) ÷ height (m)^1.5 − 18<br>ABSI = waist circumference (m) ÷ [BMI^(2/3) × height (m)^(1/2)]</div>
+                        <p>These measures describe abdominal fat or body shape from different perspectives. Raw BAI and ABSI values vary substantially across populations and should not be used alone for diagnosis.</p>
+                        <p class="source">Sources: <a href="https://pubmed.ncbi.nlm.nih.gov/20819243/" target="_blank" rel="noopener">WHtR review</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/30030479/" target="_blank" rel="noopener">original RFM paper</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/26262696/" target="_blank" rel="noopener">BAI validation study</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/22815707/" target="_blank" rel="noopener">original ABSI paper</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>4. Janmahasatian lean body mass and Mosteller body surface area</summary>
+                    <div class="formula-content">
+                        <div class="formula">Male LBM = 9270×weight ÷ (6680 + 216×BMI)<br>Female LBM = 9270×weight ÷ (8780 + 244×BMI)<br>BSA (m²) = √[height (cm)×weight (kg)÷3600]</div>
+                        <p>The lean-body-mass formula is often used in research and medication-dosing contexts. Body surface area has no single health threshold for the general population.</p>
+                        <p class="source">Sources: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3833312/" target="_blank" rel="noopener">lean-body-mass formula validation</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/3657876/" target="_blank" rel="noopener">Mosteller BSA formula</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>5. Mifflin–St Jeor, Harris–Benedict, and Cunningham energy formulas</summary>
+                    <div class="formula-content">
+                        <div class="formula">Mifflin for men = 10W + 6.25H − 5A + 5<br>Mifflin for women = 10W + 6.25H − 5A − 161<br><br>Harris for men = 88.362 + 13.397W + 4.799H − 5.677A<br>Harris for women = 447.593 + 9.247W + 3.098H − 4.330A<br><br>Cunningham = 500 + 22×fat-free mass (kg)</div>
+                        <p>W is weight in kg, H is height in cm, and A is age in years; results are in kcal/day. Strictly speaking, Mifflin estimates resting energy expenditure (REE). All three formulas are displayed for comparison.</p>
+                        <p class="source">Sources: <a href="https://pubmed.ncbi.nlm.nih.gov/2305711/" target="_blank" rel="noopener">original Mifflin paper</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/11817239/" target="_blank" rel="noopener">revised Harris–Benedict equation</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/7435418/" target="_blank" rel="noopener">original Cunningham paper</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>6. TDEE and protein reference for exercising adults</summary>
+                    <div class="formula-content">
+                        <div class="formula">TDEE = Mifflin resting energy expenditure × PAL<br>Protein reference for exercising adults = weight (kg) × 1.4–2.0 g/day</div>
+                        <p>PAL uses midpoints of the FAO adult activity ranges. The protein range applies to healthy exercising adults and is not a dietary prescription for everyone.</p>
+                        <p class="source">Sources: <a href="https://www.fao.org/4/y5686e/y5686e07.htm" target="_blank" rel="noopener">FAO human energy requirements</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/28642676/" target="_blank" rel="noopener">ISSN position stand on protein and exercise</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>7. Maximum and target heart rates</summary>
+                    <div class="formula-content">
+                        <div class="formula">Tanaka maximum heart rate = 208 − 0.7×age<br>Moderate-intensity target = 50%–70% of maximum heart rate<br>Vigorous-intensity target = 70%–85% of maximum heart rate<br>Karvonen target = resting heart rate + intensity×(maximum heart rate−resting heart rate)</div>
+                        <p>Age-based formulas predict a group average; an individual's actual maximum heart rate may differ substantially. People with cardiovascular disease or medication that affects heart rate should follow medical advice.</p>
+                        <p class="source">Sources: <a href="https://pubmed.ncbi.nlm.nih.gov/11153730/" target="_blank" rel="noopener">original Tanaka paper</a>; <a href="https://www.heart.org/en/healthy-living/exercise-and-physical-activity/fitness-basics/target-heart-rates" target="_blank" rel="noopener">American Heart Association target heart rates</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>8. Watson total body water and Nadler blood volume</summary>
+                    <div class="formula-content">
+                        <div class="formula">Watson male TBW (L) = 2.447 − 0.09516×age + 0.1074×height (cm) + 0.3362×weight (kg)<br>Watson female TBW (L) = −2.097 + 0.1069×height (cm) + 0.2466×weight (kg)<br>Body-water percentage = TBW ÷ weight × 100%<br><br>Nadler male blood volume (L) = 0.3669×height (m)³ + 0.03219×weight (kg) + 0.6041<br>Nadler female blood volume (L) = 0.3561×height (m)³ + 0.03308×weight (kg) + 0.1833</div>
+                        <p>Both are population equations based on anthropometric data. They do not represent current hydration or measured circulating blood volume and should not guide fluid replacement, blood donation, or medication dosing.</p>
+                        <p class="source">Sources: <a href="https://pubmed.ncbi.nlm.nih.gov/6986753/" target="_blank" rel="noopener">Watson body-water study</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/21936146/" target="_blank" rel="noopener">Nadler blood-volume study</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>9. Body Roundness Index and conicity index</summary>
+                    <div class="formula-content">
+                        <div class="formula">BRI = 364.2 − 365.5×√[1 − (waist circumference÷2π)² ÷ (0.5×height)²]<br>Conicity index = waist circumference (m) ÷ [0.109×√(weight in kg ÷ height in m)]</div>
+                        <p>Both describe body shape or central fat distribution. Studies use different groupings or cut points, so this page does not apply a universal individual alert line.</p>
+                        <p class="source">Sources: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3692604/" target="_blank" rel="noopener">original BRI study</a>; <a href="https://www.sciencedirect.com/science/article/pii/S2174204917301253" target="_blank" rel="noopener">conicity-index formula description</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>10. Heart-rate reserve, estimated VO₂max, and exercise calories</summary>
+                    <div class="formula-content">
+                        <div class="formula">Heart-rate reserve = estimated maximum heart rate − resting heart rate<br>Estimated VO₂max (ml/kg/min) = 15.3×estimated maximum heart rate÷resting heart rate<br>Exercise calories (kcal) = activity intensity matched by the system (MET)×3.5×weight (kg)÷200×minutes</div>
+                        <p>The user selects an exercise type and duration; the calculator automatically matches a commonly used intensity. The Uth method originally uses measured maximum heart rate, while this page substitutes the Tanaka age equation, so errors can accumulate. Exercise calories also vary with individual efficiency and actual intensity.</p>
+                        <p class="source">Sources: <a href="https://doi.org/10.1007/s00421-003-0988-y" target="_blank" rel="noopener">Uth heart-rate-ratio method</a>; <a href="https://pacompendium.com/adult-compendium/" target="_blank" rel="noopener">2024 Adult Compendium of Physical Activities</a>.</p>
+                    </div>
+                </details>
+                <details class="formula-item">
+                    <summary>11. Blood-pressure and sleep-duration assessment</summary>
+                    <div class="formula-content">
+                        <div class="formula">Ideal blood pressure: systolic &lt; 120 and diastolic &lt; 80 mmHg<br>Clinic hypertension screening threshold: systolic ≥ 140 or diastolic ≥ 90 mmHg<br>Home hypertension screening threshold: systolic ≥ 135 or diastolic ≥ 85 mmHg<br>Low reference: systolic &lt; 90 or diastolic &lt; 60 mmHg<br><br>Sleep-duration reference: 7–8 hours for adults; 6–7 hours for adults aged 65 and above</div>
+                        <p>Blood pressure is assessed using the threshold for the selected measurement setting, with separate up or down arrows for systolic and diastolic readings. One reading cannot diagnose hypertension or hypotension. Sleep duration alone also does not represent sleep quality.</p>
+                        <p class="source">Sources: <a href="https://www.nhc.gov.cn/cms-search/downFiles/63f752a17cfd4b4781f744477561866f.pdf" target="_blank" rel="noopener">Chinese primary-care hypertension guideline</a>; <a href="https://www.nhc.gov.cn/guihuaxxs/c100133/202503/70d5836afe804a858b899ee951a24a13.shtml" target="_blank" rel="noopener">National Health Commission sleep-health information</a>.</p>
+                    </div>
+                </details>
+            </div>
+            
+        </section>
+
+        <footer class="footer">
+            <p class="footer-links">
+                Author: 量化调酒师 (<a href="https://www.zhihu.com/people/plel/" target="_blank" rel="noopener"><strong>Zhihu profile</strong></a>)<br>
+                About Health Calculator: <a href="https://zhuanlan.zhihu.com/p/2074459474845242655" target="_blank" rel="noopener"><strong>Health Calculator</strong></a><br>
+                Attention Calculator: <a href="http://zhuyidao.net/" target="_blank" rel="noopener"><strong>Open Attention Calculator</strong></a><br>
+                Convex Concave Prover: <a href="http://convex.zhuyidao.net/" target="_blank" rel="noopener"><strong>Open Convex Concave Prover</strong></a>
+            </p>
+        </footer>
+    </main>
+
+    <script>
+        const CALCULATE_URL = "/health/calculate";
+        const IS_EN = true;
+        const ITEM_NAMES_EN = {
+            bmi: 'BMI', target_weight: 'Weight range corresponding to normal BMI', weight_adjustment: 'Adjustment needed to reach normal BMI',
+            body_fat_cun_bae: 'CUN-BAE estimated body fat', body_fat_deurenberg: 'Deurenberg body-fat comparison', fat_mass: 'Estimated fat mass',
+            ffm: 'Estimated fat-free mass', janma_lbm: 'Janmahasatian lean body mass', bsa_mosteller: 'Body surface area (BSA)',
+            waist_assessment: 'Waist circumference assessment', whtr: 'Waist-to-height ratio (WHtR)', whr: 'Waist-to-hip ratio (WHR)',
+            rfm: 'RFM estimated body fat', bai: 'Body Adiposity Index (BAI)', absi: 'A Body Shape Index (ABSI)',
+            bri: 'Body Roundness Index (BRI)', conicity: 'Conicity index', watson_tbw: 'Watson estimated total body water',
+            body_water_pct: 'Estimated body-water percentage', blood_volume_nadler: 'Nadler estimated blood volume',
+            mifflin_ree: 'Mifflin resting energy expenditure', harris_ree: 'Harris–Benedict', cunningham_ree: 'Cunningham',
+            tdee: 'Total daily energy expenditure (TDEE)', resting_hr: 'Resting heart rate', max_hr_tanaka: 'Tanaka maximum heart rate',
+            moderate_hr: 'Moderate-intensity heart rate', vigorous_hr: 'Vigorous-intensity heart rate', karvonen_hr: 'Karvonen target heart rate',
+            heart_rate_reserve: 'Heart-rate reserve', estimated_vo2max: 'Estimated VO₂max', protein_range: 'Protein reference for exercising adults',
+            exercise_kcal: 'Estimated calories for this exercise session', systolic_bp: 'Systolic pressure', diastolic_bp: 'Diastolic pressure',
+            blood_pressure_category: 'Blood-pressure assessment', sleep_duration: 'Average nightly sleep duration'
+        };
+        const UNIT_EN = { 'kcal/天': 'kcal/day', '次/分钟': 'bpm', 'g/天': 'g/day', '小时': 'hours' };
+        const STATUS_EN = {
+            '体重过低': 'Underweight', '正常范围': 'Normal range', '超重范围': 'Overweight range', '肥胖范围': 'Obesity range',
+            'BMI体重过低，还需增重': 'Underweight BMI; weight gain needed', 'BMI达到超重或肥胖范围，还需减重': 'Overweight or obesity BMI; weight loss needed',
+            '结果超出公式的合理解释范围': 'Outside the formula’s interpretable range', '达到高体脂报警界值': 'At or above the high-body-fat alert threshold',
+            '处于体脂偏高参考区间': 'Higher body-fat reference interval', '未达到高体脂报警界值': 'Below the high-body-fat alert threshold',
+            '超出CUN-BAE原始18～80岁验证范围': 'Outside the original CUN-BAE validation range of ages 18–80',
+            '未达到中心型肥胖前期界值': 'Below the pre-central-obesity threshold', '中心型肥胖前期': 'Pre-central obesity range',
+            '达到中心型肥胖界值': 'At or above the central-obesity threshold', '低于0.5参考界值': 'Below the 0.5 reference threshold',
+            '达到或超过0.5参考界值': 'At or above the 0.5 reference threshold', '低于参考界值': 'Below the reference threshold',
+            '达到或超过参考界值': 'At or above the reference threshold', '低于一般成人常见范围': 'Below the common adult range',
+            '一般成人常见范围': 'Common adult range', '高于一般成人常见范围': 'Above the common adult range',
+            '低于90参考值': 'Below the 90 reference value', '低于60参考值': 'Below the 60 reference value',
+            '高于理想范围': 'Above the ideal range', '理想范围': 'Ideal range', '3级高血压范围': 'Grade 3 hypertension range',
+            '2级高血压范围': 'Grade 2 hypertension range', '1级高血压范围': 'Grade 1 hypertension range',
+            '达到家庭血压高血压筛查界值': 'At the home hypertension screening threshold', '血压偏低范围': 'Low blood-pressure range',
+            '正常血压范围': 'Normal blood-pressure range', '正常高值范围': 'High-normal blood-pressure range',
+            '低于睡眠时长参考范围': 'Below the sleep-duration reference range', '高于睡眠时长参考范围': 'Above the sleep-duration reference range',
+            '睡眠时长参考范围': 'Within the sleep-duration reference range'
+        };
+        const REFERENCE_EN = {
+            bmi: 'Chinese adult reference: 18.5–23.9', target_weight: 'Calculated only by converting the BMI range',
+            fat_mass: 'Derived from estimated body-fat percentage', ffm: 'Derived from estimated body-fat percentage', janma_lbm: 'Formula estimate',
+            bsa_mosteller: 'No universal healthy range', rfm: 'Estimated from height and waist circumference', bai: 'Individual error may be substantial',
+            absi: 'Raw values require population standardization', bri: 'No universal health threshold; intended for body-shape comparison',
+            conicity: 'No universal health threshold', watson_tbw: 'Anthropometric formula estimate', body_water_pct: 'Derived by dividing Watson total body water by weight',
+            blood_volume_nadler: 'Anthropometric formula estimate; not for medical decisions', mifflin_ree: 'Resting-state estimate', harris_ree: 'Comparison formula',
+            cunningham_ree: 'Based on estimated fat-free mass', tdee: 'No universal healthy range', resting_hr: 'About 60–100 for most adults',
+            max_hr_tanaka: 'Age-based formula estimate', moderate_hr: '50%–70% of maximum heart rate', vigorous_hr: '70%–85% of maximum heart rate',
+            karvonen_hr: '50%–70% of heart-rate reserve', heart_rate_reserve: 'Estimated maximum heart rate minus resting heart rate',
+            estimated_vo2max: 'Uses estimated maximum heart rate, so errors may accumulate', protein_range: '1.4–2.0 g/kg/day for healthy exercising adults',
+            blood_pressure_category: 'One reading is for screening only and cannot diagnose a condition'
+        };
+        const EXERCISE_NAMES_EN = {
+            walking_slow: 'Slow walking', walking_moderate: 'Moderate walking', walking_brisk: 'Brisk walking', jogging: 'Jogging',
+            running_8kph: 'Running (about 8 km/h)', cycling_easy: 'Easy cycling', cycling_moderate: 'Moderate cycling',
+            swimming_leisure: 'Leisure swimming', strength_training: 'General strength training', yoga: 'General yoga',
+            badminton: 'Recreational badminton', table_tennis: 'Table tennis', stair_climbing: 'Moderate stair climbing', jump_rope: 'Jumping rope'
+        };
+        const ALERT_WITHOUT_DIRECTION = new Set([
+            '结果超出公式的合理解释范围',
+            '超出CUN-BAE原始18～80岁验证范围',
+            'Outside the formula’s interpretable range',
+            'Outside the original CUN-BAE validation range of ages 18–80'
+        ]);
+        const form = document.getElementById('healthForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const formError = document.getElementById('formError');
+        const resultsPanel = document.getElementById('results');
+        const resultContent = document.getElementById('resultContent');
+
+        function optionalNumber(id) {
+            const value = document.getElementById(id).value.trim();
+            return value === '' ? null : Number(value);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function displayValue(value, fallback = (IS_EN ? 'Not entered' : '未填写')) {
+            return value === null || value === undefined ? fallback : escapeHtml(value);
+        }
+
+        function englishReference(item, profile) {
+            const male = profile?.sex === 'male';
+            switch (item.key) {
+                case 'weight_adjustment':
+                    return item.metadata?.adjustment_direction === 'gain'
+                        ? 'Mathematical conversion to BMI 18.5'
+                        : 'Mathematical conversion to BMI 23.9';
+                case 'body_fat_cun_bae':
+                    return male ? '20%–25% indicates higher body fat; ≥25% is an alert value' : '25%–30% indicates higher body fat; ≥30% is an alert value';
+                case 'body_fat_deurenberg': return 'Simplified comparison estimate';
+                case 'waist_assessment': return male ? 'Men: pre-central obesity at 85 cm; central obesity at 90 cm' : 'Women: pre-central obesity at 80 cm; central obesity at 85 cm';
+                case 'whtr': return 'Simple adult threshold: 0.5';
+                case 'whr': return male ? 'Men: below 0.90' : 'Women: below 0.85';
+                case 'exercise_kcal': {
+                    const label = EXERCISE_NAMES_EN[item.metadata?.exercise_type] || 'Selected exercise';
+                    return `${label} × ${item.metadata?.minutes} minutes`;
+                }
+                case 'systolic_bp': {
+                    const context = item.metadata?.measurement_context === 'home' ? 'Home measurement' : 'Clinic measurement';
+                    return `${context}; ideal below 120`;
+                }
+                case 'diastolic_bp': {
+                    const context = item.metadata?.measurement_context === 'home' ? 'Home measurement' : 'Clinic measurement';
+                    return `${context}; ideal below 80`;
+                }
+                case 'sleep_duration':
+                    return profile?.age >= 65 ? 'Generally 6–7 hours for adults aged 65 and above' : 'Generally 7–8 hours for adults';
+                default: return REFERENCE_EN[item.key] || item.reference || '';
+            }
+        }
+
+        function translatedItem(item, profile) {
+            if (!IS_EN) return item;
+            return {
+                ...item,
+                display_name: ITEM_NAMES_EN[item.key] || item.display_name,
+                display_value: STATUS_EN[item.display_value] || item.display_value,
+                unit: UNIT_EN[item.unit] || item.unit,
+                status: STATUS_EN[item.status] || item.status,
+                reference: englishReference(item, profile)
+            };
+        }
+
+        function metricCard(label, value, unit = '', status = '', range = '', direction = '') {
+            const statusText = String(status || '');
+            const arrow = direction === 'up' ? '↑' : (direction === 'down' ? '↓' : '');
+            const arrowLabel = direction === 'up' ? (IS_EN ? 'Above the reference range' : '高于参考范围') : (IS_EN ? 'Below the reference range' : '低于参考范围');
+            const alertStatus = Boolean(arrow) || ALERT_WITHOUT_DIRECTION.has(statusText);
+            return `<article class="metric-card${alertStatus ? ' is-alert' : ''}">
+                <div class="metric-label">${escapeHtml(label)}</div>
+                <div class="metric-value">${arrow ? `<span class="metric-arrow" role="img" aria-label="${arrowLabel}">${arrow}</span>` : ''}${displayValue(value)} ${unit ? `<span class="metric-unit">${escapeHtml(unit)}</span>` : ''}</div>
+                ${status ? `<div class="metric-status">${escapeHtml(status)}</div>` : ''}
+                ${range ? `<div class="metric-range">${IS_EN ? 'Reference: ' : '参考：'}${escapeHtml(range)}</div>` : ''}
+            </article>`;
+        }
+
+        function showResults(data) {
+            const items = (Array.isArray(data.items) ? data.items : []).map(item => translatedItem(item, data.profile));
+            const byKey = Object.fromEntries(items.map(item => [item.key, item]));
+            const categories = {
+                body: { title: IS_EN ? 'Body size and composition' : '体型与身体成分', items: [] },
+                metabolism: { title: IS_EN ? 'Resting energy and daily expenditure' : '静息代谢与每日能量', items: [] },
+                heart: { title: IS_EN ? 'Heart rate and exercise intensity' : '心率与运动强度', items: [] },
+                nutrition: { title: IS_EN ? 'Nutrition reference' : '营养参考', items: [] },
+                exercise: { title: IS_EN ? 'Exercise calories' : '运动热量', items: [] },
+                vitals: { title: IS_EN ? 'Blood pressure and sleep' : '血压与睡眠', items: [] }
+            };
+            items.forEach(item => {
+                if (!categories[item.category_key]) {
+                    categories[item.category_key] = { title: item.category_key, items: [] };
+                }
+                categories[item.category_key].items.push(item);
+            });
+
+            function itemCard(item) {
+                return metricCard(item.display_name, item.display_value, item.unit, item.status, item.reference, item.direction || item.metadata?.direction || '');
+            }
+
+            function summaryCard(key) {
+                const item = byKey[key];
+                return item ? itemCard(item) : '';
+            }
+
+            const categoryHtml = Object.values(categories)
+                .filter(category => category.items.length)
+                .map(category => `<div class="result-group"><h3>${escapeHtml(category.title)}</h3><div class="metric-grid">${category.items.map(itemCard).join('')}</div></div>`)
+                .join('');
+
+            const tips = IS_EN ? (Array.isArray(data.tips_en) ? data.tips_en : []) : (Array.isArray(data.tips) ? data.tips : []);
+            const resultHeading = IS_EN ? `${escapeHtml(data.profile.nickname)} — estimated results` : `${escapeHtml(data.profile.nickname)} 的估算结果`;
+            const resultIntro = IS_EN
+                ? 'The entered items have been estimated for health screening. Follow long-term trends instead of relying on one reading.'
+                : '已完成所填项目的健康筛查估算。建议观察长期趋势，不要只看单次数字。';
+
+            resultContent.innerHTML = `
+                <div class="result-hero">
+                    <div><h2 id="resultTitle">${resultHeading}</h2><p>${resultIntro}</p></div>
+                </div>
+                <div class="metric-grid">
+                    ${summaryCard('bmi')}
+                    ${summaryCard('body_fat_cun_bae')}
+                    ${summaryCard('tdee')}
+                    ${summaryCard('max_hr_tanaka')}
+                </div>
+                ${categoryHtml}
+                <div class="result-group"><h3>${IS_EN ? 'Health guidance' : '健康提示'}</h3><ul class="tips">${tips.map(tip => `<li>${escapeHtml(tip)}</li>`).join('')}</ul></div>
+                <div class="disclaimer">${IS_EN ? '<strong>Important:</strong> These formulas are population-level statistical estimates and do not constitute diagnosis or treatment advice. Pregnancy, minors, professional athletes, severe obesity, chronic illness, or medication use may require specialized assessment.' : '<strong>重要：</strong>这些公式是群体统计估算，不构成诊断或治疗建议。孕期、未成年人、专业运动员、严重肥胖、慢性病或服药人群应使用专门评估方法。'}</div>
+            `;
+            resultsPanel.style.display = 'block';
+            resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            formError.textContent = '';
+            if (!form.reportValidity()) return;
+
+            const height = Number(document.getElementById('height_cm').value);
+            if (height < 1 || height > 250) {
+                formError.textContent = IS_EN ? 'Height must be between 1 and 250 cm.' : '身高必须在1～250厘米之间。';
+                return;
+            }
+
+            const payload = {
+                nickname: document.getElementById('nickname').value.trim(),
+                sex: document.getElementById('sex').value,
+                age: Number(document.getElementById('age').value),
+                height_cm: height,
+                weight_kg: Number(document.getElementById('weight_kg').value),
+                waist_cm: optionalNumber('waist_cm'),
+                hip_cm: optionalNumber('hip_cm'),
+                resting_hr: optionalNumber('resting_hr'),
+                pal: Number(document.getElementById('pal').value),
+                exercise_type: document.getElementById('exercise_type').value || null,
+                exercise_minutes: optionalNumber('exercise_minutes'),
+                bp_context: document.getElementById('bp_context').value || null,
+                systolic_bp: optionalNumber('systolic_bp'),
+                diastolic_bp: optionalNumber('diastolic_bp'),
+                sleep_hours: optionalNumber('sleep_hours'),
+                website: document.getElementById('website').value
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = IS_EN ? 'Calculating…' : '正在计算…';
+            try {
+                const response = await fetch(CALCULATE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({ ok: false, error: IS_EN ? 'The server returned an invalid response.' : '服务器返回格式不正确。' }));
+                if (!response.ok || !data.ok) {
+                    throw new Error(IS_EN ? 'Please check the entered values and try again.' : (data.error || '计算失败，请稍后再试。'));
+                }
+                showResults(data.results);
+            } catch (error) {
+                formError.textContent = error.message || (IS_EN ? 'Calculation failed. Please try again later.' : '计算失败，请稍后再试。');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = IS_EN ? 'Calculate' : '开始计算';
+            }
+        });
+    </script>
+</body>
+</html>

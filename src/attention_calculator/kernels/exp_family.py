@@ -5,14 +5,15 @@
 a+b*sin(x). All moments live in span{const, 1} (kernel-spec.md).
 """
 
+import math
 from fractions import Fraction
 from math import comb, lcm
 
 import sympy as sp
 
-from ..engine import mn_order, search
+from ..engine import WrongDirection, mn_order, search
 from ..moment import Moment, add, combine, scale
-from ..render import rat_tex, wire_fraction, wire_or
+from ..render import coef_tex, rat_tex, wire_pair
 
 LIMIT_E = 30  # e、pi 两类型指数上限 30
 LIMIT_OTHER = 10
@@ -86,12 +87,11 @@ def mul_latex(numer: sp.Expr, u: int) -> str:
 
 def const_latex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: e.g. e, 2e, \\dfrac{1}{2}e, e^2, e^\\dfrac{1}{2}, e^{\\pi}."""
-    pv = wire_or(power)
     if kind == "e":
-        return "e" if pv == 1 else f"{rat_tex(power)}e"
+        return coef_tex(power) + "e"
     if kind == "e_q":
         return "e^" + rat_tex(power)
-    return ("e^{\\pi}" if pv == 1 else f"{rat_tex(power)}e^{{\\pi}}")
+    return coef_tex(power) + "e^{\\pi}"
 
 
 def emit(kind: str, m: int, n: int, coeffs: list[Fraction]) -> dict:
@@ -121,6 +121,12 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     e_q reaches the natural 1/q division (site answers 500 there).
     """
     if kind == "e_q":
+        # float64 direction pre-check before the kernel: false claims are
+        # 方向反了 (e^0 > 2 -> 404), true/equal ones proceed into the 1/q
+        # moments which crash for q=0 (-> 500); math.exp overflow -> 500
+        c = math.exp(float(power))
+        if (float(bound) > c) if comp == ">" else (float(bound) < c):
+            raise WrongDirection
         sym, coef, q, limit = "e_q", Fraction(1), power, LIMIT_OTHER
         plans = ((m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)])
                  for m, n in mn_order(limit))
@@ -148,7 +154,9 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
         s = sp.sin(x)
         integrand = s**m * (1 - s) ** n * (au + bu * s) * sp.exp(x)
     else:
-        q = wire_fraction(power) if kind == "e_q" else sp.Integer(1)
+        # e_q's exponent comes from the raw wire pair: a macro parses with
+        # unsigned digit groups ('\dfrac{6}{-4}' -> e^{3x/2}, sign dropped)
+        q = Fraction(*wire_pair(power)) if kind == "e_q" else sp.Integer(1)
         integrand = x**m * (1 - x) ** n * (au + bu * x) * sp.exp(q * x)
     const = const_latex(kind, power)
     r = rat_tex(bound)

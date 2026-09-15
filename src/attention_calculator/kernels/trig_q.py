@@ -35,7 +35,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_pair
 
 LIMIT = 10
 
@@ -125,9 +125,14 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
 
 
 def raw_ratio(v: Fraction | str) -> str:
-    """Plain 'n/d' text, e.g. for \\cos(6/5) in the tan/cot divisor."""
+    """Plain 'n/d' text for the tan/cot divisor, e.g. \\cos(6/5).
+
+    A \\frac/\\dfrac macro collapses to its unsigned digit groups joined by
+    '/' ('\\dfrac{-6}{4}' -> '6/4'); any other raw string echoes verbatim
+    ('-1000...0' -> '\\cos(-1000...0)')."""
     if isinstance(v, str):
-        return v
+        m = re.search(r"\\d?frac\{-?(\d+)\}\{-?(\d+)\}", v)
+        return f"{m.group(1)}/{m.group(2)}" if m else v
     return f"{v.numerator}/{v.denominator}" if v.denominator != 1 else str(v.numerator)
 
 
@@ -182,7 +187,10 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     m, n = params["m"], params["n"]
     au, bu, cu = (Fraction(params[k]) for k in ("au_val", "bu_val", "cu_val"))
     u = Fraction(params["u_val"])
-    q = wire_fraction(power)
+    # the sin factor takes |q| from the raw wire pair (macro digits unsigned);
+    # a plain-signed negative q hoists a '- ' in front of the whole fraction
+    qn, qd = wire_pair(power)
+    q = Fraction(qn, qd)
     name = kind.removesuffix("_q")
 
     const = rf"\{name}{rat_tex(power)}"
@@ -199,9 +207,11 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
         terms.append(pow_term(1 - x, n))
     if not poly.is_Number:
         terms.append(add_term(poly))
-    terms.append((t := sp.latex(sp.sin(sp.Rational(q.numerator, q.denominator) * x)), t))
+    terms.append((t := sp.latex(sp.sin(sp.Rational(abs(q).numerator, abs(q).denominator) * x)), t))
     num = join_product(terms)
     body = num if u == 1 else rf"\frac{{{num}}}{{{u}}}"
+    if q < 0:
+        body = "- " + body
     if name == "tan":
         body = rf"\dfrac{{1}}{{\cos({raw_ratio(power)})}} " + body
     elif name == "cot":

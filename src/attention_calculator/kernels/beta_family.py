@@ -29,6 +29,7 @@ For golden, S_k = int_0^1 x^k sqrt(x+4) dx = A_k + B_k sqrt(5) with
 mapped to the phi-basis via sqrt(5) = 2 phi - 1.
 """
 
+import re
 from fractions import Fraction
 from math import comb, lcm
 
@@ -37,7 +38,7 @@ import sympy as sp
 from ..engine import NoSolution, Solved, gauss_solve, mn_order, poly_nonneg, search
 from ..integrand import lhs_mpf
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_or
+from ..render import coef_tex, rat_tex, wire_or
 
 LIMIT = 10
 
@@ -141,6 +142,12 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
         except NoSolution:
             if comp == ">":
                 return sqrt_bound_proof(kind, target)
+            # the '<' degenerate sits between the plain search and the
+            # transposed shot: probes where both fire (gauss 1<5/4) emit it
+            try:
+                return lt_bound_proof(kind, target)
+            except NoSolution:
+                pass
             solved = transposed_lt_proof(kind, power, bound, target)
 
     a, b = solved.coeffs
@@ -212,6 +219,39 @@ def sqrt_bound_proof(kind: str, target: Moment) -> dict:
     }
 
 
+# '<' last-resort kernel moments: t * x^res * (1-x) * sqrt(1-x^4) integrates
+# to {symbol: t*alpha, "1": t*beta}. gauss uses x^2 (symbol gauss_inv), varpi
+# x^3 (symbol varpi) — the '<' residues with the sqrt in the numerator.
+LT_BOUND_MOMENT = {
+    "gauss": ("gauss_inv", Fraction(1, 5), Fraction(-1, 6)),
+    "varpi": ("varpi", Fraction(-1, 21), Fraction(1, 6)),
+}
+
+
+def lt_bound_proof(kind: str, target: Moment) -> dict:
+    """The site's '<' second-to-last resort: ``∫ t·x^res(1-x)√(1-x⁴) + b == target``.
+
+    Same template as sqrt_bound_proof but for the '<' kernels: t follows the
+    target's constant coefficient, and the rational leftover b becomes an
+    additive remainder. Emitted iff t >= 0 and b > 0 strictly — a b == 0
+    boundary (gauss 1<6/5, varpi 1<7/2) still reaches the transposed solve.
+    Reported with cu_val=2 (the '>' variant uses 1), m=n=0, a=bu=0.
+    """
+    sym, alpha, beta = LT_BOUND_MOMENT[kind]
+    t = target[sym] / alpha
+    b = target["1"] - t * beta
+    if t < 0 or b <= 0:
+        raise NoSolution
+    return {
+        "parameters": {
+            "m": 0, "n": 0, "a_val": "0", "b_val": str(b), "c_val": "0",
+            "au_val": str(t.numerator), "bu_val": "0", "cu_val": "2",
+            "u_val": str(t.denominator), "unified_form": {},
+        },
+        "solution": "a = 0, b = 0",
+    }
+
+
 # ------------------------------------------------------------------- rendering
 
 
@@ -266,9 +306,9 @@ def lemniscate_numerator(e: int, au: int, bu: int, u: int) -> str:
 
 
 def const_tex(kind: str, power: Fraction | str) -> str:
-    """The constant side as printed: '2\\phi', '\\varpi', '3G', ..."""
-    pre = "" if wire_or(power) == 1 else rat_tex(power)
-    return pre + {"golden": "\\phi", "varpi": "\\varpi", "gauss": "G"}[kind]
+    """The constant side as printed: '2\\phi', '\\varpi', '3G', '1\\phi'..."""
+    return coef_tex(power) + {"golden": "\\phi", "varpi": "\\varpi",
+                              "gauss": "G"}[kind]
 
 
 def render_equation(params: dict, kind: str, power: Fraction | str,
@@ -301,19 +341,20 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     res = {"varpi": 1, "gauss": 0}[kind] if comp == ">" else {
         "varpi": 3, "gauss": 2}[kind]
     if int(params["cu_val"]):
-        # '>' last resort: (au/u)·x^k(1-x)·sqrt(1-x^4)/pi + b_val, with k=0 for
-        # gauss and k=1 for varpi; au=0 prints a bare 0. gauss keeps the '>'
-        # double space after \int_0^1, varpi's fallback uses one.
+        # last-resort template: (au/u)·x^res(1-x)·sqrt(1-x^4)[/pi] + b_val.
+        # '>' keeps the /pi denominator, '<' drops it; gauss wraps the product
+        # in \left(\right), varpi leaves it bare; the space after \int_0^1 is
+        # reversed between the two kinds across directions (probed bytes).
         x = sp.symbols("x")
+        inner = re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ",
+                       sp.latex(sp.Rational(au, u) * x**res * (1 - x)))
         if kind == "gauss":
-            body = ("0" if au == 0
-                    else f"\\left({sp.latex(au * (1 - x))}\\right)")
-            gap = "  "
-        else:
-            body = sp.latex(sp.Rational(au, u) * x * (1 - x))
-            gap = " "
-        return (f"{lhs} = \\int_0^1{gap}{body}"
-                f"\\dfrac{{\\sqrt{{1-x^4}}}}{{\\pi}} \\mathrm{{d}} x"
+            inner = f"\\left({inner}\\right)"
+        gap, tail = (("  ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">"
+                     else (" ", "\\sqrt{1-x^4}")) if kind == "gauss" else (
+                     (" ", "\\dfrac{\\sqrt{1-x^4}}{\\pi}") if comp == ">"
+                     else ("  ", "\\sqrt{1-x^4}"))
+        return (f"{lhs} = \\int_0^1{gap}{inner}{tail} \\mathrm{{d}} x"
                 f"+{rat_tex(params['b_val'])} > 0")
     num = lemniscate_numerator(4 * m + res, au, bu, u)
     tail = ("\\dfrac{(1-x)}{\\pi\\sqrt{1-x^4}}" if comp == ">"

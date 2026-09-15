@@ -33,9 +33,12 @@ stashes N in cu_val (c_val = 0).
 from fractions import Fraction
 from math import log
 
+import sympy as sp
+
 from ..engine import NoSolution, WrongDirection
-from ..render import rat_tex, wire_or
+from ..render import coef_tex, rat_tex, wire_fraction
 from .log_family import ln_bound_proof, numerator_latex
+from .quadlog import factors_tex
 
 EULER_F = 0.5772156649015329  # site compares in float64
 
@@ -44,6 +47,12 @@ N_LIMIT = 600  # H_N denominators stay tractable well past this
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
+    # the site's float64 direction pre-check runs before the kernel — a false
+    # claim is 方向反了 (gamma 0>1), a true/equal one proceeds into the
+    # bound/|power| division which crashes for power=0 (-> 500, gamma 0<1)
+    c = float(power) * EULER_F
+    if (float(bound) > c) if comp == ">" else (float(bound) < c):
+        raise WrongDirection
     # power*gamma ⋚ bound  ≡  gamma ⋚ bound/power (direction flips if power < 0)
     if power < 0:
         comp = ">" if comp == "<" else "<"
@@ -94,25 +103,39 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     u = int(params["u_val"])
     n = int(params["cu_val"])  # main-kernel exponent and sub denominator coef
 
-    ctex = ("\\gamma" if wire_or(power) == 1
-            else rat_tex(power) + "\\gamma")
+    # the coef is a real multiplier: it prefixes the kernel bracket, scales the
+    # N=0 constant tail, and folds into the sub-fraction's numerator scale t
+    cf = wire_fraction(power)
+    ctex = coef_tex(power) + "\\gamma"
     btex = rat_tex(bound)
     lhs = f"{btex} - {ctex}" if comp == "<" else f"{ctex} - {btex}"
 
     kern = ("\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}" if comp == "<"
             else "\\dfrac{1}{1-x}+\\dfrac{1}{\\ln(x)}-\\dfrac{1}{2}")
     xp = "" if n == 0 else ("x" if n == 1 else f"x^{{{n}}}")
-    main = f"{xp}\\left({kern}\\right)"
+    pre = " ".join(p for p in (coef_tex(power), xp) if p)
+    main = f"{pre}\\left({kern}\\right)"
 
-    if u == 0:  # N = 0: leftover is a bare constant, no ln sub-proof
-        const = Fraction(params["a_val"])
-        body = (main if const == 0
-                else f"\\left[{main}+{rat_tex(const)}\\right]")
+    if u == 0:
+        m, nn = int(params["m"]), int(params["n"])
+        au, bu = int(params["au_val"]), int(params["bu_val"])
+        if au == 0 and bu == 0:
+            # N = 0: leftover is the bare constant a_val * coef
+            const = Fraction(params["a_val"]) * cf
+            body = (main if const == 0
+                    else f"\\left[{main}+{rat_tex(const)}\\right]")
+        else:
+            # u = 0 denominator collapses the sub-fraction to sympy's
+            # zoo * numerator (site shows \tilde{\infty} times the factors)
+            s = max(m, nn, 1)
+            x = sp.symbols("x")
+            expr = cf * x**m * (1 - x)**nn * (au + bu * x) / (u * (1 + n * x)**s)
+            body = f"\\left[{main}+{factors_tex(expr)}\\right]"
     else:
         m, nn = int(params["m"]), int(params["n"])
         au, bu = int(params["au_val"]), int(params["bu_val"])
         s = max(m, nn, 1)
-        num = numerator_latex(m, nn, au, bu, 0, 1, Fraction(n), False)
+        num = numerator_latex(m, nn, au, bu, 0, cf, Fraction(n), False)
         if s == 1:
             a_ = u * n
             den = f"{a_} x + {u}" if a_ != 1 else f"x + {u}"

@@ -6,6 +6,7 @@ span{sinh q, cosh q, 1}. tanh/coth are solved as sinh q - p cosh q
 in the rendered equation (kernel-spec.md).
 """
 
+import math
 from fractions import Fraction
 from math import comb, lcm
 
@@ -62,14 +63,23 @@ def target_for(kind: str, comp: str, bound: Fraction) -> Moment:
     return {"cosh_q": Fraction(sign), "sinh_q": Fraction(-sign) * bound}
 
 
+# the site evaluates the claimed constant in float64 before the kernel runs —
+# a strictly-false inequality is 方向反了 without ever touching the moment
+# machinery (q=0 would crash it); equality or truth proceeds. math.* overflow
+# (sinh 711, cosh 1e15) and the coth 1/tanh(0) division surface as 500.
+CONST_F = {"sinh_q": math.sinh, "cosh_q": math.cosh, "tanh_q": math.tanh,
+           "coth_q": lambda v: 1 / math.tanh(v)}
+
+
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape.
 
-    power==0: site reports 方向反了 for sinh/tanh (degenerate solve) and
-    a 500 for cosh/coth (1/q crash); reproduce both — the former by hand,
-    the latter by letting the Fraction division blow up.
+    power==0: the float64 pre-check decides first — false claims get 方向反了
+    (sinh 0>9, cosh 0<1/2), true/equal ones reach the kernel's 1/q crash
+    (sinh 0<0, cosh 0>1/2 -> 500); coth crashes inside the check itself.
     """
-    if power == 0 and kind in ("sinh_q", "tanh_q"):
+    c = CONST_F[kind](float(power))
+    if (float(bound) > c) if comp == ">" else (float(bound) < c):
         raise WrongDirection
     plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)])
              for m, n in mn_order(LIMIT))

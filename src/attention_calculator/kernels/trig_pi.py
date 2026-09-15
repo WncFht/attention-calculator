@@ -207,8 +207,9 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
 
     # The site latexes the whole product; its printer puts " \cdot " before a
-    # parenthesized factor following a number or a power (\d or }), a space
-    # elsewhere -- e.g. "(1-s)^8 \cdot (a+b s) sin(ax) sin^m x".
+    # digit-leading parenthesized factor following a number or a power
+    # (\d or }), a space elsewhere -- e.g. "(1-s)^8 \cdot (a+b s)" but
+    # "... ^{3} \left(-1465926 ..." (a negative group gets no cdot).
     integrand = (au + bu * s) * (1 - s) ** n * sp.sin(alpha * x) * s ** m / u
-    body = re.sub(r"(?<=[0-9}]) (?=\\left\()", r" \\cdot ", sp.latex(integrand))
+    body = re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ", sp.latex(integrand))
     return lhs + rf" = \int_0^{{\pi/2}} {body} \mathrm{{d}} x > 0"

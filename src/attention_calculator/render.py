@@ -25,6 +25,36 @@ def wire_fraction(v: Fraction | str) -> Fraction:
     return Fraction(v)
 
 
+# coef 位置解析宏时丢掉一切符号：'-\dfrac{6}{4}' 与 '\dfrac{6}{-4}' 都解析成
+# (6, 4)（probe: e_q 被积 e^{3x/2}、tan_q 除数 \cos(6/4)）
+WIRE_PAIR_MACRO_RE = re.compile(r"\\d?frac\{\s*-?(\d+)\s*\}\{\s*-?(\d+)\s*\}")
+
+
+def wire_pair(v: Fraction | str) -> tuple[int, int]:
+    """Raw (numerator, denominator) the site's render layer derives from a
+    wire field — *unreduced* and per-notation quirky:
+
+    - ``\\frac``/``\\dfrac`` macro: unsigned digit groups; a minus inside or
+      outside the braces is dropped (e_q '-\\dfrac{6}{4}' -> e^{3x/2}).
+    - plain 'n/d' text: signed and unreduced, so ln_q's (q-1) denominator
+      treats '4/2' and '2' differently.
+    - Fraction passthrough (already reduced — the /calculate path).
+
+    Raises ValueError on unparseable text, like wire_fraction: the site
+    echoes garbage into display-only slots but crashes (500) when a kernel
+    genuinely needs the value.
+    """
+    if isinstance(v, Fraction):
+        return v.numerator, v.denominator
+    m = WIRE_PAIR_MACRO_RE.search(v)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = re.fullmatch(r"(-?\d+)(?:/(-?\d+))?", v.strip())
+    if not m:
+        raise ValueError(f"unparseable rational {v!r}")
+    return int(m.group(1)), int(m.group(2) or 1)
+
+
 def wire_or(v: Fraction | str) -> Fraction | None:
     """Tolerant wire_fraction: None when the text isn't a number.
 
@@ -48,9 +78,20 @@ def rat_tex(v: Fraction | str) -> str:
     """
     if isinstance(v, str):
         num, slash, den = v.partition("/")
+        # raw 'n/1' integerizes to 'n'; 'n/n' with den != 1 stays a \dfrac
+        if den == "1":
+            return num
         return f"\\dfrac{{{num}}}{{{den}}}" if slash else v
     return (str(v.numerator) if v.denominator == 1
             else f"\\dfrac{{{v.numerator}}}{{{v.denominator}}}")
+
+
+def coef_tex(v: Fraction | str) -> str:
+    """Multiplier-position text: literal '1' (or Fraction 1) vanishes —
+    ``\\pi`` not ``1\\pi`` — while '1/1' still prints ``1\\pi``: the site only
+    strips the canonical form (probe: coef '1/1' -> '1C', '1e^{\\pi}').
+    '0', '-1', '2/2' and junk all pass through rat_tex's raw echo."""
+    return "" if v == "1" or v == Fraction(1) else rat_tex(v)
 
 
 def coerce_params(query: dict) -> dict:

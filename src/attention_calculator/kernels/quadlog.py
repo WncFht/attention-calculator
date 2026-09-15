@@ -21,15 +21,16 @@ Moment closed forms used below (docs/kernel-spec.md):
 even k needs odd powers (η(k) ~ pi^k) and odd k needs even powers (β(k) ~ pi^k).
 """
 
+import math
 from fractions import Fraction
 from functools import cache
 from math import comb, factorial, gcd, lcm
 
 import sympy as sp
 
-from ..engine import mn_order, search
+from ..engine import WrongDirection, mn_order, search
 from ..moment import Moment
-from ..render import rat_tex, wire_or
+from ..render import coef_tex, rat_tex, wire_or, wire_pair
 
 # β(k)/pi^k for odd k (Euler numbers: β(2j+1) = (-1)^j E_{2j} pi^{2j+1}/(4^{j+1}(2j)!))
 BETA_PI = {1: Fraction(1, 4), 3: Fraction(1, 32), 5: Fraction(5, 1536),
@@ -92,9 +93,9 @@ def spec(kind: str, power: Fraction) -> dict:
                     coef=power, q=Fraction(1), limit=30)
     if kind == "pi_n":
         # power p/q is reduced to pi^p vs bound^q; the kernel uses ln^{p-1}.
+        # no range guard — the site lets the table lookup crash (KeyError ->
+        # 500) for exponents outside [1, 10]
         k, pd = power.numerator, power.denominator
-        if not 1 <= k <= 10:
-            raise ValueError("pi_n requires power numerator in [1, 10]")
         return dict(r=k - 1, odd=k % 2 == 0, sym="pi", coef=Fraction(1),
                     factor=BETA_PI[k] if k % 2 else ETA_PI[k],
                     q=Fraction(1), limit=10, pd=pd)
@@ -108,8 +109,20 @@ def spec(kind: str, power: Fraction) -> dict:
     return dict(r=0, odd=False, sym="arctan", coef=Fraction(1), q=q, limit=10)
 
 
+# float64 direction pre-check, same convention as the other kernels: the site
+# evaluates the claimed constant before the search and rejects strictly-false
+# inequalities with 方向反了. Only the types whose kernel can crash need it —
+# arctan/arccot divide by q and pi_n's spec() dies on out-of-range exponents.
+PRE_F = {"arctan_q": math.atan, "arccot_q": lambda v: math.atan(1 / v),
+         "pi_n": lambda v: math.pi ** v}
+
+
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """Search (m, n) in the author's order; return the site's parameter dict."""
+    if kind in PRE_F:
+        c = PRE_F[kind](float(power))
+        if (float(bound) > c) if comp == ">" else (float(bound) < c):
+            raise WrongDirection
     cfg = spec(kind, power)
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 
@@ -146,21 +159,22 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
 
 def const_tex(kind: str, power: Fraction | str) -> str:
     """The target constant as printed on the equation's left-hand side."""
-    pv = wire_or(power)
     if kind == "pi":
-        return "\\pi" if pv == 1 else rat_tex(power) + "\\pi"
+        return coef_tex(power) + "\\pi"
     if kind == "pi_n":
-        if pv.denominator != 1:
+        # raw (num, den) pair — unreduced: '\frac{-9}{8}' keeps its den 8 and
+        # the macro drops its minus inside the pi^... slot (verbatim echo)
+        pnum, pden = wire_pair(power)
+        if pden != 1:
             return f"\\left(\\pi^{rat_tex(power)}\\right)"
-        k = pv.numerator
-        return f"\\pi^{{{k}}}" if k >= 10 else f"\\pi^{k}"
+        return f"\\pi^{{{pnum}}}" if pnum >= 10 else f"\\pi^{pnum}"
     if kind == "arctan_q":
         return "\\arctan" + rat_tex(power)
     if kind == "arccot_q":
         return "\\mathrm{arccot}" + rat_tex(power)
     if kind == "catalan":
-        return "C" if pv == 1 else rat_tex(power) + "C"
-    return "\\zeta(3)" if pv == 1 else rat_tex(power) + "\\zeta(3)"
+        return coef_tex(power) + "C"
+    return coef_tex(power) + "\\zeta(3)"
 
 
 def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
@@ -181,6 +195,8 @@ def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
         pieces.append((1 - x ** 2) ** n)
     if au or bu:
         pieces.append(au + bu * x ** 2)
+    if not pieces:
+        return sp.Integer(0)  # degenerate a=b=0 params render a bare 0
     pieces[0] = t * pieces[0]
     return sp.Mul(*pieces)
 
@@ -209,22 +225,27 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
                     comp: str, bound: Fraction | str) -> str:
     """Reproduce the site's /get_integral_image LaTeX string for this family."""
     # coef 原文进 spec：pi/catalan/zeta3 只用显示位，垃圾串也能渲染；
-    # pi_n/arctan/arccot 需要真值，不可解析时 None 自然崩进站端 500
+    # arctan/arccot 需要真值，不可解析时 None 自然崩进站端 500；pi_n 的
+    # 渲染走 wire_pair 原始 (num, den)——奇偶、外层指数、ln 指数都用未约分值
     pv = wire_or(power)
-    cfg = spec(kind, pv)
+    if kind == "pi_n":
+        pnum, pden = wire_pair(power)
+        odd, q = pnum % 2 == 0, Fraction(1)
+    else:
+        cfg = spec(kind, pv)
+        odd, q = cfg["odd"], cfg["q"]
     m, n = int(params["m"]), int(params["n"])
     au, bu, u = int(params["au_val"]), int(params["bu_val"]), int(params["u_val"])
-    q: Fraction = cfg["q"]
 
     btex = rat_tex(bound)  # raw 字符串原样回显数位（不约分）
     lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"
            else f"{btex} - {const_tex(kind, power)}")
     eq_sep = " = "
-    if kind == "pi_n" and pv.denominator != 1:
+    if kind == "pi_n" and pden != 1:
         # fractional power p/q: LHS shows (pi^{p/q})^q - (bound)^q literally;
         # '>' uses the site's tight spacing, '<' the normal one
-        c = const_tex(kind, power) + f"^{{{pv.denominator}}}"
-        b_ = f"\\left({btex}\\right)^{{{pv.denominator}}}"
+        c = const_tex(kind, power) + f"^{{{pden}}}"
+        b_ = f"\\left({btex}\\right)^{{{pden}}}"
         lhs, eq_sep = (f"{c}- {b_}", "= ") if comp == ">" else (f"{b_} - {c}", " = ")
 
     # scale t so the denominator u'·(1+q^2 x^2) has integer coefficients
@@ -233,19 +254,20 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
 
     x = sp.symbols("x")
     qq = sp.Rational(q.numerator, q.denominator)
-    num = numerator(m, n, cfg["odd"], au, bu, t)
+    num = numerator(m, n, odd, au, bu, t)
     den = u * t * (qq * qq * x ** 2 + 1)
 
-    # the site feeds the assembled fraction through sympy: a numerator
-    # proportional to the denominator cancels away entirely (pi 0 < 1 -> 1)
-    ratio = sp.cancel(num / den)
+    # the site feeds the assembled fraction through sympy: literally identical
+    # num/den factors auto-cancel (pi 0 < 1 -> 1) but a merely proportional
+    # numerator stays a fraction (zeta3 0 < 1 keeps x(4x²+4)/(x²+1))
+    ratio = num / den
     if ratio.as_numer_denom()[1] == 1:
         body = sp.latex(ratio)
     else:
         body = f"\\frac{{{factors_tex(num)}}}{{{sp.latex(den)}}}"
 
     if kind == "pi_n":
-        r = pv.numerator - 1
+        r = pnum - 1  # raw numerator, unreduced — '^-4' prints unbraced
         ln = "" if r == 0 else "(\\ln(1/x))" if r == 1 else f"(\\ln(1/x))^{r}"
     elif kind == "catalan":
         ln = "\\ln(1/x)"

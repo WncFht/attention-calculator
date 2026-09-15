@@ -30,7 +30,7 @@ import sympy as sp
 from ..engine import InternalError, WrongDirection, mn_order, search
 from ..integrand import constant_mpf
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_pair
 
 LIMIT = 10
 
@@ -231,23 +231,29 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     m, n = int(params["m"]), int(params["n"])
     au, bu, cu = (int(params[k]) for k in ("au_val", "bu_val", "cu_val"))
     u = int(params["u_val"])
-    qt = (Fraction(params["c_val"]) if kind in ("artanh_q", "arcoth_q")
-          else wire_fraction(power))
-    c = qt - 1
+    x = sp.symbols("x")
+    if kind in ("artanh_q", "arcoth_q"):
+        c = Fraction(params["c_val"]) - 1  # q~ stashed by prove, already reduced
+        d, e = c.numerator, c.denominator
+    else:
+        # ln types derive (q-1) = (d/e) from the raw, unreduced wire pair —
+        # '4/2' and '2' build different denominators, and a '\frac' macro
+        # parses unsigned (probe: '\frac{-4}{2}' -> (2x+2)^6 like '4/2')
+        wn, wd = wire_pair(power)
+        d, e = wn - wd, wd
+        c = Fraction(d, e)
     s = max(m, n, 1)
-    d, e = c.numerator, c.denominator
     g = gcd(u, e ** s)
     t = e ** s // g
     up = u // g
 
     # denominator: s == 1 prints the expanded ``A x + B``; s >= 2 prints
-    # ``u' (d x + e)^{s}`` with the u' factor omitted when it is 1
+    # ``u' (d x + e)^{s}`` with the u' factor omitted when it is 1; the linear
+    # factor goes through sympy's ordering ('4 - 10 x' positive-first)
     if s == 1:
-        a_, b_ = up * d, up * e
-        den = (f"{a_} x + {b_}" if a_ != 1 else f"x + {b_}")
+        den = sp.latex(up * d * x + up * e)
     else:
-        inner = f"{d} x + {e}" if d != 1 else f"x + {e}"
-        den = f"\\left({inner}\\right)^{{{s}}}"
+        den = f"\\left({sp.latex(d * x + e)}\\right)^{{{s}}}"
         if up != 1:
             den = f"{up} {den}"
 
