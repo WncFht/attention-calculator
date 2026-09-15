@@ -1,0 +1,9 @@
+# 内容即数据：逐字引用站端原文（全角标点、带空白回显），autocorrect 会篡改证据
+docs/
+# parity 夹具与数据
+src/attention_calculator/templates/
+bench/probes/
+# 依赖与本机层
+node_modules/
+.venv/
+.crossnote/

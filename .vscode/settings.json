@@ -23,6 +23,10 @@
     "markdown-preview-enhanced.frontMatterRenderingOption": "code block",
     // docs/ 内容即数据（逐字引用站端原文），编辑器侧同样划出 markdownlint
     "markdownlint.ignore": ["docs/**"],
+    // autocorrect 扩展 formatOnSave 默认开且独立于 defaultFormatter——
+    // 曾把 docs/kernel-spec.md 里逐字引用的站端串改掉；本仓关闭，
+    // md 的中英间距统一由 pre-commit 链在提交时施加（docs/ 已被 hook exclude 划出）
+    "autocorrect.formatOnSave": false,
     "[markdown]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,

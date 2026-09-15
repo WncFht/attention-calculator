@@ -33,7 +33,7 @@
 - `*.toml`：`taplo fmt`（gfs）；`uv.lock` 是生成物，hook 已排除。
 - `.github/workflows/*`：`actionlint` check。
 - `src/attention_calculator/templates/*.html`、`bench/probes/*.json` 是 parity 夹具/数据——不在链内，formatter 不许碰（已在 `.prettierignore` 划出）。
-- `docs/` 整目录划出 markdownlint/autocorrect/prettier——inline code span 逐字引用站端字符串（全角标点、带空白回显），内容即数据，格式化会篡改证据（hook `exclude:` + `.prettierignore` + cli2 ignores + 编辑器 `markdownlint.ignore` 四层划出）。
+- `docs/` 整目录划出 markdownlint/autocorrect/prettier——inline code span 逐字引用站端字符串（全角标点、带空白回显），内容即数据，格式化会篡改证据（hook `exclude:` + `.prettierignore` + `.autocorrectignore` + cli2 ignores + 编辑器 `markdownlint.ignore`/`autocorrect.formatOnSave:false` 划出）。
 - gitleaks 拦 secret；自定义规则与精确值放行写法见 `.gitleaks.toml` 注释。
 
 CI（`.github/workflows/ci.yml`）与本地同源，本地不过 CI 必挂。
