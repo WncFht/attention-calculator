@@ -322,6 +322,10 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     if kind == "golden":
         lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"
                else f"{btex} - {const_tex(kind, power)}")
+        if au == 0 and bu == 0:
+            # the a+bx factor is literally 0: sympy reduces the whole
+            # numerator/u to the bare '0' the site prints (golden 0-vs-0)
+            return f"{lhs} = \\int_0^1 0 \\mathrm{{d}} x > 0"
         num = golden_numerator(m, int(params["n"]), au, bu)
         return (f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{u}}}"
                 " \\mathrm{d} x > 0")

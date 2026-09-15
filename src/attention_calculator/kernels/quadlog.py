@@ -193,10 +193,10 @@ def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
         pieces.append(x ** (2 * m + odd))
     if n:
         pieces.append((1 - x ** 2) ** n)
-    if au or bu:
-        pieces.append(au + bu * x ** 2)
-    if not pieces:
-        return sp.Integer(0)  # degenerate a=b=0 params render a bare 0
+    # the polynomial factor multiplies in even when au == bu == 0, so the
+    # degenerate params collapse the whole product to a literal 0 (site
+    # renders `0\ln^2(x)` for zeta3 0-vs-0, not x/(x²+1))
+    pieces.append(au + bu * x ** 2)
     pieces[0] = t * pieces[0]
     return sp.Mul(*pieces)
 

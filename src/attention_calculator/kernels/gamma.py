@@ -31,7 +31,7 @@ stashes N in cu_val (c_val = 0).
 """
 
 from fractions import Fraction
-from math import log
+from math import gcd, log
 
 import sympy as sp
 
@@ -112,8 +112,10 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
 
     kern = ("\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}" if comp == "<"
             else "\\dfrac{1}{1-x}+\\dfrac{1}{\\ln(x)}-\\dfrac{1}{2}")
-    xp = "" if n == 0 else ("x" if n == 1 else f"x^{{{n}}}")
-    pre = " ".join(p for p in (coef_tex(power), xp) if p)
+    x = sp.symbols("x")
+    # coef·x^N goes through sympy when N > 0 ('1/2' -> \frac{x^{5}}{2});
+    # the bare N = 0 multiplier keeps the request text ('3/2' -> \dfrac{3}{2})
+    pre = coef_tex(power) if n == 0 else sp.latex(cf * x**n)
     main = f"{pre}\\left({kern}\\right)"
 
     if u == 0:
@@ -128,22 +130,26 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
             # u = 0 denominator collapses the sub-fraction to sympy's
             # zoo * numerator (site shows \tilde{\infty} times the factors)
             s = max(m, nn, 1)
-            x = sp.symbols("x")
             expr = cf * x**m * (1 - x)**nn * (au + bu * x) / (u * (1 + n * x)**s)
             body = f"\\left[{main}+{factors_tex(expr)}\\right]"
     else:
         m, nn = int(params["m"]), int(params["n"])
         au, bu = int(params["au_val"]), int(params["bu_val"])
         s = max(m, nn, 1)
-        num = numerator_latex(m, nn, au, bu, 0, cf, Fraction(n), False)
+        # the sub-fraction is cf·num/(u·den) printed reduced: the scalar
+        # cf/u drops to (cf.n/g) / (cf.d·u/g), so '2' over u=936 shows an
+        # unscaled numerator over 468 and '1/2' over u=168 shows 336
+        g = gcd(cf.numerator, u)
+        tnum = cf.numerator // g
+        uden = cf.denominator * (u // g)
+        num = numerator_latex(m, nn, au, bu, 0, tnum, Fraction(n), False)
         if s == 1:
-            a_ = u * n
-            den = f"{a_} x + {u}" if a_ != 1 else f"x + {u}"
+            den = sp.latex(uden * n * x + uden)
         else:
             inner = "x + 1" if n == 1 else f"{n} x + 1"
             den = f"\\left({inner}\\right)^{{{s}}}"
-            if u != 1:
-                den = f"{u} {den}"
+            if uden != 1:
+                den = f"{uden} {den}"
         body = f"\\left[{main}+\\frac{{{num}}}{{{den}}}\\right]"
 
     eq = " =\\int_0^1 " if comp == "<" else " = \\int_0^1 "
