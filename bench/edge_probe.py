@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 r"""边缘探针：对 zhuyidao.net 发起 golden 网格未覆盖的请求，并本地重放比对。
 
 每条探针先打站端（限速 ≥1.05s），再用 app.test_client() 重放同一请求，
@@ -16,6 +15,7 @@ byte_match = 响应体逐字节一致（站端 JSON 键排序 + \uXXXX 转义与
 断点续跑：已写入的 id 自动跳过。
 """
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -440,10 +440,7 @@ def site_request(p):
     if p["method"] == "GET":
         resp = SESSION.get(BASE + p["endpoint"], params=p["request"] or None,
                            timeout=TIMEOUT)
-    elif p["kind"] == "form":
-        resp = SESSION.post(BASE + p["endpoint"], data=p["request"],
-                            timeout=TIMEOUT)
-    elif p["kind"] == "form-dup":
+    elif p["kind"] in ("form", "form-dup"):
         resp = SESSION.post(BASE + p["endpoint"], data=p["request"],
                             timeout=TIMEOUT)
     elif p["kind"] == "query":
@@ -494,10 +491,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     if args.only:
         todo = [p for p in todo if args.only in p["id"]]
