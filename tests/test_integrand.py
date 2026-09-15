@@ -1,4 +1,4 @@
-# ruff: noqa: RUF002, RUF003  # 中文标点属刻意文体
+# 中文标点属刻意文体
 """integrand.py 重建器的离线测试：fixture 全部来自 zhuyidao.net 实测返回。
 
 每行 (type, comp, power, rational, m, n, a, b, c, u, s_or_k)：
