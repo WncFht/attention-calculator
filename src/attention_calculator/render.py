@@ -25,6 +25,20 @@ def wire_fraction(v: Fraction | str) -> Fraction:
     return Fraction(v)
 
 
+def wire_or(v: Fraction | str) -> Fraction | None:
+    """Tolerant wire_fraction: None when the text isn't a number.
+
+    /get_integral_image never validates ``coef``/``rational`` — the site
+    echoes garbage like ``coef=x`` straight into the LaTeX. Display paths
+    (``== 1`` checks) use this; paths that genuinely need the value keep
+    wire_fraction so bad input still lands in the site's 500 catch-all.
+    """
+    try:
+        return wire_fraction(v)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
 def rat_tex(v: Fraction | str) -> str:
     """Site-style rational LaTeX: integers bare, fractions as ``\\dfrac``.
 

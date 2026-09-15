@@ -34,7 +34,7 @@ from fractions import Fraction
 from math import log
 
 from ..engine import NoSolution, WrongDirection
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_or
 from .log_family import ln_bound_proof, numerator_latex
 
 EULER_F = 0.5772156649015329  # site compares in float64
@@ -94,7 +94,7 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     u = int(params["u_val"])
     n = int(params["cu_val"])  # main-kernel exponent and sub denominator coef
 
-    ctex = ("\\gamma" if wire_fraction(power) == 1
+    ctex = ("\\gamma" if wire_or(power) == 1
             else rat_tex(power) + "\\gamma")
     btex = rat_tex(bound)
     lhs = f"{btex} - {ctex}" if comp == "<" else f"{ctex} - {btex}"

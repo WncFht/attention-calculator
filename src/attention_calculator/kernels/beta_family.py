@@ -37,7 +37,7 @@ import sympy as sp
 from ..engine import NoSolution, Solved, gauss_solve, mn_order, poly_nonneg, search
 from ..integrand import lhs_mpf
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_or
 
 LIMIT = 10
 
@@ -267,7 +267,7 @@ def lemniscate_numerator(e: int, au: int, bu: int, u: int) -> str:
 
 def const_tex(kind: str, power: Fraction | str) -> str:
     """The constant side as printed: '2\\phi', '\\varpi', '3G', ..."""
-    pre = "" if wire_fraction(power) == 1 else rat_tex(power)
+    pre = "" if wire_or(power) == 1 else rat_tex(power)
     return pre + {"golden": "\\phi", "varpi": "\\varpi", "gauss": "G"}[kind]
 
 
@@ -277,7 +277,7 @@ def render_equation(params: dict, kind: str, power: Fraction | str,
     m = int(params["m"])
     au, bu, u = (int(params[k]) for k in ("au_val", "bu_val", "u_val"))
     btex = rat_tex(bound)
-    bound_v = wire_fraction(bound)
+    bound_v = wire_or(bound)
 
     if kind == "golden":
         lhs = (f"{const_tex(kind, power)} - {btex}" if comp == ">"

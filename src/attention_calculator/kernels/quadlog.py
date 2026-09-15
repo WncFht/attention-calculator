@@ -29,7 +29,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_or
 
 # β(k)/pi^k for odd k (Euler numbers: β(2j+1) = (-1)^j E_{2j} pi^{2j+1}/(4^{j+1}(2j)!))
 BETA_PI = {1: Fraction(1, 4), 3: Fraction(1, 32), 5: Fraction(5, 1536),
@@ -146,7 +146,7 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
 
 def const_tex(kind: str, power: Fraction | str) -> str:
     """The target constant as printed on the equation's left-hand side."""
-    pv = wire_fraction(power)
+    pv = wire_or(power)
     if kind == "pi":
         return "\\pi" if pv == 1 else rat_tex(power) + "\\pi"
     if kind == "pi_n":
@@ -208,7 +208,9 @@ def factors_tex(num: sp.Expr) -> str:
 def render_equation(params: dict, kind: str, power: Fraction | str,
                     comp: str, bound: Fraction | str) -> str:
     """Reproduce the site's /get_integral_image LaTeX string for this family."""
-    pv = wire_fraction(power)
+    # coef 原文进 spec：pi/catalan/zeta3 只用显示位，垃圾串也能渲染；
+    # pi_n/arctan/arccot 需要真值，不可解析时 None 自然崩进站端 500
+    pv = wire_or(power)
     cfg = spec(kind, pv)
     m, n = int(params["m"]), int(params["n"])
     au, bu, u = int(params["au_val"]), int(params["bu_val"]), int(params["u_val"])

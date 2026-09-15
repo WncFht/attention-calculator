@@ -89,3 +89,13 @@
 字节差异：BOM、CSS 残注释与缺失规则、HTML 注释、选项空白、双 `#result`、if-else 链 vs 表驱动、内联 Fraction 库、load/eProof 死代码、若干行尾空格。
 
 资源：bg1/bg2/title.png 与线上逐字节一致，无需补下载；无可下载的 favicon（线上 204 空响应）。
+
+## 已解决（2026-09-15）
+
+- `/get_integral_image` 逐字段有序 400 校验已按探针实现：type/comparison 缺席默认 pi/`>`，整数序 m→n→u→au→bu→cu（m,n∈[0,30]，u≥1，au/bu/cu 无界），分数序 a→b→c（格式/分母0，无分子上限），coef/rational 免校验原文回显（缺席默认 "1"/"0"）。注意 n 上限实测是 30（n=31 即"过大"），修正上文 [0,50] 的误记。
+- `/calculate` comparison 缺席默认 `>`。
+- 非 2xx 全 JSON 化：errorhandler(404)→`请求的页面不存在`，405 与未捕获异常→`服务器内部错误，请稍后再试`。
+- `/en/`→404、`/favicon.ico`→204 空响应、`/attention`（含 /attention/、/attention/en）挂载同页（attention.html 静态前缀 /attention/static/，已存字节版）。
+- `templates/index.html` 换成线上字节版（含 BOM、CSS 残注释、双 #result、死代码全保留）；历史记录持久化差异随之消失（线上版本不写 sessionStorage）。
+- `/decompose_inequality` 空输入文案改为 `请输入一个只包含一个 > 或 < 的不等式`（decompose 模块本体由另一 agent 实现中）。
+- 遗留未克隆：`/convex`、`/health` 两个独立子应用（不属于注意力计算器本体）。

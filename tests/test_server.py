@@ -47,6 +47,37 @@ def test_index_served(client):
     assert "注意力计算器" in resp.get_data(as_text=True)
 
 
+def test_routes_and_error_envelope(client, monkeypatch):
+    """Site-surface details: JSON error bodies, /en/ 404, /attention mount."""
+    def fake(*a):
+        return {"parameters": dict(PARAMS), "solution": "a = 47/120, b = -13/120"}
+
+    monkeypatch.setattr(solve, "prove", fake)
+    # absent comparison defaults to '>' (present-but-empty stays 400)
+    resp = post_calc(client, type="pi", power="1", rational="22/7")
+    assert resp.status_code == 200
+
+    assert client.get("/en").status_code == 200
+    resp = client.get("/en/")
+    assert resp.status_code == 404
+    assert resp.get_json() == {"error": "请求的页面不存在"}
+    for path in ("/attention", "/attention/", "/attention/en"):
+        assert client.get(path).status_code == 200, path
+    resp = client.get("/attention/static/title.png")
+    assert resp.status_code == 200
+
+    # every non-2xx is JSON: unknown path 404, wrong method -> 500
+    assert client.get("/no-such-path").get_json() == {"error": "请求的页面不存在"}
+    for method, path in [("get", "/calculate"), ("post", "/get_integral_image"),
+                         ("post", "/"), ("post", "/en")]:
+        resp = getattr(client, method)(path)
+        assert resp.status_code == 500, (method, path)
+        assert resp.get_json() == {"error": INTERNAL_ERROR}
+
+    resp = client.get("/favicon.ico")
+    assert resp.status_code == 204 and resp.get_data() == b""
+
+
 def test_calculate_success(client, monkeypatch):
     """Successful prove -> site envelope; type echoes the request verbatim."""
     def fake(*a):
@@ -195,7 +226,7 @@ def test_get_integral_image(client, monkeypatch):
             "comparison": "<",
             "rational": "\\frac{22}{7}",
             "coef": "1",
-            **{k: str(PARAMS[k]) for k in server.IMAGE_KEYS},
+            **{k: str(PARAMS[k]) for k in server.IMG_INT_KEYS + server.IMG_FRAC_KEYS},
         },
     )
     assert resp.status_code == 200
@@ -217,7 +248,7 @@ def test_get_integral_image_echoes_raw(client):
         "type": "pi",
         "comparison": "<",
         "coef": "1",
-        **{k: str(PARAMS[k]) for k in server.IMAGE_KEYS},
+        **{k: str(PARAMS[k]) for k in server.IMG_INT_KEYS + server.IMG_FRAC_KEYS},
     }
     resp = client.get("/get_integral_image",
                       query_string={**base, "rational": "3140/1000"})
@@ -235,22 +266,81 @@ def test_get_integral_image_echoes_raw(client):
 
 
 def test_get_integral_image_errors(client, monkeypatch):
-    """Every render failure -> the site's generic 500."""
-    resp = client.get("/get_integral_image", query_string={"type": "bogus"})
-    assert resp.status_code == 500
-    assert resp.get_json() == {"error": INTERNAL_ERROR}
+    """Ordered per-field 400s like the site; render failures -> generic 500."""
+    base = {
+        "type": "pi",
+        "comparison": "<",
+        "rational": "22/7",
+        "coef": "1",
+        **{k: str(PARAMS[k]) for k in server.IMG_INT_KEYS + server.IMG_FRAC_KEYS},
+    }
 
+    def get(**over):
+        q = dict(base)
+        for k, v in over.items():
+            if v is None:
+                q.pop(k)
+            else:
+                q[k] = v
+        return client.get("/get_integral_image", query_string=q)
+
+    # type/comparison first: absent defaults, empty/invalid 400
+    assert get(type=None).status_code == 200
+    assert get(comparison=None).status_code == 200
+    for over, err in [
+        ({"type": "bogus"}, "无效的证明类型"),
+        ({"type": ""}, "无效的证明类型"),
+        ({"comparison": "="}, "无效的不等号方向"),
+        ({"comparison": ""}, "无效的不等号方向"),
+    ]:
+        resp = get(**over)
+        assert resp.status_code == 400 and resp.get_json() == {"error": err}, over
+
+    # integer fields in probed order; m,n bounded [0,30], u_val >= 1,
+    # au/bu/cu unbounded (negatives and huge values pass)
+    for over, err in [
+        ({"m": "abc"}, "m必须是整数"),
+        ({"m": "3.5"}, "m必须是整数"),
+        ({"m": "3/2"}, "m必须是整数"),
+        ({"m": None}, "m必须是整数"),
+        ({"n": None}, "n必须是整数"),
+        ({"u_val": "x"}, "u_val必须是整数"),
+        ({"m": "-1"}, "m过小"),
+        ({"m": "31"}, "m过大"),
+        ({"n": "-1"}, "n过小"),
+        ({"n": "31"}, "n过大"),
+        ({"u_val": "0"}, "u_val过小"),
+        ({"m": "x", "a_val": "zz"}, "m必须是整数"),  # 整数组先于分数组
+        ({"n": "x", "m": "y"}, "m必须是整数"),  # m 先于 n
+    ]:
+        resp = get(**over)
+        assert resp.status_code == 400 and resp.get_json() == {"error": err}, over
+    for ok in ({"m": "30"}, {"n": "30"}, {"au_val": "-5"}, {"cu_val": "9"},
+               {"u_val": "10" + "0" * 16}):
+        assert get(**ok).status_code == 200, ok
+
+    # fraction fields: format + denominator-0, no numerator cap
+    for over, err in [
+        ({"a_val": "x"}, "a_val格式无效"),
+        ({"a_val": "1/0"}, "a_val分母不能为0"),
+        ({"b_val": None}, "b_val格式无效"),
+        ({"a_val": "x", "b_val": "y"}, "a_val格式无效"),  # a 先于 b
+    ]:
+        resp = get(**over)
+        assert resp.status_code == 400 and resp.get_json() == {"error": err}, over
+    assert get(a_val="-1/2").status_code == 200
+    assert get(b_val="9" * 20 + "/7").status_code == 200
+
+    # coef/rational unvalidated, echoed raw (probed: coef=x -> x\pi,
+    # rational absent -> "0 - \pi")
+    eq = get(coef="x").get_json()["equation"]
+    assert "x\\pi" in eq
+    eq = get(rational=None).get_json()["equation"]
+    assert eq.startswith("0 - \\pi")
+
+    # a kernel crash still lands in the site's generic 500
     monkeypatch.setitem(server.render.FAMILY, "pi", "no_such_family")
-    resp = client.get(
-        "/get_integral_image",
-        query_string={
-            "type": "pi",
-            "comparison": "<",
-            "rational": "22/7",
-            "coef": "1",
-            **{k: str(PARAMS[k]) for k in server.IMAGE_KEYS},
-        },
-    )
+    resp = get()
     assert resp.status_code == 500
     assert resp.get_json() == {"error": INTERNAL_ERROR}
 
@@ -289,7 +379,7 @@ def test_decompose_inequality_errors(client, monkeypatch):
     """Empty problem -> 400; ValueError from the module -> 400 error body."""
     resp = client.post("/decompose_inequality", data={"problem": "  "})
     assert resp.status_code == 400
-    assert "error" in resp.get_json()
+    assert resp.get_json() == {"error": "请输入一个只包含一个 > 或 < 的不等式"}
 
     def boom(problem):
         raise ValueError("无法解析该不等式")

@@ -12,7 +12,7 @@ import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, add, combine, scale
-from ..render import rat_tex, wire_fraction
+from ..render import rat_tex, wire_fraction, wire_or
 
 LIMIT_E = 30  # e、pi 两类型指数上限 30
 LIMIT_OTHER = 10
@@ -86,7 +86,7 @@ def mul_latex(numer: sp.Expr, u: int) -> str:
 
 def const_latex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: e.g. e, 2e, \\dfrac{1}{2}e, e^2, e^\\dfrac{1}{2}, e^{\\pi}."""
-    pv = wire_fraction(power)
+    pv = wire_or(power)
     if kind == "e":
         return "e" if pv == 1 else f"{rat_tex(power)}e"
     if kind == "e_q":
