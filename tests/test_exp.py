@@ -95,7 +95,9 @@ def mom_val(mom, **consts):
     return sum(tomf(c) * consts[k] for k, c in mom.items())
 
 
-@pytest.mark.parametrize("m,n,j,q", [(0, 0, 0, F(1)), (2, 3, 1, F(1)), (1, 2, 0, F(5, 2)), (3, 1, 1, F(1, 3))])
+@pytest.mark.parametrize("m,n,j,q", [
+    (0, 0, 0, F(1)), (2, 3, 1, F(1)), (1, 2, 0, F(5, 2)), (3, 1, 1, F(1, 3)),
+])
 def test_basis_x_moment_numeric(m, n, j, q):
     qq = tomf(q)
     mom = exp_family.basis_x_moment(m, n, j, q, "e_q")
@@ -113,7 +115,9 @@ def test_basis_sin_moment_numeric(m, n, j):
     assert mp.almosteq(val, want, rel_eps=mp.mpf("1e-30"))
 
 
-@pytest.mark.parametrize("m,n,j,q", [(0, 0, 0, F(1)), (1, 1, 2, F(1)), (2, 0, 1, F(3, 2)), (0, 2, 0, F(2, 3))])
+@pytest.mark.parametrize("m,n,j,q", [
+    (0, 0, 0, F(1)), (1, 1, 2, F(1)), (2, 0, 1, F(3, 2)), (0, 2, 0, F(2, 3)),
+])
 def test_basis_sinh_moment_numeric(m, n, j, q):
     qq = tomf(q)
     mom = hyperbolic.basis_moment(m, n, j, q)
@@ -174,33 +178,51 @@ def test_prove_site_parity(kind, power, comp, bound, m, n, solution):
 
 @pytest.mark.parametrize("kind,power,comp,bound,equation", [
     ("e", "1", ">", "8/3",
-     r"e - \dfrac{8}{3} = \int_0^1 \frac{x^{2} \cdot \left(1 - x\right) e^{x}}{3} \mathrm{d} x > 0"),
+     r"e - \dfrac{8}{3} = \int_0^1 "
+     r"\frac{x^{2} \cdot \left(1 - x\right) e^{x}}{3} \mathrm{d} x > 0"),
     ("e", "1", ">", "2",
      r"e - 2 = \int_0^1 \left(1 - x\right) e^{x} \mathrm{d} x > 0"),
     ("e", "1", ">", "27/10",
-     r"e - \dfrac{27}{10} = \int_0^1 \frac{x \left(1 - x\right)^{2} \left(x + 1\right) e^{x}}{10} \mathrm{d} x > 0"),
+     r"e - \dfrac{27}{10} = \int_0^1 \frac{x \left(1 - x\right)^{2} "
+     r"\left(x + 1\right) e^{x}}{10} \mathrm{d} x > 0"),
     ("e", "1", "<", "68/25",
-     r"\dfrac{68}{25} - e = \int_0^1 \frac{x^{2} \left(1 - x\right)^{2} \left(x + 1\right) e^{x}}{50} \mathrm{d} x > 0"),
+     r"\dfrac{68}{25} - e = \int_0^1 \frac{x^{2} \left(1 - x\right)^{2} "
+     r"\left(x + 1\right) e^{x}}{50} \mathrm{d} x > 0"),
     ("e", "3/4", ">", "2",
-     r"\dfrac{3}{4}e - 2 = \int_0^1 \frac{x^{2} \cdot \left(1 - x\right) e^{x}}{4} \mathrm{d} x > 0"),
+     r"\dfrac{3}{4}e - 2 = \int_0^1 "
+     r"\frac{x^{2} \cdot \left(1 - x\right) e^{x}}{4} \mathrm{d} x > 0"),
     ("e_q", "2", "<", "15/2",
      r"\dfrac{15}{2} - e^2 = \int_0^1 2 x^{3} \left(1 - x\right)^{2} e^{2 x} \mathrm{d} x > 0"),
     ("e_q", "1/2", ">", "3/2",
-     r"e^\dfrac{1}{2} - \dfrac{3}{2} = \int_0^1 \frac{\left(1 - x\right) e^{\frac{x}{2}}}{4} \mathrm{d} x > 0"),
+     r"e^\dfrac{1}{2} - \dfrac{3}{2} = \int_0^1 "
+     r"\frac{\left(1 - x\right) e^{\frac{x}{2}}}{4} \mathrm{d} x > 0"),
     ("e_q", "3", ">", "20",
-     r"e^3 - 20 = \int_0^1 \frac{x^{2} \left(1 - x\right)^{4} \cdot \left(33 - 27 x\right) e^{3 x}}{8} \mathrm{d} x > 0"),
+     r"e^3 - 20 = \int_0^1 \frac{x^{2} \left(1 - x\right)^{4} "
+     r"\cdot \left(33 - 27 x\right) e^{3 x}}{8} \mathrm{d} x > 0"),
     ("e_pi", "1", ">", "23",
-     r"e^{\pi} - 23 = \int_0^{\pi} \frac{\left(1 - \sin{\left(x \right)}\right)^{5} \cdot \left(547950 - 422240 \sin{\left(x \right)}\right) e^{x} \sin^{2}{\left(x \right)}}{336633} \mathrm{d} x > 0"),
+     r"e^{\pi} - 23 = \int_0^{\pi} \frac{\left(1 - "
+     r"\sin{\left(x \right)}\right)^{5} \cdot \left(547950 - "
+     r"422240 \sin{\left(x \right)}\right) e^{x} "
+     r"\sin^{2}{\left(x \right)}}{336633} \mathrm{d} x > 0"),
     ("sinh_q", "1", ">", "7/6",
-     r"\sinh1 - \dfrac{7}{6} = \int_0^1 \frac{\left(1 - x\right) \left(x^{2} - 2 x + 1\right) \sinh{\left(x \right)}}{6} \mathrm{d} x > 0"),
+     r"\sinh1 - \dfrac{7}{6} = \int_0^1 "
+     r"\frac{\left(1 - x\right) \left(x^{2} - 2 x + 1\right) "
+     r"\sinh{\left(x \right)}}{6} \mathrm{d} x > 0"),
     ("cosh_q", "2/3", ">", "6/5",
-     r"\cosh\dfrac{2}{3} - \dfrac{6}{5} = \int_0^1 \frac{\left(2 x^{2} - 4 x + 3\right) \sinh{\left(\frac{2 x}{3} \right)}}{15} \mathrm{d} x > 0"),
+     r"\cosh\dfrac{2}{3} - \dfrac{6}{5} = \int_0^1 "
+     r"\frac{\left(2 x^{2} - 4 x + 3\right) "
+     r"\sinh{\left(\frac{2 x}{3} \right)}}{15} \mathrm{d} x > 0"),
     ("tanh_q", "1", ">", "3/4",
-     r"\tanh1 - \dfrac{3}{4} = \int_0^1 \dfrac{1}{\cosh(1)} \frac{\left(1 - x\right) \left(x^{2} + x\right) \sinh{\left(x \right)}}{8} \mathrm{d} x > 0"),
+     r"\tanh1 - \dfrac{3}{4} = \int_0^1 \dfrac{1}{\cosh(1)} "
+     r"\frac{\left(1 - x\right) \left(x^{2} + x\right) "
+     r"\sinh{\left(x \right)}}{8} \mathrm{d} x > 0"),
     ("tanh_q", "2/3", "<", "3/5",
-     r"\dfrac{3}{5} - \tanh\dfrac{2}{3} = \int_0^1 \dfrac{1}{\cosh(2/3)} \frac{\left(1 - x\right) \left(9 - 2 x^{2}\right) \sinh{\left(\frac{2 x}{3} \right)}}{45} \mathrm{d} x > 0"),
+     r"\dfrac{3}{5} - \tanh\dfrac{2}{3} = \int_0^1 "
+     r"\dfrac{1}{\cosh(2/3)} \frac{\left(1 - x\right) \left(9 - 2 x^{2}\right) "
+     r"\sinh{\left(\frac{2 x}{3} \right)}}{45} \mathrm{d} x > 0"),
     ("coth_q", "1", "<", "2",
-     r"2 - \coth1 = \int_0^1 \dfrac{1}{\sinh(1)} \left(2 - x^{2}\right) \sinh{\left(x \right)} \mathrm{d} x > 0"),
+     r"2 - \coth1 = \int_0^1 \dfrac{1}{\sinh(1)} "
+     r"\left(2 - x^{2}\right) \sinh{\left(x \right)} \mathrm{d} x > 0"),
 ])
 def test_render_equation_bytes(kind, power, comp, bound, equation):
     fam = exp_family if kind in ("e", "e_q", "e_pi") else hyperbolic
