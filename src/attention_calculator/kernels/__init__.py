@@ -1,0 +1,21 @@
+"""Kernel family registry: type name -> prove() implementation.
+
+Each family module defines::
+
+    def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict
+
+where ``kind`` is the requested site type (a module may serve several types).
+It returns ``{"parameters": {...}, "solution": "a = 47/120, b = -13/120"}``
+with ``parameters`` holding the nine site fields (m, n, a_val, b_val, c_val,
+au_val, bu_val, cu_val, u_val). Raises WrongDirection or NoSolution from
+..engine on failure.
+"""
+
+TYPES = [
+    "pi", "e", "pi_n", "e_q", "ln_q", "ln_q_square",
+    "sin_q", "cos_q", "tan_q", "cot_q",
+    "sin_q_degree", "cos_q_degree", "sin_pi_q", "cos_pi_q",
+    "arctan_q", "arccot_q",
+    "sinh_q", "cosh_q", "tanh_q", "coth_q", "artanh_q", "arcoth_q",
+    "gamma", "golden", "catalan", "zeta3", "e_pi", "varpi", "gauss",
+]
