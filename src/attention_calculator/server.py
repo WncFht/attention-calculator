@@ -42,7 +42,7 @@ NUM_RE = re.compile(r"^\d+(/\d+)?$")
 # 右侧有理数分子/分母必须 < 10^16 (probe: cap:*)
 RATIONAL_CAP = 10**16
 
-INTERNAL_ERROR = "服务器内部错误，请稍后再试"  # noqa: RUF001 -- 站端原文
+INTERNAL_ERROR = "服务器内部错误，请稍后再试"  # 站端原文
 # 姊妹应用（/convex、/health）的内部错误文案带句号，且所有未匹配/错方法
 # 一律 500（probe: /health/xyz、/health/en/、POST /health/en、/convex/Prove）
 SIBLING_INTERNAL_ERROR = "服务器内部错误，请稍后再试。"  # 站端原文（带句号）
@@ -119,11 +119,11 @@ def domain_error(kind: str, power: Fraction) -> str | None:
     if kind in ("sin_pi_q", "cos_pi_q") and (
         power.denominator == 1 or not 0 < power < Fraction(1, 2)
     ):
-        return "请在输入一个在(0,1/2)内的分数，本情况不支持整数"  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+        return "请在输入一个在(0,1/2)内的分数，本情况不支持整数"  # 站端原文(含"在"字笔误)
     if kind == "artanh_q" and (power.denominator == 1 or not 0 < power < 1):
-        return "请在输入一个在(0,1)内的分数，本情况不支持整数"  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+        return "请在输入一个在(0,1)内的分数，本情况不支持整数"  # 站端原文(含"在"字笔误)
     if kind == "arcoth_q" and power <= 1:
-        return "请在输入一个大于1的数"  # noqa: RUF001 -- 站端原文(含"在"字笔误)
+        return "请在输入一个大于1的数"  # 站端原文(含"在"字笔误)
     if kind in ("sin_q_degree", "cos_q_degree") and not 0 < power < 90:
         return "请在输入一个在(0,90)内的数"  # 站端原文(含"在"字笔误)
     return None
@@ -309,6 +309,8 @@ def decompose_inequality():
         result = decompose.decompose_inequality(problem)
     except ValueError as exc:
         return fail(str(exc), 400)
+    except Exception:
+        return fail("组合证明生成失败，请稍后再试", 500)
     return respond(result)
 
 
