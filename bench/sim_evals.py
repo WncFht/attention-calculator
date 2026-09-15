@@ -11,9 +11,10 @@ from fractions import Fraction
 
 sys.path.insert(0, "src")
 sys.path.insert(0, "bench")
-from attention_calculator.engine import mn_order, solve_moment
-from sim_mechanisms import basis_and_target
 from sim_float_solve import f_nonneg, f_nonpos, gauss_float
+from sim_mechanisms import basis_and_target
+
+from attention_calculator.engine import mn_order, solve_moment
 
 
 def system(basis, target, bound_sign):
@@ -83,7 +84,7 @@ def ev_cramer_f64_formula(keys, M, t0, t1, Bf):
         return None
     P, Q, D = ct
     Df = float(D)
-    return [(float(p) + float(q) * Bf) / Df for p, q in zip(P, Q)]
+    return [(float(p) + float(q) * Bf) / Df for p, q in zip(P, Q, strict=True)]
 
 
 def ev_affine_f64(keys, M, t0, t1, Bf):
@@ -92,7 +93,7 @@ def ev_affine_f64(keys, M, t0, t1, Bf):
     if ct is None:
         return None
     P, Q, D = ct
-    return [float(p / D) + float(q / D) * Bf for p, q in zip(P, Q)]
+    return [float(p / D) + float(q / D) * Bf for p, q in zip(P, Q, strict=True)]
 
 
 def ev_cramer_allfloat(keys, M, t0, t1, Bf):
@@ -136,7 +137,6 @@ def ev_gauss_f64(keys, M, t0, t1, Bf):
 
 def ev_exact_f64coeff(keys, M, t0, t1, Bf):
     """Exact solve then float64 of coeffs (baseline refuted model)."""
-    n = len(M)
     tgt = {k: t0[i] + t1[i] * Fraction(Bf) for i, k in enumerate(keys)}
     # Bf is float; Fraction(Bf) is the exact dyadic — fine, equals bound intent
     try:
@@ -158,7 +158,7 @@ EVALS = {
 
 def scan_eval(kind, pw, comp, rs, ev, mid_nonpos):
     """Return (event, (m,n), idx, u). event in nonneg/nonpos/exhaust."""
-    power, bound = Fraction(pw), Fraction(rs)
+    bound = Fraction(rs)
     limit, mk, target, B = basis_and_target(kind, pw, comp, bound)
     sign = 1 if comp == ">" else -1
     Bf = float(B)
@@ -208,7 +208,7 @@ def predict(evname, kind, pw, comp, rs):
         res = scan_eval(kind, pw, comp, rs, ev, mid_nonpos)
     except Exception as e:
         return ("EXC", str(e)[:40])
-    ev_, mn, i = res
+    ev_, mn, _i = res
     if comp == ">":
         return {"nonneg": f"OK{mn}", "nonpos": f"WD@{mn}", "exhaust": "NS"}[ev_]
     else:
