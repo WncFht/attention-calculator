@@ -21,6 +21,8 @@ from . import engine, render, solve
 from .kernels import TYPES
 
 app = Flask(__name__)
+# Jinja 默认吞掉模板尾部换行；站端页面以 \n 结尾（byte diff 实测）
+app.jinja_env.keep_trailing_newline = True
 
 
 def respond(payload: dict, status: int = 200) -> Response:
