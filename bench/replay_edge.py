@@ -1,4 +1,3 @@
-# ruff: noqa: RUF002, RUF003
 """离线重放 edge-probes.jsonl：只打本方 test_client，不触网。
 
 两波探针的 ours_* 字段分别采集自改动前/后的 server.py；
