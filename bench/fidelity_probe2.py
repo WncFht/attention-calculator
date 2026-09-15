@@ -4,8 +4,8 @@ For each type: '>' TRUE float-equal sweep (gap ladder), '>' FALSE float-equal
 (exact nonpos exists / fake-200 hunt), '<' FALSE float-equal (fake-200 hunt),
 '<' TRUE float-equal. Appends to bench/data/fidelity-probes.jsonl.
 """
+import contextlib
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -187,10 +187,8 @@ def main():
     if OUT.exists():
         for line in OUT.read_text().splitlines():
             if line.strip():
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     done.add(json.loads(line)["id"])
-                except json.JSONDecodeError:
-                    pass
     todo = [p for p in PROBES if p["id"] not in done]
     print(f"{len(done)} done, {len(todo)} to probe", flush=True)
     last = 0.0
