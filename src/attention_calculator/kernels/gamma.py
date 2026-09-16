@@ -44,7 +44,7 @@ from .quadlog import factors_tex
 N_LIMIT = 600  # H_N denominators stay tractable well past this
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     # the site's float64 direction pre-check runs before the kernel — a false
     # claim is 方向反了 (gamma 0>1), a true/equal one proceeds into the

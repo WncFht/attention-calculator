@@ -132,6 +132,33 @@ def parse_rational(text: str) -> Fraction:
     return Fraction(text.strip())
 
 
+def certified_cmp(kind: str, q: Fraction, r: Fraction) -> int:
+    """Certified sign of C - r for mode=exact direction decisions.
+
+    Evaluates the target constant at escalating mpmath precision and
+    accepts the sign only when |C - r| clears a wide guard band around
+    the evaluation error (2^30 ulp at the working precision). Returns
+    +1/-1/0; raises NoSolution when 2400 dps still cannot decide, which
+    for an irrational C means |C - r| < ~2^-7000 — practically unreachable.
+    """
+    from .integrand import constant_mpf
+
+    for dps in (80, 240, 800, 2400):
+        with mp.workdps(dps):
+            c = constant_mpf(kind, q)
+            diff = c - mp.mpf(r.numerator) / r.denominator
+            guard = mp.mpf(2) ** (30 - dps) * max(1, abs(c))
+            if diff > guard:
+                return 1
+            if diff < -guard:
+                return -1
+            if abs(diff) <= guard and dps == 2400:
+                # |C - r| below the smallest guard band: treat as equality
+                # (only reachable for rational C, e.g. Niven points)
+                return 0
+    raise NoSolution
+
+
 def failure_text(exc: Exception, kind: str, comp: str) -> str:
     """站端 404 文案：WrongDirection -> 方向反了；NoSolution -> 预算内未找到解。"""
     if isinstance(exc, WrongDirection):
@@ -140,15 +167,22 @@ def failure_text(exc: Exception, kind: str, comp: str) -> str:
     return f"在指数不超过{limit}的范围内未找到{comp}方向的解"
 
 
-def prove(kind: str, power: str, comp: str, rational: str) -> dict:
+def prove(kind: str, power: str, comp: str, rational: str, exact: bool = False) -> dict:
     """Run the proof search; returns the site's /calculate response shape.
 
     Raises engine.WrongDirection / engine.NoSolution on failure.
+
+    ``exact`` selects the math-correctness path (plan doc W1): certified
+    direction comparison instead of float64, kernels solve the true
+    system (no reproduced site bugs), and every emitted proof is
+    re-verified by exact_check before returning.
     """
     if kind not in TYPES:
         raise ValueError(f"unsupported type {kind!r}")
     module = importlib.import_module(f"attention_calculator.kernels.{FAMILY[kind]}")
     q, r = parse_rational(power), parse_rational(rational)
+    if exact:
+        return prove_exact(module, kind, q, comp, r)
     # 负界在站端被表层格式校验挡掉（右侧有理数格式无效），不进方向预检
     c = None if ((kind == "zeta3" and comp == ">") or r < 0) else direction_f(kind, q)
     if c is not None and ((r > c) if comp == ">" else (r < c)):
@@ -183,3 +217,27 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
     if claim_false:
         raise WrongDirection from None
     raise NoSolution from None
+
+
+def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
+    """mode=exact path: certified direction, true-system solve, self-check.
+
+    Direction is decided by certified_cmp before the search; a mid-scan
+    WrongDirection under true moments certifies the opposite inequality,
+    so it propagates honestly (no '<'-to-NoSolution remap). The emitted
+    parameters are re-verified by exact_check — a failure is our bug,
+    reported as InternalError rather than a wrong proof.
+    """
+    from .engine import EqualClaim, InternalError
+    from .exact_check import verify
+
+    sign = certified_cmp(kind, q, r)
+    if sign == 0:
+        raise EqualClaim("二者相等")
+    if (sign < 0) == (comp == ">"):
+        raise WrongDirection
+    resp = module.prove(kind, q, comp, r, exact=True)
+    res = verify(kind, q, comp, r, resp["parameters"])
+    if not (res["identity_ok"] and res["nonneg"]):
+        raise InternalError("emitted proof failed exact self-check")
+    return resp

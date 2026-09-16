@@ -117,7 +117,7 @@ def lemniscate_target(kind: str, comp: str, power: Fraction, bound: Fraction) ->
     return {"gauss": power, "1": -bound} if comp == ">" else {"gauss_inv": bound, "1": -power}
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     if kind == "golden":
         plans = ((m, n, [golden_basis(m, n, 0), golden_basis(m, n, 1)]) for m, n in mn_order(LIMIT))

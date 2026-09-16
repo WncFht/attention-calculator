@@ -104,7 +104,7 @@ def check_input(power: Fraction, bound: Fraction, kind: str) -> None:
         raise ValueError("请在输入一个大于1的数")
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     check_input(power, bound, kind)
     if kind == "ln_q_square" and power in (Fraction(5), Fraction(7)):

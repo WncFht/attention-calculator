@@ -75,7 +75,7 @@ CONST_F = {
 }
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape.
 
     power==0: the float64 pre-check decides first — false claims get 方向反了

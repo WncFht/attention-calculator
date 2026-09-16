@@ -177,7 +177,7 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
     return search(plans, target, True, defer=True), alpha
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """Run the proof search for one trig_pi-family request."""
     solved, alpha = solve(kind, power, comp, bound)
     result = emit(solved.m, solved.n, solved.coeffs, c_val=str(alpha))

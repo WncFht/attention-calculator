@@ -113,7 +113,7 @@ def emit(kind: str, m: int, n: int, coeffs: list[Fraction]) -> dict:
     return res
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape.
 
     Input format is validated one layer up (server.NUM_RE); power==0 for

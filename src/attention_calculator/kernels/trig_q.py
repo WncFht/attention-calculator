@@ -105,7 +105,7 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
     return search(plans, target, True)
 
 
-def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
+def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """Run the proof search for one trig_q-family request."""
     solved = solve(kind, power, comp, bound)
     result = emit(solved.m, solved.n, solved.coeffs)
