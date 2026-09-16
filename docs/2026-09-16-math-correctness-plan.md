@@ -27,7 +27,7 @@ def check(kind, power, comp, bound, params) -> bool
 ### W1 失真面修复（exact 路径）
 
 - **trig_pi (1,8)**：exact 模式直接用 `basis_moment`（真矩，核内已存在），不走 `site_basis`。顺带把"预存闭式"升级为真矩递推，解除 (m,n) 存储表范围限制。
-- **beta '<' 转置**：删 `transposed_lt_proof`，正确解继续向上搜（LT_M_LIMIT 是站端任意上限）；保留两个 sqrt 兜底模板（其恒等式本身为真，W0 会核证）。
+- **beta '<' 转置**：删 `transposed_lt_proof`，正确解继续向上搜（LT_M_LIMIT 是站端任意上限）；保留两个 sqrt 兜底模板（其恒等式本身为真，W0 会核证）。落地决定：exact '<' 扫描上限 EXACT_LT_LIMIT=256——更深的真证明（如 gauss 1<1398/1675 需 m~10⁶）诚实 NoSolution，预算上限作为可调参数留档；bench/verify.py 的 gamma 重建伪影不单独修，exact_check 已取代它做正确性裁决（verify.py 保留为站端审计工具）。
 - **系数缩放**：站端把命题规约到 `C ⋚ bound/power` 求解却印 `power·C − bound` 与未缩放被积函数（claimed = power×actual）。exact 路径令目标向量 = 印刷 LHS 向量：解 `{C: s·power, 1: −s·bound}` 或解 `C ⋚ bound/power` 后被积函数整体乘 |power|——两种印法任选，关键是 ∫印刷物 == 印刷 LHS。
 - **ln_q_square q∈{5,7}**：诊断站端崩溃根因（疑似矩系统奇异/实现除零），exact 路径按真系统正常求解。
 - **方向判定认证**：float64 预检/兜底替换为 `mp.iv` 区间比较（精度递增至符号确定）；代数常数（golden=√5 型）走 ℚ 精确平方比较。等值命题报 `二者相等` 保持。
