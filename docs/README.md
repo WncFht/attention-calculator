@@ -34,6 +34,7 @@
 ## 里程碑与过程记录
 
 - `2026-09-16-site-parity-status.md` — site 阶段终点：判官全绿基线 + 失真面权威盘点（46+6）
+- `2026-09-16-dev-history.md` — 两日开发史复盘：双机时间线、人类指令全录、会话/subagent 名册、事故与观察
 - `HANDOFF.md` — site 阶段完成记录（架构/分工/遗留）
 - `ROADMAP.md` — site 阶段路线图与实测行为记录（含 tie-break 更正）
 - `verify-report.md` — golden 全量数值验证报告（含重建伪影重归因）
