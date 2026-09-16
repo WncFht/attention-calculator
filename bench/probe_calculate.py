@@ -1,6 +1,6 @@
 """Probe zhuyidao.net API: /calculate + /get_integral_image for given cases.
 
-Usage: .venv/bin/python tools/probe.py cases.txt outdir
+Usage: .venv/bin/python bench/probe_calculate.py cases.txt outdir
 cases.txt lines: type power comparison rational   (comparison as > or <, url-encoded ok)
 
 Rate-limited >=0.6s between requests. Writes one JSON per case: the /calculate
