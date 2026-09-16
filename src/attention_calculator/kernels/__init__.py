@@ -52,3 +52,11 @@ TYPES = [
     "varpi",
     "gauss",
 ]
+
+# Exact-mode-only types (docs/2026-09-16-math-correctness-plan.md W3):
+# no site counterpart — the real site 400s them, so TYPES is untouched and
+# /calculate admits them solely under mode=exact.
+EXACT_TYPES = [
+    "zeta5",
+    "zeta7",
+]

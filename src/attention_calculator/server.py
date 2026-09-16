@@ -18,7 +18,7 @@ from fractions import Fraction
 from flask import Flask, Response, render_template, request
 
 from . import engine, render, solve
-from .kernels import TYPES
+from .kernels import EXACT_TYPES, TYPES
 
 app = Flask(__name__)
 # Jinja 默认吞掉模板尾部换行；站端页面以 \n 结尾（byte diff 实测）
@@ -195,7 +195,10 @@ def calculate():
     comp = request.form.get("comparison", ">")
     rational = request.form.get("rational", "")
 
-    if kind not in TYPES:
+    # mode=exact 走数学正确性路径（docs/2026-09-16-math-correctness-plan.md）；
+    # 缺省/其他值保持站端逐字节行为。先读 mode：EXACT_TYPES 只在 exact 下有效
+    exact = request.form.get("mode") == "exact"
+    if kind not in TYPES and not (exact and kind in EXACT_TYPES):
         return fail("无效的证明类型", 400)
     if comp not in (">", "<"):
         return fail("无效的不等号方向", 400)
@@ -226,9 +229,6 @@ def calculate():
     power_wire = "/".join(map(str, power_parts))
     rational_wire = "/".join(map(str, bound_parts))
     try:
-        # mode=exact 走数学正确性路径（docs/2026-09-16-math-correctness-plan.md）；
-        # 缺省/其他值保持站端逐字节行为
-        exact = request.form.get("mode") == "exact"
         result = solve.prove(kind, power_wire, comp, rational_wire, exact=exact)
     except (engine.WrongDirection, engine.NoSolution) as exc:
         return fail(solve.failure_text(exc, kind, comp), 404)

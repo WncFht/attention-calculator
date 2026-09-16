@@ -7,7 +7,7 @@ from fractions import Fraction
 import mpmath as mp
 
 from .engine import EXPONENT_LIMIT, NoSolution, WrongDirection
-from .kernels import TYPES
+from .kernels import EXACT_TYPES, TYPES
 
 # type -> module under attention_calculator.kernels
 FAMILY = {
@@ -40,6 +40,9 @@ FAMILY = {
     "varpi": "beta_family",
     "gauss": "beta_family",
     "gamma": "gamma",
+    # EXACT_TYPES — no site counterpart; kernels are exact-path only
+    "zeta5": "zeta_odd",
+    "zeta7": "zeta_odd",
 }
 
 # 站端在进核前用 float64 求值命题常数 c，再把有理界与 c 做 *精确* 比较
@@ -183,6 +186,10 @@ def prove(kind: str, power: str, comp: str, rational: str, exact: bool = False) 
     re-verified by exact_check before returning.
     """
     if kind not in TYPES:
+        if exact and kind in EXACT_TYPES:
+            module = importlib.import_module(f"attention_calculator.kernels.{FAMILY[kind]}")
+            q, r = parse_rational(power), parse_rational(rational)
+            return prove_exact(module, kind, q, comp, r)
         raise ValueError(f"unsupported type {kind!r}")
     module = importlib.import_module(f"attention_calculator.kernels.{FAMILY[kind]}")
     q, r = parse_rational(power), parse_rational(rational)

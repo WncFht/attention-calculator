@@ -246,6 +246,9 @@ def constant_mpf(kind: str, power: Fraction):
         # 方向兜底把假命题放行为未找到。
         "catalan": lambda: q * mp.catalan,
         "zeta3": lambda: q * mp.zeta(3),
+        # exact-mode-only types (kernels/EXACT_TYPES); power is the coefficient
+        "zeta5": lambda: q * mp.zeta(5),
+        "zeta7": lambda: q * mp.zeta(7),
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。
