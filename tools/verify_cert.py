@@ -42,6 +42,18 @@ def main() -> int:
             return 0
         print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
         return 1
+    if isinstance(cert, dict) and cert.get("prover") == "composite":
+        # Composite proof DAG: children verified recursively inside
+        # gamma_special.verify_cert; the transfer arithmetic is all-QQ
+        ok = verify_cert(cert)
+        print(f"identity_ok: {ok}")
+        print(f"nonneg:      {ok}")
+        print(f"statement:   composite {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
+        if ok:
+            print("VERIFIED")
+            return 0
+        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
+        return 1
     try:
         res = recheck(cert)
     except Exception as e:  # untrusted input: any checker/parse failure = malformed cert
