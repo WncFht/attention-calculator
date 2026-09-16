@@ -42,6 +42,21 @@ def main() -> int:
             return 0
         print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
         return 1
+    if isinstance(cert, dict) and "agm_iter" in cert:
+        # AGM interval certificate: agm.verify_cert replays the enclosure
+        # and demands verbatim endpoint equality
+        ok = verify_cert(cert)
+        print(f"identity_ok: {ok}")
+        print(f"nonneg:      {ok}")
+        print(
+            f"statement:   agm {cert.get('kind')} {cert.get('power')}"
+            f" {cert.get('comparison')} {cert.get('bound')}"
+        )
+        if ok:
+            print("VERIFIED")
+            return 0
+        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
+        return 1
     if isinstance(cert, dict) and cert.get("prover") == "composite":
         # Composite proof DAG: children verified recursively inside
         # gamma_special.verify_cert; the transfer arithmetic is all-QQ

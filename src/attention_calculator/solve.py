@@ -282,6 +282,14 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
             cert = pade.prove(kind, q, comp, r)
             if cert is not None:
                 return {"type": kind, "prover": "pade", "certificate": cert}
+        # W7 AGM 第二证法：gauss 直出区间包络证书；varpi 走 pi 子证 +
+        # AGM 的 composite DAG（cert["prover"]=="composite"）
+        if kind in ("varpi", "gauss"):
+            from . import agm
+
+            cert = agm.prove(kind, q, comp, r)
+            if cert is not None:
+                return {"type": kind, "prover": cert["prover"], "certificate": cert}
         raise
     if resp.get("prover") == "composite":
         # W6 Γ-型复合证明：证书是子证明 DAG，children 已在构造时逐个验证

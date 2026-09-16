@@ -27,6 +27,8 @@ g² = S·T, h = V/g, s² = π, recorded once here:
                   '>': A ≥ R·B;  '<': A ≤ R·B;  B > 0 both ways
     sqrt          s ⋚ R:   π ⋚ R² (pi), R > 0
     pos_transfer  C > R with R ≤ 0: child cert proves C > w, w > 0
+    pi_div_agm    ϖ ⋚ R:   π ⋚ A (pi kernel), G ⋚ B (agm cert)
+                  '>': A·B ≥ R;  '<': A·B ≤ R;  A, B > 0 both ways
 """
 
 from fractions import Fraction
@@ -37,7 +39,7 @@ from ..engine import NoSolution
 
 DPS_LADDER = (80, 300, 1200)
 
-_RULES = ("sqrt_mul", "sqrt_div", "sqrt", "pos_transfer")
+_RULES = ("sqrt_mul", "sqrt_div", "sqrt", "pos_transfer", "pi_div_agm")
 
 
 def _flip(comp: str) -> str:
@@ -314,7 +316,7 @@ def verify_cert(cert: dict) -> bool:
         children = cert["children"]
     except (KeyError, TypeError, ValueError):
         return False
-    if kind not in ("gamma14", "gamma34", "gamma12") or comp not in (">", "<"):
+    if kind not in ("gamma14", "gamma34", "gamma12", "varpi") or comp not in (">", "<"):
         return False
     if rule not in _RULES or q == 0 or len(expect) != len(children):
         return False
@@ -344,6 +346,18 @@ def verify_cert(cert: dict) -> bool:
         return side_ok and expect == [
             ("varpi", Fraction(2), c, s1),
             ("pi", Fraction(1), c, t2 * t2 / 2),
+        ]
+    if rule == "pi_div_agm":
+        # varpi = pi*G: children pi comp A (quadlog cert) and G comp B
+        # (agm cert); both strict, so the product is strict already at
+        # A*B == R -- the boundary form is what the prover emits
+        A, B = witness["A"], witness["B"]
+        if kind != "varpi" or A <= 0 or B <= 0:
+            return False
+        side_ok = A * B >= R if c == ">" else A * B <= R
+        return side_ok and expect == [
+            ("pi", Fraction(1), c, A),
+            ("gauss", Fraction(1), c, B),
         ]
     # sqrt_div
     B, A = witness["B"], witness["A"]

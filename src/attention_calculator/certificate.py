@@ -88,6 +88,13 @@ def verify_cert(cert: dict) -> bool:
             return pade.verify_cert(pade.cert_parse(cert))
         except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
             return False
+    if isinstance(cert, dict) and "agm_iter" in cert:
+        from . import agm
+
+        try:
+            return agm.verify_cert(agm.cert_parse(cert))
+        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+            return False
     if isinstance(cert, dict) and cert.get("prover") == "composite":
         from .kernels import gamma_special
 
@@ -124,6 +131,11 @@ def cert_tex(cert: dict) -> str:
         )
     if "serr" in cert:
         return f"{cert['kind']} {cert['comp']} {cert['p']} \\quad (\\mathrm{{Pad\\acute{{e}}}})"
+    if "agm_iter" in cert:
+        return (
+            f"{cert['kind']}({cert['power']}) {cert['comparison']} {cert['bound']}"
+            " \\quad (\\mathrm{AGM})"
+        )
     return f"{_moment_tex(_moment_in(cert['check']['target']))} = \\int f\\,\\mathrm{{d}}x > 0"
 
 

@@ -269,6 +269,18 @@ def calculate():
                 "certificate": pade.cert_jsonable(result["certificate"]),
             }
         )
+    if result.get("prover") == "agm":
+        # W7 AGM 证法：证书即响应（gauss 用；varpi 的 composite 走下一支）
+        from . import agm
+
+        return respond(
+            {
+                "success": True,
+                "type": result.get("type", kind),
+                "prover": "agm",
+                "certificate": agm.cert_jsonable(result["certificate"]),
+            }
+        )
     if result.get("prover") == "composite":
         # W6 Γ-型复合证法：证书是子证明 DAG（全字符串，JSON 安全）
         return respond(

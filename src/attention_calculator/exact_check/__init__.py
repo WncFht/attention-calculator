@@ -57,6 +57,17 @@ def verify_response(kind: str, power: Fraction, comp: str, bound: Fraction, resp
             match = False
         ok = match and pade.verify_cert(pade.cert_parse(cert))
         return {"identity_ok": ok, "nonneg": ok, "integrand": {}, "target": {}}
+    if resp.get("prover") == "agm":
+        from .. import agm
+        from ..kernels import gamma_special
+
+        cert = resp["certificate"]
+        try:
+            match = gamma_special.child_claim(cert) == (kind, power, comp, bound)
+        except (KeyError, TypeError, ValueError):
+            match = False
+        ok = match and agm.verify_cert(agm.cert_parse(cert))
+        return {"identity_ok": ok, "nonneg": ok, "integrand": {}, "target": {}}
     if resp.get("prover") == "composite":
         from ..kernels import gamma_special
 
