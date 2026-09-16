@@ -116,6 +116,12 @@ def in_domain(kind: str, q: Fraction) -> bool:
         return 0 < q < 1
     if kind in ("gaussint_q", "dawson_q", "erfiint_q"):
         return q != 0
+    # 460c5b1 域规则：e_q/cosh/sinh/tanh 的 q=0 退化拒（e^0=1 等有理点），
+    # coth 要求 q>0；q<0 经奇偶归约在域内
+    if kind == "e_q" or kind in ("sinh_q", "cosh_q", "tanh_q"):
+        return q != 0
+    if kind == "coth_q":
+        return q > 0
     if kind == "artanh_q":
         return 0 < q < 1 and q.denominator != 1
     if kind == "arcoth_q":
