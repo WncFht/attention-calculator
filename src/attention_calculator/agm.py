@@ -260,14 +260,14 @@ def verify_cert(cert: dict) -> bool:
     return hi * R <= 1 if c == ">" else lo * R >= 1
 
 
-_FRAC_KEYS = ("power", "bound", "lo", "hi")
+FRAC_KEYS = ("power", "bound", "lo", "hi")
 
 
 def cert_jsonable(cert: dict) -> dict:
     """JSON-safe copy of an agm certificate: every Fraction as "n/d" text."""
-    return {**cert, **{k: str(cert[k]) for k in _FRAC_KEYS}}
+    return {**cert, **{k: str(cert[k]) for k in FRAC_KEYS}}
 
 
 def cert_parse(cert: dict) -> dict:
     """Inverse of cert_jsonable; also accepts already-Fraction fields."""
-    return {**cert, **{k: Fraction(cert[k]) for k in _FRAC_KEYS}}
+    return {**cert, **{k: Fraction(cert[k]) for k in FRAC_KEYS}}
