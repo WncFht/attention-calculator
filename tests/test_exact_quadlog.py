@@ -48,11 +48,9 @@ def check(kind, power, comp, bound):
         ("catalan", "1", "<", "11/12"),
         ("catalan", "2", "<", "2"),
         ("catalan", "1/2", ">", "2/5"),
-        ("catalan", "0", "<", "1/2"),
         ("zeta3", "1", "<", "5/4"),
         ("zeta3", "2", ">", "2"),
         ("zeta3", "1/2", ">", "3/5"),
-        ("zeta3", "0", "<", "1"),
         ("arctan_q", "1", ">", "7/9"),
         ("arctan_q", "1", "<", "4/5"),
         ("arctan_q", "2", ">", "1"),
@@ -124,11 +122,14 @@ def test_params_checked_against_wrong_direction_fail():
     assert not res["identity_ok"]
 
 
-def test_zero_power_emitted_identity_is_true():
-    # site prints e.g. '1/2 - 0*C = ∫(1+x^2)ln(1/x)/(2(1+x^2)) > 0': the claim
-    # is degenerate but the printed equation is a true identity (params solve
-    # {C: 0, 1: bound})
-    resp = solve.prove("catalan", "0", "<", "1/2", exact=True)
+def test_zero_power_rejected_exact_but_site_emits():
+    # q=0 degenerates the claim to a rational comparison: mode=exact rejects
+    # it as out of scope (uniform with the exact-only kinds' domain rule).
+    # Site mode keeps emitting the vacuously-true identity '1/2 - 0*C = ∫…>0'
+    # for parity — params solve {C: 0, 1: bound} and verify_response agrees.
+    with pytest.raises(ValueError, match="退化为有理数比较"):
+        solve.prove("catalan", "0", "<", "1/2", exact=True)
+    resp = solve.prove("catalan", "0", "<", "1/2")
     res = verify_response("catalan", Fraction(0), "<", Fraction(1, 2), resp)
     assert res["identity_ok"]
     assert res["integrand"] == {"1": Fraction(1, 2)}

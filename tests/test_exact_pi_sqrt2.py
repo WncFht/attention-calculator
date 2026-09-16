@@ -199,8 +199,8 @@ def test_kernel_level_false_claim_is_no_solution():
     ("power", "comp", "bound", "exc"),
     [
         ("0", ">", "1", WrongDirection),  # 0 > 1 false
-        ("0", ">", "-1", NoSolution),  # 0 > -1 true but unprovable
-        ("0", "<", "1", NoSolution),  # 0 < 1 true but unprovable
+        ("0", ">", "-1", ValueError),  # 0 > -1 true but degenerate: q=0 gate
+        ("0", "<", "1", ValueError),  # 0 < 1 true but degenerate
         ("0", "<", "-1", WrongDirection),  # 0 < -1 false
         ("-1", ">", "-5", NoSolution),  # -S > -5 true, P sign-indefinite at all m
         ("-1", ">", "-4", WrongDirection),  # -S > -4 false
@@ -209,9 +209,10 @@ def test_kernel_level_false_claim_is_no_solution():
     ],
 )
 def test_nonpositive_power(power, comp, bound, exc):
-    """q <= 0 mirrors the varpi/gamma convention: certified_cmp rejects
-    false claims; true ones are honest NoSolution since the moment machine
-    cannot express a negative-coefficient claim with non-negative P."""
+    """q = 0 is rejected as a degenerate rational claim; q < 0 mirrors the
+    varpi/gamma convention: certified_cmp rejects false claims, true ones
+    are honest NoSolution since the moment machine cannot express a
+    negative-coefficient claim with non-negative P."""
     with pytest.raises(exc):
         solve.prove("pi_sqrt2", power, comp, bound, exact=True)
 

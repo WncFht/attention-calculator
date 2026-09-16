@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 from attention_calculator import solve
-from attention_calculator.engine import EqualClaim, NoSolution, WrongDirection
+from attention_calculator.engine import EqualClaim, WrongDirection
 from attention_calculator.exact_check import verify, verify_response
 
 GOLDEN = Path(__file__).parent.parent / "bench" / "data" / "golden.jsonl"
@@ -151,8 +151,8 @@ def test_gamma_nonpositive_power_honest_failure():
     assert resp["prover"] == "euler_gamma"
     res = verify_response("gamma", Fraction(-2), "<", Fraction(1), resp)
     assert res["identity_ok"] and res["nonneg"]
-    # power = 0 stays a degenerate rational-only claim: honestly unsolved
-    with pytest.raises(NoSolution):
+    # power = 0 is a degenerate rational-only claim: rejected as out of scope
+    with pytest.raises(ValueError, match="退化为有理数比较"):
         solve.prove("gamma", "0", "<", "1", exact=True)
     with pytest.raises(WrongDirection):
         solve.prove("gamma", "-2", ">", "1", exact=True)

@@ -272,6 +272,10 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
         raise EqualClaim("二者相等")
     if sign is not None and (sign < 0) == (comp == ">"):
         raise WrongDirection
+    if q == 0:
+        # q=0 使命题退化为有理数比较（0·C、C^0=1、sin0=0 等），不属常数
+        # 证明器职责；等值/假命题已被 certified_cmp 诚实拦下，这里拦真退化
+        raise ValueError("q=0 时命题退化为有理数比较")
     try:
         resp = module.prove(kind, q, comp, r, exact=True)
     except NoSolution:
@@ -292,8 +296,8 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
             if cert is not None:
                 return {"type": kind, "prover": cert["prover"], "certificate": cert}
         # W7 Euler--Maclaurin 第二证法：gamma 的 (m,n) 预算耗尽后用 EM
-        # 有理包络 + 两个 ln2 子证 DAG 兜底；q=0 是有理比较，退化拒收
-        if kind == "gamma" and q != 0:
+        # 有理包络 + 两个 ln2 子证 DAG 兜底
+        if kind == "gamma":
             from . import euler_gamma
 
             cert = euler_gamma.prove(kind, q, comp, r)
