@@ -36,7 +36,7 @@
 - `BUG:wd-on-true` ×41（hyperbolic q<0 未做奇偶归约）→ commit 460c5b1 奇偶归约到 |q|；
 - `BUG:crash` ×21（power=0 触发 Fraction(1,0)）→ 同 commit 退化域拒（e_q/cosh_q q=0、coth_q q≤0 等报 ValueError）。
 
-修复后 a9 复扫 9594 例（含 exact-only 型）：**零 BUG**。覆盖率地板前三弱曾是 varpi 26/113、gauss 28/105、gamma 32/109——已由 W7 第二证明器波次补齐（varpi/gauss 走 `agm.py` 区间包络，gamma 走 `euler_gamma.py` EM 包络；三者深界不再依赖 (m,n) 预算）。W7 落地后 a9 对这三型同输入重跑 660 条的 before→after：**varpi 26→108（+82）、gauss 28→105（+77）、gamma 32→105（+73），零回退、零 BUG/FLAG、零 truth_mismatch**，全部系 unsolved-true→proved；36 条 gauss/varpi 转置簇（真命题、站端假证明）无一漏全证出。残余 unsolved-true：gauss 0 条；gamma 4 条全是 power=0 退化点（euler_gamma 按设计拒"命题退化为有理数比较"，口径上与 varpi q=0 的 rejected-input 分类不统一，待对齐）；varpi 4 条为 ~9e15 分母级的最深连分数界，在 pi 子证地板之外。复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。
+修复后 a9 复扫 9594 例（含 exact-only 型）：**零 BUG**。覆盖率地板前三弱曾是 varpi 26/113、gauss 28/105、gamma 32/109——已由 W7 第二证明器波次补齐（varpi/gauss 走 `agm.py` 区间包络，gamma 走 `euler_gamma.py` EM 包络；三者深界不再依赖 (m,n) 预算）。W7 落地后 a9 对这三型同输入重跑 660 条的 before→after：**varpi 26→108（+82）、gauss 28→105（+77）、gamma 32→105（+73），零回退、零 BUG/FLAG、零 truth_mismatch**，全部系 unsolved-true→proved；36 条 gauss/varpi 转置簇（真命题、站端假证明）无一漏全证出。残余 unsolved-true：gauss 0 条；gamma 4 条全是 power=0 退化点；varpi 4 条为 ~9e15 分母级的最深连分数界，在 pi 子证地板之外。q=0 口径已统一（commit 7d240c9，a9 提案 A）：`prove_exact` 在 certified_cmp 之后统一 `ValueError("q=0 时命题退化为有理数比较")`→rejected-input，全部 55 型一致；EqualClaim（bound=0 等值）与 WrongDirection（假命题）仍在认证层先拦，site 模式退化发证行为不动。复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。
 
 ## 在途项
 
