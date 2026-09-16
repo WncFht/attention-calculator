@@ -2,6 +2,8 @@
 
 计划文档里"远期可出 Lean 可检形式（非承诺）"的落地调研。结论先行：**架构上用 verified-checker + 数据证书（路线 B），数学上的真工作量集中在"逐族矩引理"，MVP 选 `e` 或 `pi` 族端到端走通**。本文 API 断言均已对 mathlib4 master 源码快照（`/tmp/mathlib4-src`，toolchain `leanprover/lean4:v4.35.0-rc1`）grep 核实。
 
+**状态：已调研，暂缓接入（2026-09-16 决定，不动工）。** 调研结论保留备查，暂缓理由与重启条件见末节。
+
 ## 我们的证书在 Lean 里是什么
 
 一条标准证书（`certificate.build`）断言两件事：
@@ -94,9 +96,11 @@ theorem check_sound (c : Cert) : check c = true → statement c := ...
 
 ## 价值与边界（诚实版）
 
-- 换来的：信任从自家 exact_check 换成 Lean kernel（+compiler，若 native_decide）；能抓规范级 bug（常数约定、域边界、证书 schema 歧义）——因为命题在 Lean 里是重新陈述的；产物是数学上可引用的形式化定理库。
+- 换来的：信任从自家 exact_check 换成 Lean kernel（+compiler，若 native_decide）。结构性动机是 `verify_cert` 与发射共用同一条 `exact_check` 代码路径——系统性 bug 会同时产错证书并通过验证，自证查不出自证；Lean 侧 `check_sound` 是对着 mathlib 实分析证的定理，`check` 实现错了只会误拒不会误放，且命题用 `Real.pi`/`riemannZeta` 等标准常数重新陈述，能抓规范级 bug（常数约定、域边界、严格/非严格、证书 schema 歧义）。产物是数学上可引用的形式化定理库。
 - 换不来的：**只管每条证明的 soundness，不管搜索完备性**；也不自动覆盖 site-parity 语义（那是另一层）。
 - 未证实项：mathlib 对 `riemannZeta 3` 实值的现成引理面、`integral_pos` 在端点奇异核上的顺路程度、`native_decide` 批量摊销的具体数字——MVP 阶段顺手验证。
+
+**暂缓理由与重启条件**：上述缺口对自用场景已被 exact 重算 + 2400dps 数值判官兜住，而接入是周级纯劳动、只加 assurance 不加求解能力——故 2026-09-16 决定不动工。若日后要对外立"kernel 级可检产物"的人设、或想要形式化定理库本身，直接从「建议分阶段」的 W8a 起步即可，本调研继续有效。
 
 ## 参考文献
 
