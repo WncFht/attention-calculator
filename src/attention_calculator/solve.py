@@ -241,8 +241,8 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
     parameters are re-verified by exact_check — a failure is our bug,
     reported as InternalError rather than a wrong proof.
     """
+    from .certificate import build as build_cert
     from .engine import EqualClaim, InternalError
-    from .exact_check import verify
 
     sign = certified_cmp(kind, q, r)
     if sign == 0:
@@ -250,7 +250,10 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
     if sign is not None and (sign < 0) == (comp == ">"):
         raise WrongDirection
     resp = module.prove(kind, q, comp, r, exact=True)
-    res = verify(kind, q, comp, r, resp["parameters"])
-    if not (res["identity_ok"] and res["nonneg"]):
+    # certificate.build internally runs exact_check.verify — its embedded
+    # check block IS the emit self-check, so a failure stays InternalError
+    cert = build_cert(kind, q, comp, r, resp["parameters"])
+    if not (cert["check"]["identity_ok"] and cert["check"]["nonneg"]):
         raise InternalError("emitted proof failed exact self-check")
+    resp["certificate"] = cert
     return resp

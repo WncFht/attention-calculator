@@ -246,16 +246,18 @@ def calculate():
     params["m"], params["n"] = int(params["m"]), int(params["n"])
     for k in ("au_val", "bu_val", "cu_val", "u_val"):
         params[k] = str(params[k])
-    return respond(
-        {
-            "success": True,
-            # kernels may normalize the wire type (site echoes sin_q_degree
-            # requests back as "sin_pi_q"); default to the request's type
-            "type": result.get("type", kind),
-            "parameters": params,
-            "equations": {"solution": result["solution"]},
-        }
-    )
+    payload = {
+        "success": True,
+        # kernels may normalize the wire type (site echoes sin_q_degree
+        # requests back as "sin_pi_q"); default to the request's type
+        "type": result.get("type", kind),
+        "parameters": params,
+        "equations": {"solution": result["solution"]},
+    }
+    # mode=exact 的证明附机器可检证书（W5）；site 模式无此键，逐字节不变
+    if "certificate" in result:
+        payload["certificate"] = result["certificate"]
+    return respond(payload)
 
 
 # 图像端点逐字段校验（probe 钉死）：
