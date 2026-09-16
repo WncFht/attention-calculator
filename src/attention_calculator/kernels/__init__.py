@@ -62,4 +62,7 @@ EXACT_TYPES = [
     "ln_q_cube",
     "arcsin_q",
     "arsinh_q",
+    "gaussint_q",
+    "dawson_q",
+    "erfiint_q",
 ]

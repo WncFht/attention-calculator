@@ -46,6 +46,9 @@ FAMILY = {
     "ln_q_cube": "ln_pow",
     "arcsin_q": "arcsin",
     "arsinh_q": "invhyp",
+    "gaussint_q": "gauss_erf",
+    "dawson_q": "gauss_erf",
+    "erfiint_q": "gauss_erf",
 }
 
 # 站端在进核前用 float64 求值命题常数 c，再把有理界与 c 做 *精确* 比较

@@ -253,6 +253,12 @@ def constant_mpf(kind: str, power: Fraction):
         "ln_q_cube": lambda: mp.log(q) ** 3,
         "arcsin_q": lambda: mp.asin(q),
         "arsinh_q": lambda: mp.asinh(q),
+        # gauss-erf 族：缩放常数（erf/erfi 本身因 √π 障碍不可达，见
+        # docs/2026-09-16-w3-research-erf.md）；power 槽携带 q
+        "gaussint_q": lambda: mp.sqrt(mp.pi) * mp.erf(q) / 2,
+        # 本环境 mpmath 无 mp.dawson：F(q) = √π/2 · e^{−q²}·erfi(q)
+        "dawson_q": lambda: mp.sqrt(mp.pi) * mp.exp(-(q * q)) * mp.erfi(q) / 2,
+        "erfiint_q": lambda: mp.sqrt(mp.pi) * mp.erfi(q) / 2,
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。
