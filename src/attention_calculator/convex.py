@@ -25,6 +25,7 @@ REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索�
 
 
 def atom_value(atom, x):
+    """Atom value at x: const/linear/exp/log/power dispatch."""
     kind = atom[0]
     if kind == "const":
         return 1.0
@@ -38,6 +39,7 @@ def atom_value(atom, x):
 
 
 def atom_d1(atom, x):
+    """First derivative of the atom at x."""
     kind = atom[0]
     if kind == "const":
         return 0.0
@@ -52,6 +54,7 @@ def atom_d1(atom, x):
 
 
 def atom_d2_sign(atom, coeff):
+    """Sign of the atom's second-derivative contribution (+1/-1/0 under EPS)."""
     kind = atom[0]
     if kind in ("const", "linear"):
         return 0
@@ -71,6 +74,7 @@ def atom_d2_sign(atom, coeff):
 
 
 def normalize_expr(text):
+    """Site syntax to evaluable text: ^ -> **, ln( -> log(, e**x -> exp(x)."""
     text = text.strip()
     text = text.replace("^", "**")
     text = re.sub(r"\bln\s*\(", "log(", text)
@@ -79,6 +83,7 @@ def normalize_expr(text):
 
 
 def split_inequality(text):
+    """Split into (lhs, rhs, op); '<' and '<=' swap the sides."""
     text = normalize_expr(text)
     for op in (">=", "<=", ">", "<", "="):
         if op in text:
@@ -90,10 +95,12 @@ def split_inequality(text):
 
 
 def dump(node):
+    """ast.dump with show_empty, for parse-error messages."""
     return ast.dump(node, show_empty=True)
 
 
 def parse_number(node):
+    """Numeric literal subtree -> float (number, unary -, /, **, sqrt)."""
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
         return float(node.value)
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
@@ -110,6 +117,7 @@ def parse_number(node):
 
 
 def parse_atom(node):
+    """One x-dependent atom: x, exp/log/sqrt calls, or x**const."""
     if isinstance(node, ast.Name) and node.id == "x":
         return ("linear",)
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
@@ -136,6 +144,7 @@ def parse_atom(node):
 
 
 def parse_factor_term(node):
+    """(coeff, atom) of a factor: numeric constant or single atom."""
     try:
         return (parse_number(node), ("const",))
     except ValueError:
@@ -143,6 +152,7 @@ def parse_factor_term(node):
 
 
 def parse_product(node):
+    """(coeff, atom) of a * or / node: the constant side folds into the coefficient."""
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
         left = parse_product(node.left)
         right = parse_product(node.right)
@@ -159,6 +169,7 @@ def parse_product(node):
 
 
 def collect_terms(node, sign=1.0):
+    """Flatten an additive/multiplicative AST into signed (coeff, atom) terms."""
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         return collect_terms(node.left, sign) + collect_terms(node.right, sign)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Sub):
@@ -186,11 +197,13 @@ def collect_terms(node, sign=1.0):
 
 
 def parse_terms(text):
+    """Expression text -> raw (coeff, atom) term list."""
     tree = ast.parse(normalize_expr(text), mode="eval")
     return collect_terms(tree.body)
 
 
 def combine_terms(terms):
+    """Merge coefficients per atom; drop |coeff| <= EPS."""
     buckets = {}
     for c, a in terms:
         buckets[a] = buckets.get(a, 0.0) + c
@@ -198,6 +211,7 @@ def combine_terms(terms):
 
 
 def split_positive_negative(terms):
+    """Split terms into (positive side, negated negative side)."""
     left, right = [], []
     for c, a in terms:
         if c >= 0:
@@ -208,6 +222,7 @@ def split_positive_negative(terms):
 
 
 def evaluate(terms, x):
+    """Sum of coeff * atom value at x (naive loop, old-CPython sum parity)."""
     # 站端跑旧 CPython（sum 为朴素顺序累加）；3.12+ 的 sum 改 Neumaier 补偿求和，
     # 末位 ulp 会差——手写循环复刻旧行为
     total = 0
@@ -217,6 +232,7 @@ def evaluate(terms, x):
 
 
 def derivative(terms, x):
+    """Sum of coeff * atom first derivative at x."""
     total = 0
     for c, a in terms:
         total += c * atom_d1(a, x)
@@ -224,6 +240,7 @@ def derivative(terms, x):
 
 
 def curvature(terms):
+    """Term list -> 'convex' | 'concave' | 'affine' | 'mixed'."""
     signs = {atom_d2_sign(a, c) for c, a in terms}
     signs.discard(0)
     if not signs:
@@ -236,6 +253,7 @@ def curvature(terms):
 
 
 def minimize_convex(terms, domain):
+    """Minimum of a convex term list on the domain (endpoint checks + 160 bisections)."""
     lo, hi = domain
     lo = max(lo, 1e-8)
     if hi is not None:
@@ -263,6 +281,7 @@ def minimize_convex(terms, domain):
 
 
 def line_gap_terms(base_terms, m, b, sign):
+    """Terms of (line - base) for sign=1, (base - line) otherwise."""
     line = [(m, ("linear",)), (b, ("const",))]
     if sign == 1:
         return combine_terms(line + [(-c, a) for c, a in base_terms])
@@ -270,18 +289,21 @@ def line_gap_terms(base_terms, m, b, sign):
 
 
 def fraction_label(frac):
+    """Fraction as plain text 'n' or 'n/d'."""
     if frac.denominator == 1:
         return str(frac.numerator)
     return f"{frac.numerator}/{frac.denominator}"
 
 
 def fraction_latex(frac):
+    r"""Fraction as LaTeX 'n' or '\frac{n}{d}'."""
     if frac.denominator == 1:
         return str(frac.numerator)
     return f"\\frac{{{frac.numerator}}}{{{frac.denominator}}}"
 
 
 def signed_fraction_label(frac):
+    """Signed ' + n/d' / ' - n/d' text piece (empty for 0)."""
     if frac == 0:
         return ""
     sign = "+" if frac > 0 else "-"
@@ -289,6 +311,7 @@ def signed_fraction_label(frac):
 
 
 def signed_fraction_latex(frac):
+    """Signed LaTeX piece (empty for 0)."""
     if frac == 0:
         return ""
     sign = "+" if frac > 0 else "-"
@@ -296,6 +319,7 @@ def signed_fraction_latex(frac):
 
 
 def continued_fraction_convergents(x, max_terms=12, max_denominator=10000):
+    """CF convergents of x, <= max_terms terms and denominator <= max_denominator."""
     terms = []
     y = x
     for _ in range(max_terms):
@@ -316,12 +340,14 @@ def continued_fraction_convergents(x, max_terms=12, max_denominator=10000):
 
 
 def tangent_line_at(terms, x0):
+    """(slope, intercept) of the term list's tangent at x0."""
     m = derivative(terms, x0)
     b = evaluate(terms, x0) - m * x0
     return m, b
 
 
 def tangent_term_text(coeff, atom, point):
+    """Plain-text tangent-line term at a rational point."""
     c = Fraction(coeff).limit_denominator(1000000)
     r = fraction_label(point)
     prefix = "" if c == 1 else "-" if c == -1 else f"{fraction_label(c)}*"
@@ -343,6 +369,7 @@ def tangent_term_text(coeff, atom, point):
 
 
 def tangent_term_latex(coeff, atom, point):
+    """LaTeX tangent-line term at a rational point."""
     c = Fraction(coeff).limit_denominator(1000000)
     r = fraction_latex(point)
     prefix = "" if c == 1 else "-" if c == -1 else fraction_latex(c)
@@ -365,11 +392,13 @@ def tangent_term_latex(coeff, atom, point):
 
 
 def tangent_expr(terms, point, tex):
+    """The tangent line's terms joined into one expression (text or LaTeX)."""
     fn = tangent_term_latex if tex else tangent_term_text
     return " + ".join(fn(c, a, point) for c, a in terms).replace("+ -", "- ")
 
 
 def find_line(left, right, domain, x_center, strict, left_tex, right_tex):
+    """First CF-convergent tangent line certifying left >= right, else None."""
     for rational in continued_fraction_convergents(x_center):
         x0 = float(rational)
         if x0 <= domain[0] or (domain[1] is not None and x0 >= domain[1]):
@@ -395,6 +424,7 @@ def find_line(left, right, domain, x_center, strict, left_tex, right_tex):
 
 
 def parse_domain(text):
+    """'lo,hi' text -> (lo, hi|None); empty -> the default domain."""
     if not text:
         return (1e-8, None)
     parts = [p.strip() for p in text.split(",")]
@@ -406,6 +436,7 @@ def parse_domain(text):
 
 
 def atom_text(atom):
+    """Atom in plain text (x, e^x, ln x, √x, x^a)."""
     kind = atom[0]
     if kind == "linear":
         return "x"
@@ -421,6 +452,7 @@ def atom_text(atom):
 
 
 def atom_latex(atom):
+    r"""Atom in LaTeX (x, e^x, \ln x, \sqrt{x}, x^{a})."""
     kind = atom[0]
     if kind == "linear":
         return "x"
@@ -442,6 +474,7 @@ def atom_latex(atom):
 
 
 def fmt_terms(terms, tex):
+    """Signed term list -> display string, plain text or LaTeX."""
     pieces = []
     for coeff_f, atom in terms:
         coeff = Fraction(coeff_f).limit_denominator(1000000)
@@ -474,6 +507,7 @@ def fmt_terms(terms, tex):
 
 
 def affine_line_from_expr(text):
+    """Parse a --line expression into (m, b); rejects non-affine atoms."""
     m = 0.0
     b = 0.0
     for c, a in combine_terms(parse_terms(text)):
@@ -487,6 +521,7 @@ def affine_line_from_expr(text):
 
 
 def verify_line(left, right, domain, m, b):
+    """Gap minima of (left - line) and (line - right) over the domain."""
     left_gap = line_gap_terms(left, m, b, -1)
     right_gap = line_gap_terms(right, m, b, 1)
     x_left, min_left = minimize_convex(left_gap, domain)

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from fractions import Fraction
 
-from flask import Flask, Response, render_template, request
+from flask import Flask, Response, render_template, request, send_from_directory
 
 from . import engine, render, solve
 from .kernels import EXACT_TYPES, TYPES
@@ -158,22 +159,23 @@ def en_slash():
 
 # 本地演示页：站端页面引用 jsdelivr/hertzen 三个 CDN 依赖（MathJax/KaTeX/
 # html2canvas），离线或 CDN 不可达时公式不排版。/demo 把 URL 改写为
-# static/vendor 下的本地副本；/ 与 /en 保持站端逐字节不动（parity 夹具）。
+# static/vendor 下的本地副本（vendor 文件缺席则保留 CDN URL，在线环境仍可
+# 排版）；/ 与 /en 保持站端逐字节不动（parity 夹具）。
 DEMO_CDN = (
     ("https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js", "mathjax/tex-mml-chtml.js"),
     ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css", "katex/katex.min.css"),
     ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js", "katex/katex.min.js"),
     ("https://html2canvas.hertzen.com/dist/html2canvas.min.js", "html2canvas.min.js"),
 )
-DEMO_ASSETS = {cdn: f"/static/vendor/{name}" for cdn, name in DEMO_CDN}
 
 
 @app.get("/demo")
 def demo():
-    """Same page as / with the three CDN URLs rewritten to vendored copies."""
+    """Same page as / with the CDN URLs rewritten to vendored copies that exist."""
     html = render_template("index.html")
-    for cdn, local in DEMO_ASSETS.items():
-        html = html.replace(cdn, local)
+    for cdn, name in DEMO_CDN:
+        if os.path.isfile(os.path.join(app.static_folder, "vendor", name)):
+            html = html.replace(cdn, f"/static/vendor/{name}")
     return html
 
 
@@ -189,8 +191,6 @@ def attention():
 @app.get("/attention/static/<path:name>")
 def attention_static(name: str):
     """Mirror of /static under the /attention prefix."""
-    from flask import send_from_directory
-
     return send_from_directory(app.static_folder, name)
 
 
@@ -248,7 +248,7 @@ def calculate():
     try:
         result = solve.prove(kind, power_wire, comp, rational_wire, exact=exact)
     except (engine.WrongDirection, engine.NoSolution) as exc:
-        return fail(solve.failure_text(exc, kind, comp), 404)
+        return fail(solve.failure_text(exc, kind, comp, exact=exact), 404)
     except engine.EqualClaim as exc:
         return fail(str(exc), 404)
     except ValueError as exc:
@@ -343,7 +343,7 @@ def get_integral_image():
     """Render the LaTeX proof equation for solved parameters via the kernel family."""
     kind = request.args.get("type", "pi")
     comp = request.args.get("comparison", ">")
-    if not kind or kind not in TYPES:
+    if kind not in TYPES:
         return fail("无效的证明类型", 400)
     if comp not in (">", "<"):
         return fail("无效的不等号方向", 400)
@@ -424,8 +424,6 @@ def convex_page():
 @app.get("/convex/static/<path:name>")
 def convex_static(name: str):
     """/convex/static/* 与主站共用 static 目录（bg1.png sha256 实测一致）。"""
-    from flask import send_from_directory
-
     return send_from_directory(app.static_folder, name)
 
 

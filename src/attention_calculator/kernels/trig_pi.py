@@ -49,6 +49,7 @@ def angle_moment(j: int, alpha: Fraction) -> Moment:
     out: Moment = {}
 
     def addto(key: str, v: Fraction) -> None:
+        """Accumulate v into out[key]."""
         out[key] = out.get(key, Fraction(0)) + v
 
     if j % 2:

@@ -179,11 +179,13 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     if sym == "arctan":
 
         def term(k: int) -> tuple[Fraction, Fraction]:
+            """Arctan basis term: the k-th arctan moment."""
             return atan_moment(k, q)
     else:
         factor = cfg["factor"]
 
         def term(k: int) -> tuple[Fraction, Fraction]:
+            """Ln basis term: the k-th ln moment scaled by the family factor."""
             cc, rat = ln_moment(k, r, odd)
             return cc * factor, rat
 

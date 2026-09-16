@@ -101,7 +101,7 @@ class Sub:
     comp: str = ">"  # proved direction on U
     bound: Fraction = Fraction(0)  # rational bound on U
     floor: Fraction = Fraction(0)  # measured provability floor on U for comp
-    u: object = None  # mpf value of U (filled at DPS)
+    u: mp.mpf | None = None  # mpf value of U (filled at DPS)
     proof: dict | None = None
     error: str | None = None
 
@@ -364,7 +364,7 @@ SYMPY_CONST = {
 }
 
 
-def _lt(q: Fraction, x) -> bool:
+def lt(q: Fraction, x) -> bool:
     """Exact Fraction < sympy-transcendental comparison (for the pi bounds)."""
     return bool(sp.Rational(q.numerator, q.denominator) < x)
 
@@ -384,10 +384,10 @@ ATOM_DOMAIN = {
     "psi1_q": lambda q: q > 0,
     "coth_q": lambda q: q > 0,
     "li2_q": lambda q: q != 0 and q < 1,
-    "sin_q": lambda q: q > 0 and _lt(q, sp.pi),
-    "cos_q": lambda q: q > 0 and _lt(q, PI2),
-    "tan_q": lambda q: q > 0 and _lt(q, PI2),
-    "cot_q": lambda q: q > 0 and _lt(q, PI2),
+    "sin_q": lambda q: q > 0 and lt(q, sp.pi),
+    "cos_q": lambda q: q > 0 and lt(q, PI2),
+    "tan_q": lambda q: q > 0 and lt(q, PI2),
+    "cot_q": lambda q: q > 0 and lt(q, PI2),
     "sin_q_degree": lambda q: 0 < q < 90,
     "cos_q_degree": lambda q: 0 < q < 90,
     "sin_pi_q": lambda q: 0 < q < Fraction(1, 2),
@@ -559,8 +559,9 @@ def single_atom_exact(expr):
 def parse_problem(problem: str):
     """Split ``problem`` reusing decompose.py's parser pieces.
 
-    Returns (comp, terms, rationals, rhs, lhs_expr): terms are (coef, atoms)
-    pairs; rhs is Fraction for a numeric right side or a (kind, arg) atom.
+    Returns (comp, terms, rationals, r, lhs_expr, rhs_expr): terms are
+    (coef, atoms) pairs; r is Fraction for a numeric right side or a
+    (kind, arg) atom tuple; lhs_expr/rhs_expr are the sympy sides.
     """
     txt = problem.replace(" ", "").replace("\n", "")
     txt = txt.replace("°", "*pi/180").replace("^", "**")
@@ -758,7 +759,7 @@ def decompose_exact(problem: str) -> dict:
     Every step carries the emitted (kind, power, comparison, bound), the
     prove parameters, achieved depth m+n, and the certified margin.
     """
-    comp, terms_raw, rationals, r, lhs_expr, _rhs = parse_problem(problem)
+    comp, terms_raw, rationals, r, lhs_expr, _ = parse_problem(problem)
     dir_sign = 1 if comp == ">" else -1
 
     if not isinstance(r, Fraction):

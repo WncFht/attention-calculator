@@ -12,7 +12,7 @@ from fractions import Fraction
 import sympy as sp
 
 from . import render, solve
-from .engine import EqualClaim, NoSolution, WrongDirection
+from .engine import NoSolution, WrongDirection
 
 # ------------------------------------------------------------------ sympy 表示
 # 常数一律用 Symbol（e/pi/gamma/golden/catalan/gauss/varpi/zeta3），canon 排序
@@ -557,11 +557,8 @@ def make_step(kind, arg, coef_disp, comp, bound, is_factor=False):
         res = solve.prove(kind, power, comp, str(bound_eff))
     except (WrongDirection, NoSolution) as exc:
         inner = solve.failure_text(exc, kind, comp)
-    except EqualClaim as exc:
-        inner = str(exc)
-    except ValueError as exc:
-        inner = str(exc)
     except Exception as exc:
+        # EqualClaim 是 ValueError 子类；它与 ValueError/其它内核异常同走 str(exc)
         inner = str(exc)
     else:
         equation = render.render_equation(res["parameters"], kind, power, comp, str(bound_eff))

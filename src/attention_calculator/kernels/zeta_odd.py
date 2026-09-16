@@ -38,6 +38,7 @@ def basis(m: int, n: int, kind: str) -> list[Moment]:
     r, factor = ZETA[kind]
 
     def term(k: int) -> tuple[Fraction, Fraction]:
+        """Ln basis term scaled by the zeta eta-factor."""
         cc, rat = ln_moment(k, r, True)
         return cc * factor, rat
 

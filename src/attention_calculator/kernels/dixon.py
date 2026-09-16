@@ -187,14 +187,14 @@ def bound_proof(kind: str, comp: str, power: Fraction, bound: Fraction) -> dict:
             t = target[sym] / mom[sym]
             b = target.get("1", Fraction(0)) - t * mom.get("1", Fraction(0))
             if t >= 0 and b > 0:
-                return _emit_bound(kind, m, flag, t, b)
+                return emit_bound(kind, m, flag, t, b)
     elif target["1"] > 0:
         # bound == 0: the claim is its rational part — t = 0 kills the moment
-        return _emit_bound(kind, 0, flag, Fraction(0), target["1"])
+        return emit_bound(kind, 0, flag, Fraction(0), target["1"])
     raise NoSolution
 
 
-def _emit_bound(kind: str, m: int, flag: int, t: Fraction, b: Fraction) -> dict:
+def emit_bound(kind: str, m: int, flag: int, t: Fraction, b: Fraction) -> dict:
     """The cu_val=1 parameter shape: au/u = t, b_val = b, other slots zero."""
     return {
         "type": kind,

@@ -39,29 +39,29 @@ from ..engine import NoSolution
 
 DPS_LADDER = (80, 300, 1200)
 
-_RULES = ("sqrt_mul", "sqrt_div", "sqrt", "pos_transfer", "pi_div_agm")
+RULES = ("sqrt_mul", "sqrt_div", "sqrt", "pos_transfer", "pi_div_agm")
 
 
-def _flip(comp: str) -> str:
+def flip(comp: str) -> str:
     """Opposite comparison."""
     return "<" if comp == ">" else ">"
 
 
-def _snap(x) -> Fraction:
+def snap(x) -> Fraction:
     """Snap an mpf to a Fraction at ~40 significant digits."""
     return Fraction(mp.nstr(x, 40))
 
 
-def _snap_candidates(x) -> list:
+def snap_candidates(x) -> list:
     """Interior-snap candidates, pretty rationals first: the child oracle and
     the exact product checks are the real gatekeepers, so a cheap
     small-denominator snap is tried before the full-precision one."""
     pretty = Fraction(mp.nstr(x, 30)).limit_denominator(10**6)
-    fine = _snap(x)
+    fine = snap(x)
     return [pretty, fine] if pretty != fine else [fine]
 
 
-def _const_mpf(name: str):
+def const_mpf(name: str):
     """Unit constants at ambient precision: g, h, s, S, T, V."""
     if name == "g":
         return mp.gamma(mp.mpf(1) / 4)
@@ -76,7 +76,7 @@ def _const_mpf(name: str):
     return mp.pi * mp.sqrt(2)  # V
 
 
-def _child_cert(kind: str, power: Fraction, comp: str, bound: Fraction):
+def child_cert(kind: str, power: Fraction, comp: str, bound: Fraction):
     """solve.prove a child claim; (certificate, ok)."""
     from .. import solve
 
@@ -90,7 +90,7 @@ def _child_cert(kind: str, power: Fraction, comp: str, bound: Fraction):
 # ------------------------------------------------------------------ builders
 
 
-def _cert(
+def make_cert(
     kind: str, comp: str, R: Fraction, rule: str, witness: dict, expect: list, children: list
 ) -> dict:
     """Assemble a composite cert for the normalized claim ``C(kind) comp R``."""
@@ -109,11 +109,11 @@ def _cert(
     }
 
 
-def _sqrt_mul(comp: str, R: Fraction) -> dict | None:
+def sqrt_mul(comp: str, R: Fraction) -> dict | None:
     """Witness + child certs for ``g comp R`` via g² = S·T; None if unproved."""
     for dps in DPS_LADDER:
         with mp.workdps(dps):
-            Sv, Tv = _const_mpf("S"), _const_mpf("T")
+            Sv, Tv = const_mpf("S"), const_mpf("T")
             Rm = mp.mpf(R.numerator) / R.denominator
             R2 = Rm * Rm
             if comp == ">":
@@ -124,34 +124,34 @@ def _sqrt_mul(comp: str, R: Fraction) -> dict | None:
                 return None  # numerically infeasible at this precision
             for frac_t in (Fraction(1, 2), Fraction(1, 4), Fraction(3, 4)):
                 t2_pt = lo + (hi - lo) * mp.mpf(frac_t.numerator) / frac_t.denominator
-                for t2 in _snap_candidates(t2_pt):
+                for t2 in snap_candidates(t2_pt):
                     if t2 <= 0:
                         continue
                     # t2 inside (lo,hi) is only snap-accurate; the child oracle
                     # and the exact product check below are the real gatekeepers
                     half = t2 * t2 / 2
-                    pi_cert, ok = _child_cert("pi", Fraction(1), comp, half)
+                    pi_cert, ok = child_cert("pi", Fraction(1), comp, half)
                     if not ok:
                         continue
                     s1_lim = Fraction(R) * R / t2  # s1 range endpoint from the product
                     if comp == ">":
-                        s_lo, s_hi = s1_lim, _snap(Sv)  # s1 ∈ [R²/t2, S)
+                        s_lo, s_hi = s1_lim, snap(Sv)  # s1 ∈ [R²/t2, S)
                     else:
-                        s_lo, s_hi = _snap(Sv), s1_lim  # s1 ∈ (S, R²/t2]
+                        s_lo, s_hi = snap(Sv), s1_lim  # s1 ∈ (S, R²/t2]
                     if not s_lo < s_hi:
                         continue
                     for frac_s in (Fraction(1, 2), Fraction(1, 4), Fraction(3, 4)):
-                        for s1 in _snap_candidates(s_lo + (s_hi - s_lo) * frac_s):
+                        for s1 in snap_candidates(s_lo + (s_hi - s_lo) * frac_s):
                             if s1 <= 0:
                                 continue
                             if comp == ">" and not s1 * t2 >= R * R:
                                 continue
                             if comp == "<" and not s1 * t2 <= R * R:
                                 continue
-                            vp_cert, ok = _child_cert("varpi", Fraction(2), comp, s1)
+                            vp_cert, ok = child_cert("varpi", Fraction(2), comp, s1)
                             if not ok:
                                 continue
-                            return _cert(
+                            return make_cert(
                                 "gamma14",
                                 comp,
                                 R,
@@ -166,11 +166,11 @@ def _sqrt_mul(comp: str, R: Fraction) -> dict | None:
     return None
 
 
-def _sqrt_div(comp: str, R: Fraction) -> dict | None:
+def sqrt_div(comp: str, R: Fraction) -> dict | None:
     """Witness + child certs for ``h comp R`` via h = V/g."""
     for dps in DPS_LADDER:
         with mp.workdps(dps):
-            gv, Vv = _const_mpf("g"), _const_mpf("V")
+            gv, Vv = const_mpf("g"), const_mpf("V")
             Rm = mp.mpf(R.numerator) / R.denominator
             if comp == ">":
                 lo, hi = gv, Vv / Rm  # B in (g, V/R)
@@ -180,10 +180,10 @@ def _sqrt_div(comp: str, R: Fraction) -> dict | None:
                 return None
             for frac_b in (Fraction(1, 2), Fraction(1, 4), Fraction(3, 4)):
                 b_pt = lo + (hi - lo) * mp.mpf(frac_b.numerator) / frac_b.denominator
-                for B in _snap_candidates(b_pt):
+                for B in snap_candidates(b_pt):
                     if B <= 0:
                         continue
-                    g_cert, ok = _child_cert("gamma14", Fraction(1), _flip(comp), B)
+                    g_cert, ok = child_cert("gamma14", Fraction(1), flip(comp), B)
                     if not ok:
                         continue
                     # A must sit on V's side of R·B: midpoint of (R·B, V) for
@@ -195,22 +195,22 @@ def _sqrt_div(comp: str, R: Fraction) -> dict | None:
                             * (mp.mpf(B.numerator) / B.denominator)
                         )
                         a_pt = (Am + Vv) / 2
-                    for A in _snap_candidates(a_pt):
+                    for A in snap_candidates(a_pt):
                         if comp == ">" and not A >= R * B:
                             continue
                         if comp == "<" and not A <= R * B:
                             continue
-                        v_cert, ok = _child_cert("pi_sqrt2", Fraction(1), comp, A)
+                        v_cert, ok = child_cert("pi_sqrt2", Fraction(1), comp, A)
                         if not ok:
                             continue
-                        return _cert(
+                        return make_cert(
                             "gamma34",
                             comp,
                             R,
                             "sqrt_div",
                             {"B": B, "A": A},
                             [
-                                ("gamma14", Fraction(1), _flip(comp), B),
+                                ("gamma14", Fraction(1), flip(comp), B),
                                 ("pi_sqrt2", Fraction(1), comp, A),
                             ],
                             [g_cert, v_cert],
@@ -218,13 +218,13 @@ def _sqrt_div(comp: str, R: Fraction) -> dict | None:
     return None
 
 
-def _sqrt(comp: str, R: Fraction) -> dict | None:
+def sqrt(comp: str, R: Fraction) -> dict | None:
     """Witness + child cert for ``s comp R`` via s² = π; R > 0."""
     half = R * R
-    pi_cert, ok = _child_cert("pi", Fraction(1), comp, half)
+    pi_cert, ok = child_cert("pi", Fraction(1), comp, half)
     if not ok:
         return None
-    return _cert(
+    return make_cert(
         "gamma12",
         comp,
         R,
@@ -235,15 +235,15 @@ def _sqrt(comp: str, R: Fraction) -> dict | None:
     )
 
 
-def _pos_transfer(kind: str, R: Fraction) -> dict | None:
+def pos_transfer(kind: str, R: Fraction) -> dict | None:
     """``C > R`` for R ≤ 0 via a child proving C > w for some w > 0."""
     for dps in DPS_LADDER:
         with mp.workdps(dps):
-            w = _snap(_const_mpf({"gamma14": "g", "gamma34": "h", "gamma12": "s"}[kind]) / 2)
-        child, ok = _child_cert(kind, Fraction(1), ">", w)
+            w = snap(const_mpf({"gamma14": "g", "gamma34": "h", "gamma12": "s"}[kind]) / 2)
+        child, ok = child_cert(kind, Fraction(1), ">", w)
         if not ok:
             continue
-        return _cert(
+        return make_cert(
             kind,
             ">",
             R,
@@ -255,17 +255,17 @@ def _pos_transfer(kind: str, R: Fraction) -> dict | None:
     return None
 
 
-def _prove_const(kind: str, comp: str, R: Fraction) -> dict | None:
+def prove_const(kind: str, comp: str, R: Fraction) -> dict | None:
     """Composite cert for the normalized unit claim, or None."""
     if comp == ">" and R <= 0:
-        return _pos_transfer(kind, R)
+        return pos_transfer(kind, R)
     if comp == "<" and R <= 0:
         return None  # false claim — certified_cmp should have caught it
     if kind == "gamma14":
-        return _sqrt_mul(comp, R)
+        return sqrt_mul(comp, R)
     if kind == "gamma34":
-        return _sqrt_div(comp, R)
-    return _sqrt(comp, R)
+        return sqrt_div(comp, R)
+    return sqrt(comp, R)
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = True) -> dict:
@@ -278,8 +278,8 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     if power == 0:
         raise ValueError("Γ型系数不能为0：命题退化为有理数比较")
     R = bound / power
-    c = comp if power > 0 else _flip(comp)
-    cert = _prove_const(kind, c, R)
+    c = comp if power > 0 else flip(comp)
+    cert = prove_const(kind, c, R)
     if cert is None:
         raise NoSolution
     # the cert's own claim fields record the literal request; the normalized
@@ -318,7 +318,7 @@ def verify_cert(cert: dict) -> bool:
         return False
     if kind not in ("gamma14", "gamma34", "gamma12", "varpi") or comp not in (">", "<"):
         return False
-    if rule not in _RULES or q == 0 or len(expect) != len(children):
+    if rule not in RULES or q == 0 or len(expect) != len(children):
         return False
 
     from ..certificate import verify_cert as verify_any
@@ -331,7 +331,7 @@ def verify_cert(cert: dict) -> bool:
             return False
 
     R = p / q
-    c = comp if q > 0 else _flip(comp)
+    c = comp if q > 0 else flip(comp)
     if rule == "pos_transfer":
         w = witness["w"]
         return c == ">" and R <= 0 and w > 0 and expect == [(kind, Fraction(1), ">", w)]
@@ -365,6 +365,6 @@ def verify_cert(cert: dict) -> bool:
         return False
     side_ok = A >= R * B if c == ">" else A <= R * B
     return side_ok and expect == [
-        ("gamma14", Fraction(1), _flip(c), B),
+        ("gamma14", Fraction(1), flip(c), B),
         ("pi_sqrt2", Fraction(1), c, A),
     ]

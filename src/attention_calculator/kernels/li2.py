@@ -191,7 +191,7 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     return result
 
 
-def _shift_sympy(fam: str, d: int, q: sp.Rational) -> sp.Expr:
+def shift_sympy(fam: str, d: int, q: sp.Rational) -> sp.Expr:
     """L(x) as a sympy expression, mirroring shift_poly."""
     if fam == "chord":
         return q + (-sp.log(1 - q) - q) * x
@@ -217,6 +217,6 @@ def render_equation(
     const = rf"\mathrm{{Li}}_2\left({rat_tex(power)}\right)"
     lhs = lhs_tex(const, rat_tex(bound), comp)
 
-    kern = s * (-sp.log(1 - q * x) / x - _shift_sympy(fam, d, q))
+    kern = s * (-sp.log(1 - q * x) / x - shift_sympy(fam, d, q))
     body = x**m * (1 - x) ** n * (au + bu * x + cu * x**2) * kern / u
     return f"{lhs} = \\int_0^1 {sp.latex(body)} \\mathrm{{d}} x > 0"

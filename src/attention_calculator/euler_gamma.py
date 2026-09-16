@@ -54,26 +54,26 @@ LN_MAX_N = 140  # Pade index budget for the ln-2 children
 
 # ----------------------------------------------------------------- QQ tables
 
-_B = [Fraction(1)]  # incremental Bernoulli table; _B[odd > 1] = 0
+B = [Fraction(1)]  # incremental Bernoulli table; B[odd > 1] = 0
 
 
-def _bernoulli(n: int) -> Fraction:
+def bernoulli(n: int) -> Fraction:
     """B_n over QQ via sum_{k<=m} C(m+1, k) B_k = 0 (B_0 = 1, B_1 = -1/2)."""
-    while len(_B) <= n:
-        m = len(_B)
-        _B.append(-Fraction(1, m + 1) * sum(Fraction(comb(m + 1, k)) * _B[k] for k in range(m)))
-    return _B[n]
+    while len(B) <= n:
+        m = len(B)
+        B.append(-Fraction(1, m + 1) * sum(Fraction(comb(m + 1, k)) * B[k] for k in range(m)))
+    return B[n]
 
 
-def _bpoly_minus(n: int) -> list[Fraction]:
+def bpoly_minus(n: int) -> list[Fraction]:
     """Ascending coefficients of s(x) = B_n(x) - B_n (constant term drops)."""
-    _bernoulli(n)
-    c = [Fraction(comb(n, k)) * _B[n - k] for k in range(n + 1)]
-    c[0] -= _B[n]
+    bernoulli(n)
+    c = [Fraction(comb(n, k)) * B[n - k] for k in range(n + 1)]
+    c[0] -= B[n]
     return c
 
 
-def _bernstein(c: list[Fraction]) -> list[Fraction]:
+def bernstein(c: list[Fraction]) -> list[Fraction]:
     """Bernstein coefficients of an ascending-coefficient polynomial on [0,1]."""
     d = len(c) - 1
     return [
@@ -81,23 +81,23 @@ def _bernstein(c: list[Fraction]) -> list[Fraction]:
     ]
 
 
-def _tail(n_harm: int, j: int) -> Fraction:
+def tail_bound(n_harm: int, j: int) -> Fraction:
     """T = (sum_k C(2J+2,k) |B_k|) / ((2J+2) N^{2J+2}); |E_J(N)| < T."""
     n = 2 * j + 2
-    _bernoulli(n)
-    s = sum(Fraction(comb(n, k)) * abs(_B[k]) for k in range(n))
+    bernoulli(n)
+    s = sum(Fraction(comb(n, k)) * abs(B[k]) for k in range(n))
     return s / (n * n_harm**n)
 
 
-def _rat_part(n_harm: int, j: int) -> Fraction:
+def rat_part(n_harm: int, j: int) -> Fraction:
     """RA = H_N - 1/(2N) + sum_{j<=J} B_{2j}/(2j N^{2j}) over QQ."""
-    _bernoulli(2 * j + 2)
+    bernoulli(2 * j + 2)
     h = sum(Fraction(1, i) for i in range(1, n_harm + 1))
-    s = sum(_B[2 * i] / (2 * i * n_harm ** (2 * i)) for i in range(1, j + 1))
+    s = sum(B[2 * i] / (2 * i * n_harm ** (2 * i)) for i in range(1, j + 1))
     return h - Fraction(1, 2 * n_harm) + s
 
 
-def _sign_certified(j: int) -> bool:
+def sign_certified(j: int) -> bool:
     """Bernstein check: s = B_{2J+2}(x) - B_{2J+2} keeps sign (-1)^{J+1}.
 
     All Bernstein coefficients of s on [0, 1] must lie in {0, (-1)^{J+1}};
@@ -105,29 +105,29 @@ def _sign_certified(j: int) -> bool:
     some interior b_i is nonzero.  Sufficient and fully elementary.
     """
     want_pos = j % 2 == 1  # (-1)^{J+1}: J odd -> positive
-    return all(b == 0 or (b > 0) == want_pos for b in _bernstein(_bpoly_minus(2 * j + 2)))
+    return all(b == 0 or (b > 0) == want_pos for b in bernstein(bpoly_minus(2 * j + 2)))
 
 
 # -------------------------------------------------------------------- prover
 
 
-def _flip(comp: str) -> str:
+def flip(comp: str) -> str:
     """Opposite comparison."""
     return "<" if comp == ">" else ">"
 
 
-def _snap(x, digits: int) -> Fraction:
+def snap(x, digits: int) -> Fraction:
     """Snap an mpf to a Fraction at the given significant digits."""
     return Fraction(mp.nstr(x, digits))
 
 
-def _ln_cert(comp: str, bound: Fraction, max_n: int) -> dict | None:
+def ln_cert(comp: str, bound: Fraction, max_n: int) -> dict | None:
     """Wire-form Pade certificate for ``ln 2 comp bound``; None if unproved."""
     cert = pade.prove("ln_q", Fraction(2), comp, bound, max_n=max_n)
     return None if cert is None else pade.cert_jsonable(cert)
 
 
-def _pick_j(n_harm: int, comp: str, want) -> int | None:
+def pick_j(n_harm: int, comp: str, want) -> int | None:
     """Smallest right-parity J with tail < want (mpf heuristic), or None.
 
     J must be even for '>' (E_J > 0) and odd for '<' (E_J < 0).  The scan
@@ -136,16 +136,16 @@ def _pick_j(n_harm: int, comp: str, want) -> int | None:
     """
     best = None
     for j in range(0 if comp == ">" else 1, J_CAP + 1, 2):
-        t = _tail(n_harm, j)
+        t = tail_bound(n_harm, j)
         if best is not None and t >= best:
             return None  # tail bottomed out above want at this N
         best = t
         if mp.mpf(t.numerator) / t.denominator < want:
-            return j if _sign_certified(j) else None
+            return j if sign_certified(j) else None
     return None
 
 
-def _prove_const(comp: str, bound: Fraction, max_n: int) -> dict | None:
+def prove_const(comp: str, bound: Fraction, max_n: int) -> dict | None:
     """Certificate for the normalized claim ``gamma comp bound``, or None."""
     dps = max(80, len(str(bound.numerator)) + len(str(bound.denominator)) + 40)
     with mp.workdps(dps):
@@ -157,10 +157,10 @@ def _prove_const(comp: str, bound: Fraction, max_n: int) -> dict | None:
             return None  # numerically false -- or below heuristic resolution
         for t in range(1, T_CAP + 1):
             n_harm = 1 << t
-            j = _pick_j(n_harm, comp, gap / 4)
+            j = pick_j(n_harm, comp, gap / 4)
             if j is None:
                 continue
-            ra = _rat_part(n_harm, j)
+            ra = rat_part(n_harm, j)
             lim = (ra - bound) / t  # '>' needs u <= lim; '<' needs l >= lim
             limn = mp.mpf(lim.numerator) / lim.denominator
             room = limn - ln2 if comp == ">" else ln2 - limn
@@ -174,13 +174,13 @@ def _prove_const(comp: str, bound: Fraction, max_n: int) -> dict | None:
                 cands.append(Fraction(69, 100))
             for f in (mp.mpf(1) / 2, mp.mpf(3) / 4, mp.mpf(1) / 4, mp.mpf(15) / 16):
                 pt = ln2 + f * room if comp == ">" else ln2 - f * room
-                cands += [_snap(pt, digits), _snap(pt, digits).limit_denominator(10**6)]
+                cands += [snap(pt, digits), snap(pt, digits).limit_denominator(10**6)]
             for b in cands:
                 if comp == ">":
                     if ra - t * b < bound:
                         continue  # candidate past lim (snap noise)
                     u = b
-                    low = _snap(ln2 - (mp.mpf(u.numerator) / u.denominator - ln2), digits)
+                    low = snap(ln2 - (mp.mpf(u.numerator) / u.denominator - ln2), digits)
                     if low <= 0:
                         low = Fraction(69, 100)  # loose filler, still < ln 2
                 else:
@@ -189,14 +189,14 @@ def _prove_const(comp: str, bound: Fraction, max_n: int) -> dict | None:
                     if b <= 0 or ra - t * b > bound:
                         continue
                     low = b
-                    u = _snap(ln2 + (ln2 - mp.mpf(low.numerator) / low.denominator), digits)
-                hi_child = _ln_cert("<", u, max_n)
+                    u = snap(ln2 + (ln2 - mp.mpf(low.numerator) / low.denominator), digits)
+                hi_child = ln_cert("<", u, max_n)
                 if hi_child is None:
                     continue
-                lo_child = _ln_cert(">", low, max_n)
+                lo_child = ln_cert(">", low, max_n)
                 if lo_child is None:
                     continue
-                tail = _tail(n_harm, j)
+                tail = tail_bound(n_harm, j)
                 e_lo = Fraction(0) if j % 2 == 0 else -tail
                 e_hi = tail if j % 2 == 0 else Fraction(0)
                 return {
@@ -235,8 +235,8 @@ def prove(
         raise ValueError(f"bad comparison {comp!r}")
     if power == 0:
         raise ValueError("γ型系数不能为0：命题退化为有理数比较")
-    c = comp if power > 0 else _flip(comp)
-    cert = _prove_const(c, bound / power, max_n)
+    c = comp if power > 0 else flip(comp)
+    cert = prove_const(c, bound / power, max_n)
     if cert is None:
         return None
     # the cert's claim fields record the literal request; the normalized
@@ -297,26 +297,26 @@ def verify_cert(cert: dict) -> bool:
         except Exception:
             return False
 
-    if tail != _tail(n, j) or not _sign_certified(j):
+    if tail != tail_bound(n, j) or not sign_certified(j):
         return False
-    ra = _rat_part(n, j)
+    ra = rat_part(n, j)
     e_lo = Fraction(0) if j % 2 == 0 else -tail
     e_hi = tail if j % 2 == 0 else Fraction(0)
     if (lo, hi) != (ra - t * u + e_lo, ra - t * low + e_hi):
         return False
-    c = comp if q > 0 else _flip(comp)
+    c = comp if q > 0 else flip(comp)
     return lo >= p / q if c == ">" else hi <= p / q
 
 
 # ------------------------------------------------------------------ wire JSON
 
-_FRAC_KEYS = ("q", "p", "tail", "lo", "hi")
+FRAC_KEYS = ("q", "p", "tail", "lo", "hi")
 
 
 def cert_jsonable(cert: dict) -> dict:
     """JSON-safe copy; fields are already 'n/d' strings (idempotent)."""
     out = dict(cert)
-    for k in _FRAC_KEYS:
+    for k in FRAC_KEYS:
         out[k] = str(cert[k])
     return out
 
@@ -324,6 +324,6 @@ def cert_jsonable(cert: dict) -> dict:
 def cert_parse(cert: dict) -> dict:
     """Fractions restored for q/p/tail/lo/hi; children left in wire form."""
     out = dict(cert)
-    for k in _FRAC_KEYS:
+    for k in FRAC_KEYS:
         out[k] = Fraction(cert[k])
     return out

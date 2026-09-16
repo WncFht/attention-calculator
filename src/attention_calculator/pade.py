@@ -263,26 +263,6 @@ def prove_point(kind: str, q: Fraction, comp: str, p: Fraction, max_n: int) -> d
     }
 
 
-def pade_ln_lower(q: Fraction, p: Fraction, max_n: int = MAX_N) -> dict | None:
-    """Prove ``ln(1+q) > p`` for q > 0 via interpolated [n/n] lower bounds."""
-    return prove_point("ln_q", q, ">", p, max_n)
-
-
-def pade_ln_upper(q: Fraction, p: Fraction, max_n: int = MAX_N) -> dict | None:
-    """Prove ``ln(1+q) < p`` for q > 0 via interpolated [n+1/n] upper bounds."""
-    return prove_point("ln_q", q, "<", p, max_n)
-
-
-def pade_atan_lower(q: Fraction, p: Fraction, max_n: int = MAX_N) -> dict | None:
-    """Prove ``arctan(q) > p`` for q > 0 via interpolated [2n/2n] lower bounds."""
-    return prove_point("arctan_q", q, ">", p, max_n)
-
-
-def pade_atan_upper(q: Fraction, p: Fraction, max_n: int = MAX_N) -> dict | None:
-    """Prove ``arctan(q) < p`` for q > 0 via interpolated [2n+1/2n+1] uppers."""
-    return prove_point("arctan_q", q, "<", p, max_n)
-
-
 def prove(
     kind: str, power: Fraction, comp: str, bound: Fraction, max_n: int = MAX_N
 ) -> dict | None:
@@ -354,13 +334,13 @@ def verify_cert(cert: dict) -> bool:
 
 # ------------------------------------------------------------------ wire JSON
 
-_FRAC_KEYS = ("q", "p", "a", "b", "resid")
+FRAC_KEYS = ("q", "p", "a", "b", "resid")
 
 
 def cert_jsonable(cert: dict) -> dict:
     """JSON-safe copy of a Padé certificate: every Fraction as "n/d" text."""
     out = dict(cert)
-    for k in _FRAC_KEYS:
+    for k in FRAC_KEYS:
         out[k] = str(cert[k])
     out["serr"] = [
         {**t, "w": str(t["w"]), "c": str(t["c"]), "den": [str(v) for v in t["den"]]}
@@ -372,7 +352,7 @@ def cert_jsonable(cert: dict) -> dict:
 def cert_parse(cert: dict) -> dict:
     """Inverse of cert_jsonable; also accepts already-Fraction fields."""
     out = dict(cert)
-    for k in _FRAC_KEYS:
+    for k in FRAC_KEYS:
         out[k] = Fraction(cert[k])
     out["serr"] = [
         {**t, "w": Fraction(t["w"]), "c": Fraction(t["c"]), "den": [Fraction(v) for v in t["den"]]}
