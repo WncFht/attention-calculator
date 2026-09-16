@@ -13,6 +13,15 @@ health-records.json
 /node_modules/
 /.ruff_cache/
 /.pytest_cache/
+/.mypy_cache/
+
+# 构建/测试产物兜底
+dist/
+build/
+.coverage
+coverage.xml
+htmlcov/
+*.log
 
 # 本机 agent / 预览层（scripts/agent-links.sh、scripts/crossnote-links.sh 重建）
 /CLAUDE.md

@@ -6,7 +6,6 @@
         "editorconfig.editorconfig",
         "timonwong.shellcheck",
         "mkhl.shfmt",
-        "charliermarsh.ruff",
-        "golang.go"
+        "charliermarsh.ruff"
     ]
 }

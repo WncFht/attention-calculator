@@ -50,4 +50,4 @@ CI（`.github/workflows/ci.yml`）与本地同源，本地不过 CI 必挂。
 
 ## Agent 入口约定
 
-`AGENTS.md` 与 `.agents/` 是入库的唯一事实源（skill 本体在 `.agents/skills/`，各带 `agents/openai.yaml` 元数据）。`CLAUDE.md` 与 `.claude/skills/` 是指向它们的软链，属本机便利层、不入库；clone 后跑 `scripts/agent-links.sh` 重建。
+`AGENTS.md` 与 `.agents/` 是入库的唯一事实源；仓级 skill 约定放 `.agents/skills/`（各带 `agents/openai.yaml` 元数据），当前仓库暂无仓级 skill。`CLAUDE.md` 与 `.claude/skills/` 是指向它们的软链，属本机便利层、不入库；clone 后跑 `scripts/agent-links.sh` 重建软链层。
