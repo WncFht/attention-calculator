@@ -1,6 +1,6 @@
 """组合不等式拆解：把"常数 ⋚ 有理数"的复合不等式拆成若干基础型子证明。
 
-界值分配机制 vendor 自 bench/decompose_model.py（对全部实测记录验证过）：
+界值分配机制 vendor 自 bench/archive/decompose_model.py（对全部实测记录验证过）：
 每个加法/乘积项分到一条记录界（chain of running-min/max 有理记录），
 乘积项再按 FACTOR_RANK 把界拆到各因子，倒数因子取底数记录。
 """
