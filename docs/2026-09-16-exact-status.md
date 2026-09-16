@@ -36,11 +36,11 @@
 - `BUG:wd-on-true` ×41（hyperbolic q<0 未做奇偶归约）→ commit 460c5b1 奇偶归约到 |q|；
 - `BUG:crash` ×21（power=0 触发 Fraction(1,0)）→ 同 commit 退化域拒（e_q/cosh_q q=0、coth_q q≤0 等报 ValueError）。
 
-修复后 a9 复扫 9594 例（含 exact-only 型）：**零 BUG**。覆盖率地板前三弱：varpi 26/113、gauss 28/105、gamma 32/109——由 W7 第二证明器波次（AGM 区间法、Euler–Maclaurin）对症补齐中。复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。
+修复后 a9 复扫 9594 例（含 exact-only 型）：**零 BUG**。覆盖率地板前三弱曾是 varpi 26/113、gauss 28/105、gamma 32/109——已由 W7 第二证明器波次补齐（varpi/gauss 走 `agm.py` 区间包络，gamma 走 `euler_gamma.py` EM 包络；三者深界不再依赖 (m,n) 预算）。复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。
 
 ## 在途项
 
-- W7 第二证明器波（收尾中）：`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）仍在跑。已落地：`w7-agm`（AGM 区间证法 commit d5e3000——gauss 双向 ~1e-2000 间隙、varpi ~1e-16 受 pi oracle 地板限）、`w7-ln4`（ln_q_quad，见上表）、`w7-decomp-ext`（commit 09225b5——decompose_exact 原子表覆盖全部 26 型 + 11 个原不可拼写的 site 型，修掉 arg<0 被误读为倒数的预存 bug）。
+- W7 第二证明器波（已收官）：`w7-agm`（AGM 区间证法 commit d5e3000——gauss 双向 ~1e-2000 间隙、varpi ~1e-16 受 pi oracle 地板限）、`w7-euler`（Euler–Maclaurin γ 证法 commit 2d090e7——EM 展开 N=2^t + 定号有界余项 + 两个 ln_q Padé 子证消去 lnN，Bernstein 系数现场重证符号引理，地板 ~1e-700）、`w7-ln4`（ln_q_quad，见上表）、`w7-decomp-ext`（commit 09225b5——decompose_exact 原子表覆盖全部 26 型 + 11 个原不可拼写的 site 型，修掉 arg<0 被误读为倒数的预存 bug）。三弱型地板全被第二证法接管：varpi/gauss 走 agm，gamma 走 euler_gamma。
 - `decompose_exact.py`（commit 4856f27）：可证构造的界分配；**已接线**——`/decompose_inequality` 的 `mode=exact` 走 decompose_exact（commit a492d0d），site 路径不变。
 - 已修复的精度陷阱：`decompose_exact` 的 slack 曾在 `workdps` 外与 mpf 字面量相乘塌缩成 float64（commit e00e5cd 改 Fraction 侧乘）；`import mpmath as mp` 下 `mp.dps = N` 是模块属性静默无操作（真精度留在 15），须用 `mp.mp.dps` 或 workdps——测试文件已清查。
-- 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例，待 w7-agm 第二证法接管）。
+- 未探明：ln_q_square q=13 的预言崩溃（行列式级根因已定位 q∈{5,7} 同型）；pi3 '<' 的 unsolved-true 残余是搜索强度问题而非正确性。
