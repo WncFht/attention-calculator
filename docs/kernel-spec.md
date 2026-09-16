@@ -136,6 +136,14 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 - `sin(π/5) > 1/2` → `∫₀^{π/2} (1-sin x)(637 sin x+125) sin(3x/5)/750 dx`（1-2q=3/5）
 - `γ < 3/5` → `∫₀¹ [x⁵((2-x)/2-1/(1-x)-1/ln x) + x²(1-x)⁴(18460x+2811)/(168(5x+1)⁴)] dx`（前半给 γ+ln6 项、后半是 ln6 上界子证明）
 
+## mode=exact（数学正确性路径，2026-09-16 起）
+
+`solve.prove(..., exact=True)` / `POST /calculate mode=exact` 走正确性路径，与站点行为解耦（site 路径冻结，见 `docs/2026-09-16-math-correctness-plan.md`）：
+
+- **方向判定**：`solve.certified_cmp` 递增精度（80→2400 dps）数值+护栏带认证 `sign(C−r)`；假命题预检即 `方向反了`、等值 `二者相等`、常数不可实值求值（域外输入）→ None 交给核内域校验。扫描中命中非正 P（真矩下即对偶不等式认证）→ 直接 WrongDirection 上报，不做 '<'→未找到 的站点映射。耗尽 → NoSolution（真命题预算内证不出的诚实回答）。
+- **核内真系统**：`module.prove(..., exact=True)` 要求核用真矩求解——trig_pi 走 `basis_moment`（非 site_bias）、beta '<' 不走转置档、ln_q_square q∈{5,7} 正常求解、power≠1 令发射参数满足印刷 LHS（∫印刷被积函数 == `power·C − bound` 的符号向量）。
+- **发射自检**：`exact_check.verify(kind, power, comp, bound, params)` 对每条发射证明做 ℚ 字典相等复核（`combine(coeffs, true_basis) == target` 且 `poly_nonneg`）；失败是自家 bug → InternalError。exact_check 与模式无关：对 site 模式参数跑它即可复核站点输出的真伪（verify.py 的 ℚ 精确版）。
+
 ## 参数语义（a_val/b_val/c_val/au_val/bu_val/cu_val/u_val）
 
 常规模板：`u = lcm(a, b, c 的分母)`，`au_val = a·u` 等整分子，`a_val` 为约分文本；`m, n` 为基指数（响应里 int），`au/bu/cu/u_val` 为字符串。逐型复用：
