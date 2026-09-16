@@ -52,12 +52,12 @@ BF_FLAG_LO, BF_FLAG_HI = 0.0, 70.0
 HEIGHT_TIP_CM = 100.0
 
 
-def _missing(v):
+def missing(v):
     """None 或空字符串视为未填（前端对留空字段发 null；'' 实测同 absent）。"""
     return v is None or v == ""
 
 
-def _num(v, label):
+def num(v, label):
     """站端数值解析，三类错误（s2/s3 实测）：bool -> '格式不正确'；
     float() 失败 -> '必须是数字'；NaN/±Inf -> '必须是有限数字'。"""
     if isinstance(v, bool):
@@ -71,45 +71,22 @@ def _num(v, label):
     return x, None
 
 
-def _need_num(data, key, label, lo, hi):
-    """必填数值字段：缺席 -> 请填写{label}；解析失败 -> 三类错；越界。"""
+def num_field(data, key, label, lo, hi, required=False, integer=False):
+    """数值字段校验：required 缺席 -> 请填写{label}；选填缺席 -> (None, None)。
+    integer 在范围之后追加整数检查并返回 int（范围先于整数，探针钉死）。"""
     v = data.get(key)
-    if _missing(v):
-        return None, f"请填写{label}。"
-    x, err = _num(v, label)
+    if missing(v):
+        return (None, f"请填写{label}。") if required else (None, None)
+    x, err = num(v, label)
     if err:
         return None, err
     if not lo <= x <= hi:
         return None, f"{label}应在 {lo}～{hi} 之间。"
+    if integer:
+        if not x.is_integer():
+            return None, f"{label}必须是整数。"
+        x = int(x)
     return x, None
-
-
-def _opt_num(data, key, label, lo, hi):
-    """选填数值字段：缺席 -> (None, None)；其余同上。"""
-    v = data.get(key)
-    if _missing(v):
-        return None, None
-    x, err = _num(v, label)
-    if err:
-        return None, err
-    if not lo <= x <= hi:
-        return None, f"{label}应在 {lo}～{hi} 之间。"
-    return x, None
-
-
-def _opt_int(data, key, label, lo, hi):
-    """选填整数字段：解析 -> 范围 -> 整数（范围先于整数，探针钉死）。"""
-    v = data.get(key)
-    if _missing(v):
-        return None, None
-    x, err = _num(v, label)
-    if err:
-        return None, err
-    if not lo <= x <= hi:
-        return None, f"{label}应在 {lo}～{hi} 之间。"
-    if not x.is_integer():
-        return None, f"{label}必须是整数。"
-    return int(x), None
 
 
 def validate(data):
@@ -143,30 +120,23 @@ def validate(data):
     f["sex"] = sex
 
     # 年龄：数字 -> 范围(18~120) -> 整数（17.9 实测报范围错，范围先于整数检查）
-    v = data.get("age")
-    if _missing(v):
-        return None, "请填写年龄。"
-    age, err = _num(v, "年龄")
+    x, err = num_field(data, "age", "年龄", 18, 120, required=True, integer=True)
     if err:
         return None, err
-    if not 18 <= age <= 120:
-        return None, "年龄应在 18～120 之间。"
-    if not age.is_integer():
-        return None, "年龄必须是整数。"
-    f["age"] = int(age)
+    f["age"] = x
 
-    x, err = _need_num(data, "height_cm", "身高", 1, 250)
+    x, err = num_field(data, "height_cm", "身高", 1, 250, required=True)
     if err:
         return None, err
     f["height_cm"] = x
 
-    x, err = _need_num(data, "weight_kg", "体重", 1, 500)
+    x, err = num_field(data, "weight_kg", "体重", 1, 500, required=True)
     if err:
         return None, err
     f["weight_kg"] = x
 
     # 活动水平：数字 -> [1.4,2.4] -> 三档枚举
-    x, err = _need_num(data, "pal", "活动水平", 1.4, 2.4)
+    x, err = num_field(data, "pal", "活动水平", 1.4, 2.4, required=True)
     if err:
         return None, err
     if x not in PAL_CHOICES:
@@ -174,30 +144,30 @@ def validate(data):
     f["pal"] = x
 
     # 选填数值，顺序：腰围 -> 臀围 -> 静息心率 -> 运动 -> 血压 -> 睡眠
-    x, err = _opt_num(data, "waist_cm", "腰围", 1, 300)
+    x, err = num_field(data, "waist_cm", "腰围", 1, 300)
     if err:
         return None, err
     f["waist_cm"] = x
 
-    x, err = _opt_num(data, "hip_cm", "臀围", 1, 300)
+    x, err = num_field(data, "hip_cm", "臀围", 1, 300)
     if err:
         return None, err
     f["hip_cm"] = x
 
-    x, err = _opt_int(data, "resting_hr", "静息心率", 20, 250)
+    x, err = num_field(data, "resting_hr", "静息心率", 20, 250, integer=True)
     if err:
         return None, err
     f["resting_hr"] = x
 
     # 运动：类型在场先查枚举（s2:extype-bogus-solo 实测），再查成对，再查时长
     etype, emin = data.get("exercise_type"), data.get("exercise_minutes")
-    if not _missing(etype) and str(etype) not in EXERCISE_TYPES:
+    if not missing(etype) and str(etype) not in EXERCISE_TYPES:
         return None, "请选择页面提供的运动类型。"
-    if _missing(etype) != _missing(emin):
+    if missing(etype) != missing(emin):
         return None, "运动类型和运动时长需要一起填写，或都留空。"
-    if not _missing(etype):
+    if not missing(etype):
         f["exercise_type"] = str(etype)
-        x, err = _opt_int(data, "exercise_minutes", "运动时长", 1, 1440)
+        x, err = num_field(data, "exercise_minutes", "运动时长", 1, 1440, integer=True)
         if err:
             return None, err
         f["exercise_minutes"] = x
@@ -208,16 +178,16 @@ def validate(data):
     # 血压：场景在场先查枚举（s2:bpctx-bogus-solo 实测），再查成组，
     # 再收缩压 -> 舒张压 -> 收缩压须高于舒张压（s3:bp-40-95/100-100 钉死顺序）
     bctx, bsys, bdia = (data.get("bp_context"), data.get("systolic_bp"), data.get("diastolic_bp"))
-    if not _missing(bctx) and str(bctx) not in BP_CONTEXTS:
+    if not missing(bctx) and str(bctx) not in BP_CONTEXTS:
         return None, "请选择页面提供的血压测量场景。"
-    present = [not _missing(x) for x in (bctx, bsys, bdia)]
+    present = [not missing(x) for x in (bctx, bsys, bdia)]
     if any(present) and not all(present):
         return None, "血压测量场景、收缩压和舒张压需要一起填写，或都留空。"
     if all(present):
-        s, err = _opt_int(data, "systolic_bp", "收缩压", 50, 300)
+        s, err = num_field(data, "systolic_bp", "收缩压", 50, 300, integer=True)
         if err:
             return None, err
-        d, err = _opt_int(data, "diastolic_bp", "舒张压", 30, 200)
+        d, err = num_field(data, "diastolic_bp", "舒张压", 30, 200, integer=True)
         if err:
             return None, err
         if s <= d:
@@ -226,7 +196,7 @@ def validate(data):
     else:
         f["bp_context"] = f["systolic_bp"] = f["diastolic_bp"] = None
 
-    x, err = _opt_num(data, "sleep_hours", "平均每晚睡眠时长", 0, 24)
+    x, err = num_field(data, "sleep_hours", "平均每晚睡眠时长", 0, 24)
     if err:
         return None, err
     f["sleep_hours"] = x
@@ -236,24 +206,24 @@ def validate(data):
 
 # ---- 结果组装 -------------------------------------------------------------
 
-_NHC_WEIGHT_URL = "https://www.nhc.gov.cn/wjw/ylyjs/202412/b3d40e0141834897808ce6c9dce76a60.shtml"
-_NHC_WAIST_URL = "https://www.nhc.gov.cn/xcs/c100122/202503/27b26d397f4941ff8ff3846ef40026ee.shtml"
-_NHC_BP_URL = "https://www.nhc.gov.cn/cms-search/downFiles/63f752a17cfd4b4781f744477561866f.pdf"
-_NHC_SLEEP_URL = (
+NHC_WEIGHT_URL = "https://www.nhc.gov.cn/wjw/ylyjs/202412/b3d40e0141834897808ce6c9dce76a60.shtml"
+NHC_WAIST_URL = "https://www.nhc.gov.cn/xcs/c100122/202503/27b26d397f4941ff8ff3846ef40026ee.shtml"
+NHC_BP_URL = "https://www.nhc.gov.cn/cms-search/downFiles/63f752a17cfd4b4781f744477561866f.pdf"
+NHC_SLEEP_URL = (
     "https://www.nhc.gov.cn/guihuaxxs/c100133/202503/70d5836afe804a858b899ee951a24a13.shtml"
 )
-_AHA_HR_URL = (
+AHA_HR_URL = (
     "https://www.heart.org/en/healthy-living/"
     "exercise-and-physical-activity/fitness-basics/"
     "target-heart-rates"
 )
-_CDC_KARVONEN_URL = "https://stacks.cdc.gov/view/cdc/86801"
-_CUNBAE_URL = "https://pmc.ncbi.nlm.nih.gov/articles/PMC3263863/"
-_DEURENBERG_URL = "https://pubmed.ncbi.nlm.nih.gov/2043597/"
-_WATSON_URL = "https://pubmed.ncbi.nlm.nih.gov/6986753/"
+CDC_KARVONEN_URL = "https://stacks.cdc.gov/view/cdc/86801"
+CUNBAE_URL = "https://pmc.ncbi.nlm.nih.gov/articles/PMC3263863/"
+DEURENBERG_URL = "https://pubmed.ncbi.nlm.nih.gov/2043597/"
+WATSON_URL = "https://pubmed.ncbi.nlm.nih.gov/6986753/"
 
 
-def _item(
+def item(
     key,
     category,
     name,
@@ -289,7 +259,7 @@ def _item(
     }
 
 
-def _num_item(
+def num_item(
     key,
     category,
     name,
@@ -305,7 +275,7 @@ def _num_item(
 ):
     """数值型卡片：numeric/display 均为 round(value, digits)。"""
     rounded = round(value, digits)
-    return _item(
+    return item(
         key,
         category,
         name,
@@ -321,10 +291,10 @@ def _num_item(
     )
 
 
-def _range_item(key, category, name, low, high, digits, unit, reference, sort_order, url):
+def range_item(key, category, name, low, high, digits, unit, reference, sort_order, url):
     """区间型卡片：display 'low～high'，numeric 为 null，metadata 带边界。"""
     lo, hi = round(low, digits), round(high, digits)
-    return _item(
+    return item(
         key,
         category,
         name,
@@ -343,7 +313,7 @@ def _range_item(key, category, name, low, high, digits, unit, reference, sort_or
 # ---- 提示语（中英成对；触发顺序见 docs/health-notes.md）-------------------
 
 
-def _tips(
+def build_tips(
     fields,
     bmi_raw,
     bmi_status,
@@ -505,6 +475,19 @@ def _tips(
     return tips, tips_en
 
 
+def body_fat_status(value, male, flagged):
+    """体脂率 (status, direction) 分档：flagged -> 不宜解释；否则按性别界值分档。"""
+    if flagged:
+        return "结果超出公式的合理解释范围", None
+    warn = 20.0 if male else 25.0
+    alarm = 25.0 if male else 30.0
+    if value < warn:
+        return "未达到高体脂报警界值", None
+    if value < alarm:
+        return "处于体脂偏高参考区间", "up"
+    return "达到高体脂报警界值", "up"
+
+
 def calculate(f):
     """对校验通过的字段求值，返回 results 字典（站端 wire 结构）。"""
     sex = f["sex"]
@@ -550,28 +533,9 @@ def calculate(f):
     bf_out_of_age = age > 80
     if bf_out_of_age:
         bf_status, bf_dir = "超出CUN-BAE原始18～80岁验证范围", None
-    elif bf_flag:
-        bf_status, bf_dir = "结果超出公式的合理解释范围", None
     else:
-        warn = 20.0 if male else 25.0
-        alarm = 25.0 if male else 30.0
-        if bf < warn:
-            bf_status, bf_dir = "未达到高体脂报警界值", None
-        elif bf < alarm:
-            bf_status, bf_dir = "处于体脂偏高参考区间", "up"
-        else:
-            bf_status, bf_dir = "达到高体脂报警界值", "up"
-    if deur_flag:
-        deur_status, deur_dir = "结果超出公式的合理解释范围", None
-    else:
-        warn = 20.0 if male else 25.0
-        alarm = 25.0 if male else 30.0
-        if deur < warn:
-            deur_status, deur_dir = "未达到高体脂报警界值", None
-        elif deur < alarm:
-            deur_status, deur_dir = "处于体脂偏高参考区间", "up"
-        else:
-            deur_status, deur_dir = "达到高体脂报警界值", "up"
+        bf_status, bf_dir = body_fat_status(bf, male, bf_flag)
+    deur_status, deur_dir = body_fat_status(deur, male, deur_flag)
 
     # CUN-BAE 不宜 -> 派生体成分与 Cunningham 停止（超龄不停）
     fat_mass = round(bf * w / 100, 1) if not bf_flag else None
@@ -732,7 +696,7 @@ def calculate(f):
 
     # --- 指标卡片（sort_order 即站端顺序）---
     items = [
-        _num_item(
+        num_item(
             "bmi",
             "body",
             "BMI",
@@ -745,7 +709,7 @@ def calculate(f):
             10,
             "https://www.cdc.gov/bmi/about/index.html",
         ),
-        _range_item(
+        range_item(
             "target_weight",
             "body",
             "BMI正常区间对应体重",
@@ -755,13 +719,13 @@ def calculate(f):
             "kg",
             "仅为BMI反算区间",
             20,
-            _NHC_WEIGHT_URL,
+            NHC_WEIGHT_URL,
         ),
     ]
     if wadj is not None:
         amount, gain = wadj
         items.append(
-            _item(
+            item(
                 "weight_adjustment",
                 "body",
                 "达到BMI正常范围所需调整",
@@ -772,13 +736,13 @@ def calculate(f):
                 "down" if gain else "up",
                 "增至BMI 18.5的数学反算值" if gain else "减至BMI 23.9的数学反算值",
                 25,
-                _NHC_WEIGHT_URL,
+                NHC_WEIGHT_URL,
                 metadata={"adjustment_direction": "gain" if gain else "lose"},
             )
         )
     bf_ref = "男性20%～25%提示偏高，≥25%为报警值" if male else "女性25%～30%提示偏高，≥30%为报警值"
     items += [
-        _num_item(
+        num_item(
             "body_fat_cun_bae",
             "body",
             "CUN-BAE估算体脂率",
@@ -789,9 +753,9 @@ def calculate(f):
             bf_dir,
             bf_ref,
             30,
-            _CUNBAE_URL,
+            CUNBAE_URL,
         ),
-        _num_item(
+        num_item(
             "body_fat_deurenberg",
             "body",
             "Deurenberg对照体脂率",
@@ -802,12 +766,12 @@ def calculate(f):
             deur_dir,
             "简化公式对照值",
             35,
-            _DEURENBERG_URL,
+            DEURENBERG_URL,
         ),
     ]
     if fat_mass is not None:
         items.append(
-            _num_item(
+            num_item(
                 "fat_mass",
                 "body",
                 "估算脂肪重量",
@@ -818,13 +782,13 @@ def calculate(f):
                 None,
                 "由估算体脂率推算",
                 40,
-                _CUNBAE_URL,
+                CUNBAE_URL,
                 version="2.0",
             )
         )
     if ffm is not None:
         items.append(
-            _num_item(
+            num_item(
                 "ffm",
                 "body",
                 "估算去脂体重",
@@ -835,12 +799,12 @@ def calculate(f):
                 None,
                 "由估算体脂率推算",
                 50,
-                _CUNBAE_URL,
+                CUNBAE_URL,
                 version="2.0",
             )
         )
     items += [
-        _num_item(
+        num_item(
             "janma_lbm",
             "body",
             "Janmahasatian瘦体重",
@@ -853,7 +817,7 @@ def calculate(f):
             60,
             "https://pmc.ncbi.nlm.nih.gov/articles/PMC3833312/",
         ),
-        _num_item(
+        num_item(
             "bsa_mosteller",
             "body",
             "体表面积 BSA",
@@ -869,7 +833,7 @@ def calculate(f):
     ]
     if waist is not None:
         items += [
-            _num_item(
+            num_item(
                 "waist_assessment",
                 "body",
                 "腰围判断",
@@ -880,9 +844,9 @@ def calculate(f):
                 waist_dir,
                 "男性前期85、中心型90厘米" if male else "女性前期80、中心型85厘米",
                 80,
-                _NHC_WAIST_URL,
+                NHC_WAIST_URL,
             ),
-            _num_item(
+            num_item(
                 "whtr",
                 "body",
                 "腰高比 WHtR",
@@ -898,7 +862,7 @@ def calculate(f):
         ]
     if waist is not None and hip is not None:
         items.append(
-            _num_item(
+            num_item(
                 "whr",
                 "body",
                 "腰臀比 WHR",
@@ -914,7 +878,7 @@ def calculate(f):
         )
     if waist is not None:
         items += [
-            _num_item(
+            num_item(
                 "rfm",
                 "body",
                 "RFM估算体脂率",
@@ -930,7 +894,7 @@ def calculate(f):
         ]
     if hip is not None:
         items.append(
-            _num_item(
+            num_item(
                 "bai",
                 "body",
                 "BAI身体肥胖指数",
@@ -946,7 +910,7 @@ def calculate(f):
         )
     if waist is not None:
         items += [
-            _num_item(
+            num_item(
                 "absi",
                 "body",
                 "ABSI体型指数",
@@ -959,7 +923,7 @@ def calculate(f):
                 130,
                 "https://pubmed.ncbi.nlm.nih.gov/22815707/",
             ),
-            _num_item(
+            num_item(
                 "bri",
                 "body",
                 "BRI身体圆度指数",
@@ -973,7 +937,7 @@ def calculate(f):
                 140,
                 "https://pmc.ncbi.nlm.nih.gov/articles/PMC3692604/",
             ),
-            _num_item(
+            num_item(
                 "conicity",
                 "body",
                 "锥度指数",
@@ -989,7 +953,7 @@ def calculate(f):
         ]
     if not watson_flag:
         items += [
-            _num_item(
+            num_item(
                 "watson_tbw",
                 "body",
                 "Watson估算体水分",
@@ -1000,9 +964,9 @@ def calculate(f):
                 None,
                 "人体测量公式估算",
                 160,
-                _WATSON_URL,
+                WATSON_URL,
             ),
-            _num_item(
+            num_item(
                 "body_water_pct",
                 "body",
                 "估算体水分占比",
@@ -1013,11 +977,11 @@ def calculate(f):
                 None,
                 "由Watson体水分除以体重推算",
                 170,
-                _WATSON_URL,
+                WATSON_URL,
             ),
         ]
     items.append(
-        _num_item(
+        num_item(
             "blood_volume_nadler",
             "body",
             "Nadler估算血容量",
@@ -1032,7 +996,7 @@ def calculate(f):
         )
     )
     items += [
-        _num_item(
+        num_item(
             "mifflin_ree",
             "metabolism",
             "Mifflin静息代谢",
@@ -1045,7 +1009,7 @@ def calculate(f):
             210,
             "https://pubmed.ncbi.nlm.nih.gov/2305711/",
         ),
-        _num_item(
+        num_item(
             "harris_ree",
             "metabolism",
             "Harris–Benedict",
@@ -1061,7 +1025,7 @@ def calculate(f):
     ]
     if cunningham is not None:
         items.append(
-            _num_item(
+            num_item(
                 "cunningham_ree",
                 "metabolism",
                 "Cunningham",
@@ -1077,7 +1041,7 @@ def calculate(f):
             )
         )
     items.append(
-        _num_item(
+        num_item(
             "tdee",
             "metabolism",
             "每日总能量 TDEE",
@@ -1093,7 +1057,7 @@ def calculate(f):
     )
     if rhr is not None:
         items.append(
-            _item(
+            item(
                 "resting_hr",
                 "heart",
                 "静息心率",
@@ -1104,11 +1068,11 @@ def calculate(f):
                 rhr_dir,
                 "多数成人约60～100",
                 310,
-                _AHA_HR_URL,
+                AHA_HR_URL,
             )
         )
     items += [
-        _num_item(
+        num_item(
             "max_hr_tanaka",
             "heart",
             "Tanaka最大心率",
@@ -1121,7 +1085,7 @@ def calculate(f):
             320,
             "https://pubmed.ncbi.nlm.nih.gov/11153730/",
         ),
-        _range_item(
+        range_item(
             "moderate_hr",
             "heart",
             "中等强度心率",
@@ -1131,9 +1095,9 @@ def calculate(f):
             "次/分钟",
             "最大心率50%～70%",
             330,
-            _AHA_HR_URL,
+            AHA_HR_URL,
         ),
-        _range_item(
+        range_item(
             "vigorous_hr",
             "heart",
             "较高强度心率",
@@ -1143,12 +1107,12 @@ def calculate(f):
             "次/分钟",
             "最大心率70%～85%",
             340,
-            _AHA_HR_URL,
+            AHA_HR_URL,
         ),
     ]
     if rhr is not None:
         items += [
-            _range_item(
+            range_item(
                 "karvonen_hr",
                 "heart",
                 "Karvonen目标心率",
@@ -1158,9 +1122,9 @@ def calculate(f):
                 "次/分钟",
                 "心率储备的50%～70%",
                 350,
-                _CDC_KARVONEN_URL,
+                CDC_KARVONEN_URL,
             ),
-            _num_item(
+            num_item(
                 "heart_rate_reserve",
                 "heart",
                 "心率储备",
@@ -1171,9 +1135,9 @@ def calculate(f):
                 None,
                 "估算最大心率减静息心率",
                 360,
-                _CDC_KARVONEN_URL,
+                CDC_KARVONEN_URL,
             ),
-            _num_item(
+            num_item(
                 "estimated_vo2max",
                 "heart",
                 "估算最大摄氧量",
@@ -1188,7 +1152,7 @@ def calculate(f):
             ),
         ]
     items.append(
-        _range_item(
+        range_item(
             "protein_range",
             "nutrition",
             "运动人群蛋白质参考",
@@ -1203,7 +1167,7 @@ def calculate(f):
     )
     if f["exercise_type"] is not None:
         items.append(
-            _item(
+            item(
                 "exercise_kcal",
                 "exercise",
                 "本次运动估算热量",
@@ -1225,7 +1189,7 @@ def calculate(f):
         )
     if f["bp_context"] is not None:
         items += [
-            _item(
+            item(
                 "systolic_bp",
                 "vitals",
                 "收缩压",
@@ -1236,10 +1200,10 @@ def calculate(f):
                 sys_dir,
                 f"{ctx_label}；理想值低于120",
                 610,
-                _NHC_BP_URL,
+                NHC_BP_URL,
                 metadata={"measurement_context": f["bp_context"]},
             ),
-            _item(
+            item(
                 "diastolic_bp",
                 "vitals",
                 "舒张压",
@@ -1250,10 +1214,10 @@ def calculate(f):
                 dia_dir,
                 f"{ctx_label}；理想值低于80",
                 620,
-                _NHC_BP_URL,
+                NHC_BP_URL,
                 metadata={"measurement_context": f["bp_context"]},
             ),
-            _item(
+            item(
                 "blood_pressure_category",
                 "vitals",
                 "血压判断",
@@ -1264,13 +1228,13 @@ def calculate(f):
                 bp_dir,
                 "单次读数仅供筛查，不能诊断",
                 630,
-                _NHC_BP_URL,
+                NHC_BP_URL,
                 metadata={"measurement_context": f["bp_context"]},
             ),
         ]
     if f["sleep_hours"] is not None:
         items.append(
-            _item(
+            item(
                 "sleep_duration",
                 "vitals",
                 "平均每晚睡眠时长",
@@ -1281,12 +1245,12 @@ def calculate(f):
                 sleep_dir,
                 sleep_ref,
                 640,
-                _NHC_SLEEP_URL,
+                NHC_SLEEP_URL,
                 metadata={"reference_low": sleep_lo, "reference_high": sleep_hi},
             )
         )
 
-    tips, tips_en = _tips(
+    tips, tips_en = build_tips(
         f,
         bmi_raw,
         bmi_status,
@@ -1394,18 +1358,18 @@ def calculate(f):
 
 # ---- record_id 持久计数器 -------------------------------------------------
 
-_DB_LOCK = threading.Lock()
+DB_LOCK = threading.Lock()
 
 
-def _db_path():
+def db_path():
     """计数器文件；HEALTH_DB 环境变量可覆盖（测试/多实例用）。"""
     return Path(os.environ.get("HEALTH_DB", "health-records.json"))
 
 
 def next_record_id():
     """返回并递增持久化的 record_id（仅在提交成功时调用，失败不占号）。"""
-    with _DB_LOCK:
-        path = _db_path()
+    with DB_LOCK:
+        path = db_path()
         try:
             n = json.loads(path.read_text())["next"]
         except (OSError, ValueError, KeyError, TypeError):
