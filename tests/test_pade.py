@@ -238,3 +238,60 @@ def test_denominators_pole_free_on_positive_axis():
         for func, L, M in (("ln", n, n), ("ln", n + 1, n), ("atan", 2 * n, 2 * n)):
             _, Q = pade.approx(func, L, M)
             assert Q[0] > 0 and all(v >= 0 for v in Q)
+
+
+# ------------------------------------------------------------- wire plumbing
+
+
+def test_json_round_trip():
+    import json
+
+    cert = pade.prove("arctan_q", Fraction(2), "<", Fraction(692, 625))
+    wire = json.loads(json.dumps(pade.cert_jsonable(cert)))
+    assert pade.verify_cert(pade.cert_parse(wire))
+
+
+def test_certificate_module_dispatches_pade():
+    from attention_calculator import certificate
+
+    cert = pade.cert_jsonable(pade.prove("ln_q", Fraction(8, 5), ">", Fraction(47, 100)))
+    assert certificate.verify_cert(cert)
+    bad = dict(cert, resid=str(Fraction(cert["resid"]) + 1))
+    assert not certificate.verify_cert(bad)
+
+
+def test_solve_fallback_and_http_shape():
+    from attention_calculator.server import app
+
+    # beyond the (m,n) budget -> kernel exhausts, pade takes over
+    resp = app.test_client().post(
+        "/calculate",
+        data={
+            "type": "arctan_q",
+            "power": "2",
+            "comparison": "<",
+            "rational": "692/625",
+            "mode": "exact",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["success"] and body["prover"] == "pade" and body["type"] == "arctan_q"
+    assert "parameters" not in body and "equations" not in body
+    from attention_calculator import certificate
+
+    assert certificate.verify_cert(body["certificate"])
+
+    # kernel-reachable claims keep the classic shape (no prover key)
+    resp = app.test_client().post(
+        "/calculate",
+        data={
+            "type": "arctan_q",
+            "power": "2",
+            "comparison": "<",
+            "rational": "6/5",
+            "mode": "exact",
+        },
+    )
+    body = resp.get_json()
+    assert body["success"] and "prover" not in body and "parameters" in body
