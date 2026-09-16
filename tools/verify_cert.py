@@ -57,6 +57,18 @@ def main() -> int:
             return 0
         print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
         return 1
+    if isinstance(cert, dict) and cert.get("prover") == "euler_gamma":
+        # Euler--Maclaurin gamma certificate: euler_gamma.verify_cert replays
+        # H_N, Bernoulli numbers, the tail bound and both ln-2 child certs
+        ok = verify_cert(cert)
+        print(f"identity_ok: {ok}")
+        print(f"nonneg:      {ok}")
+        print(f"statement:   euler_gamma {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
+        if ok:
+            print("VERIFIED")
+            return 0
+        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
+        return 1
     if isinstance(cert, dict) and cert.get("prover") == "composite":
         # Composite proof DAG: children verified recursively inside
         # gamma_special.verify_cert; the transfer arithmetic is all-QQ

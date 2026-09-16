@@ -917,7 +917,7 @@ def assemble(problem, comp, R, terms, slack, direct, lhs=None) -> dict:
                         step["equation"] = render.render_equation(
                             params, s.kind, str(s.power), s.comp, str(s.bound)
                         )
-                if s.proof.get("prover") in ("pade", "composite", "agm"):
+                if s.proof.get("prover") in ("pade", "composite", "agm", "euler_gamma"):
                     step["prover"] = s.proof["prover"]  # non-(m,n) certificates
                 step["margin"] = str(abs(frac60(s.u) - s.bound))
             else:
@@ -988,7 +988,7 @@ def decompose_exact_pair(problem: str, comp: str, terms_raw: list, ratom: tuple)
         if s.proof is not None:
             if s.proof.get("parameters") is not None:
                 step["parameters"] = s.proof["parameters"]
-            if s.proof.get("prover") in ("pade", "composite", "agm"):
+            if s.proof.get("prover") in ("pade", "composite", "agm", "euler_gamma"):
                 step["prover"] = s.proof["prover"]
         else:
             step["error"] = s.error

@@ -281,6 +281,18 @@ def calculate():
                 "certificate": agm.cert_jsonable(result["certificate"]),
             }
         )
+    if result.get("prover") == "euler_gamma":
+        # W7 Euler--Maclaurin 证法：证书即响应（gamma 用；子证是 ln_q 的 pade 证）
+        from . import euler_gamma
+
+        return respond(
+            {
+                "success": True,
+                "type": result.get("type", kind),
+                "prover": "euler_gamma",
+                "certificate": euler_gamma.cert_jsonable(result["certificate"]),
+            }
+        )
     if result.get("prover") == "composite":
         # W6 Γ-型复合证法：证书是子证明 DAG（全字符串，JSON 安全）
         return respond(

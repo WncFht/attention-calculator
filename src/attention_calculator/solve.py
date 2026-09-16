@@ -291,6 +291,14 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
             cert = agm.prove(kind, q, comp, r)
             if cert is not None:
                 return {"type": kind, "prover": cert["prover"], "certificate": cert}
+        # W7 Euler--Maclaurin 第二证法：gamma 的 (m,n) 预算耗尽后用 EM
+        # 有理包络 + 两个 ln2 子证 DAG 兜底；q=0 是有理比较，退化拒收
+        if kind == "gamma" and q != 0:
+            from . import euler_gamma
+
+            cert = euler_gamma.prove(kind, q, comp, r)
+            if cert is not None:
+                return {"type": kind, "prover": cert["prover"], "certificate": cert}
         raise
     if resp.get("prover") == "composite":
         # W6 Γ-型复合证明：证书是子证明 DAG，children 已在构造时逐个验证

@@ -293,7 +293,7 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
 
 def child_claim(cert: dict) -> tuple[str, Fraction, str, Fraction]:
     """The (kind, power, comp, bound) a certificate certifies, in /calculate units."""
-    if cert.get("prover") == "composite":
+    if cert.get("prover") in ("composite", "euler_gamma"):
         return cert["kind"], Fraction(cert["q"]), cert["comp"], Fraction(cert["p"])
     if "serr" in cert:
         q = Fraction(cert["q"])

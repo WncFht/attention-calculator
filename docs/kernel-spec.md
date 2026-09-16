@@ -224,6 +224,10 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 `agm.py`（顶层，与 pade.py 同级）：G = 1/M(1,√2) 的 AGM 迭代 `a_{n+1}=(a_n+b_n)/2, b_{n+1}=√(a_n·b_n)` 用 isqrt 有理包络（a_n↑M≤b_n↓ 三明治），全程 Fraction/int 无浮点。gauss 在 (m,n) 耗尽后直出区间证书（`prover:"agm"`，`agm_iter`/`agm_digits`/`lo`/`hi` 字段，复核器重放到逐字相等）；varpi = π·G 走 composite DAG（gamma_special 新规则 `pi_div_agm`：pi 子证 + AGM 子证，见证 (A,B)）。实测地板：gauss 双向 ~1e-2000 间隙（digits=4096 档，11 步迭代），varpi ~1e-16（pi oracle 地板所限）。细节 `docs/2026-09-16-agm-impl-notes.md`。
 
+## Euler–Maclaurin 区间法（gamma 的第二套方案）
+
+`euler_gamma.py`（顶层）：γ = A_J(N) − ln N + E_J(N)，A_J(N) = H_N − 1/(2N) + Σ B_{2j}/(2jN^{2j}) 全有理可重算，余项 E_J 定号 sign(−1)^J 且 |E_J| < T = (Σ|c_k|)/((2J+2)N^{2J+2})。取 N = 2^t 使 ln N = t·ln2，两个 ln_q Padé 子证（l < ln2 < u）消去唯一无理件，得 QQ 包络 γ ∈ (lo, hi)；q·γ ⋚ r 归一为 γ ⋚ r/q（q<0 翻转比较，q=0 属有理比较退化拒收）。证书 `prover:"euler_gamma"` 携带 (n, j, tail, lo, hi) + `expect`/`children` 子证 DAG（同 gamma_special 合同）；复核器除全量重放 QQ 算术与两个子证外，还用 Bernstein 系数现场重证 s({x}) 在 [0,1] 上的定号性——符号引理不取信。预算 T_CAP=10（N≤1024）、J_CAP=768、ln 子证 Padé 下标 ≤140，实测地板 ~1e-700 量级。细节 `docs/2026-09-16-euler-gamma-impl-notes.md`。
+
 ## 组合不等式 /decompose_inequality
 
 输入如 `pi^2+8*pi>35`、`e*pi+phi+sin(1)<11`。实测输出：

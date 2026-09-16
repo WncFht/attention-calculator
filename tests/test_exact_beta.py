@@ -144,10 +144,14 @@ def test_gauss_window_never_emits_transposed():
 
 
 def test_gamma_nonpositive_power_honest_failure():
-    # power <= 0 '<' claims are true but unprovable in the printed form —
-    # the coefficient scales every printed term, flipping the sign
-    with pytest.raises(NoSolution):
-        solve.prove("gamma", "-2", "<", "1", exact=True)
+    # power < 0 '<' claims are true but unprovable in the printed form —
+    # the coefficient scales every printed term, flipping the sign; the
+    # Euler--Maclaurin second prover rescues them with a certificate
+    resp = solve.prove("gamma", "-2", "<", "1", exact=True)
+    assert resp["prover"] == "euler_gamma"
+    res = verify_response("gamma", Fraction(-2), "<", Fraction(1), resp)
+    assert res["identity_ok"] and res["nonneg"]
+    # power = 0 stays a degenerate rational-only claim: honestly unsolved
     with pytest.raises(NoSolution):
         solve.prove("gamma", "0", "<", "1", exact=True)
     with pytest.raises(WrongDirection):

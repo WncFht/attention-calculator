@@ -95,6 +95,13 @@ def verify_cert(cert: dict) -> bool:
             return agm.verify_cert(agm.cert_parse(cert))
         except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
             return False
+    if isinstance(cert, dict) and cert.get("prover") == "euler_gamma":
+        from . import euler_gamma
+
+        try:
+            return euler_gamma.verify_cert(euler_gamma.cert_parse(cert))
+        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+            return False
     if isinstance(cert, dict) and cert.get("prover") == "composite":
         from .kernels import gamma_special
 
@@ -135,6 +142,11 @@ def cert_tex(cert: dict) -> str:
         return (
             f"{cert['kind']}({cert['power']}) {cert['comparison']} {cert['bound']}"
             " \\quad (\\mathrm{AGM})"
+        )
+    if cert.get("prover") == "euler_gamma":
+        return (
+            f"{cert['kind']}({cert['q']}) {cert['comp']} {cert['p']}"
+            " \\quad (\\mathrm{Euler--Maclaurin})"
         )
     return f"{_moment_tex(_moment_in(cert['check']['target']))} = \\int f\\,\\mathrm{{d}}x > 0"
 
