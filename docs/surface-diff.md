@@ -101,6 +101,4 @@
 
 ## 收口（2026-09-16）
 
-上文两处遗留均已解决：`decompose.py` 已实现（双判官全绿，规格见
-decompose-notes.md）；`/convex`、`/health` 两个姊妹应用已克隆，
-parity 分别 333/333、420/420 字节级全绿（详见 sibling-apps.md）。
+上文两处遗留均已解决：`decompose.py` 已实现（双判官全绿，规格见 decompose-notes.md）；`/convex`、`/health` 两个姊妹应用已克隆， parity 分别 333/333、420/420 字节级全绿（详见 sibling-apps.md）。

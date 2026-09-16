@@ -1,25 +1,17 @@
 # HANDOFF — 完成记录（2026-09-16 收口）
 
-本文件原是 2026-09-15 的暂停点交接；全部六项任务现已收敛，改写为完成记录。
-**Canonical 仓库即本机 `~/src/attention-calculator`**（本机即 devbox，无 rsync）。
-Python 用 `.venv/bin/python`。
+本文件原是 2026-09-15 的暂停点交接；全部六项任务现已收敛，改写为完成记录。 **Canonical 仓库即本机 `~/src/attention-calculator`**（本机即 devbox，无 rsync）。 Python 用 `.venv/bin/python`。
 
 ## 项目是什么
 
-字节级复现 https://zhuyidao.net/ —— 「注意力计算器」：输入 `常数 ⋚ 有理数`，
-返回构造好的定积分恒等式证明。复刻目标是**站点行为**而非数学正确性——站端的
-bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公开（GitHub 上只有 skill
-薄客户端，`~/src/reference/AttentionCalculator` 有镜像）。
+字节级复现 https://zhuyidao.net/ —— 「注意力计算器」：输入 `常数 ⋚ 有理数`， 返回构造好的定积分恒等式证明。复刻目标是**站点行为**而非数学正确性——站端的 bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公开（GitHub 上只有 skill 薄客户端，`~/src/reference/AttentionCalculator` 有镜像）。
 
 **范围**（用户已确认扩到全站）：主站 29 型 + 姊妹应用 `/convex` + `/health`。
 
 ## Git 状态
 
-- `wip/pause-2026-09-15`（当前分支）= 完成态：下表全部判官零分歧。
-- `master` 停在 `1a3f283`（golden 原 2969 条时期）——**wip 领先未合，
-  待主人确认后 merge 回 master**，这是唯一未完成项。
-- `bench/data/*.jsonl` 是 gitignored 数据资产（rsync/手动同步）；
-  golden.jsonl 现 **3454 条**。
+- `master` = `4527520`，含全部 wip 工作（2026-09-16 fast-forward 合入）；`wip/pause-2026-09-15` 同指，可删。
+- `bench/data/*.jsonl` 是 gitignored 数据资产（rsync/手动同步）； golden.jsonl 现 **3454 条**。
 
 ## 已验证的基线（全部实测）
 
@@ -34,35 +26,25 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 | convex parity（姊妹应用，333 tags） | **333/333 字节级全绿** | `bench/parity_convex.py` |
 | decompose parity | **全绿：combo 87/87 字节级 + decompose 182/182 JSON 级**（wip `6e9b850`） | `bench/parity_decompose.py` |
 | 页面字节级 | `/`、`/en`、`/attention`、`/convex`、`/health`、`/health/en` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
-| pytest | 607 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
+| pytest | 619 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
 
-全量评测一条命令：`bench/run_all.sh`（parity → decompose parity → health/convex
-parity → 三份重放 → verify → 聚合报告）。
+全量评测一条命令：`bench/run_all.sh`（parity → decompose parity → health/convex parity → 三份重放 → verify → 聚合报告）。
 
 ## 站点行为模型（已钉死的关键点）
 
 ### 协议与字节语义
-- 全部响应：`json.dumps(sort_keys=True, ensure_ascii=True, separators=(",",":")) + "\n"`；
-  错误体裸 `{"error": ...}`（主站）或 `{"error","ok":false}`（姊妹应用新约定）。
-- `/calculate`：POST 表单；type 缺省→pi、comparison 缺省→'>'；校验序 =
-  type→comparison→**右侧整组**（格式 `^\d+(/\d+)?$`→分母 0→≥10^16）→**左侧整组**→
-  类型值域 404→求解。数值字段先全局删 `" "`、`"\n"` 再卡格式（`"2 2/7"`→22/7，tab 拒）。
-- `/get_integral_image`：GET only；逐字段 400——int 字段 strip 后 `^-?\d+$`
-  （`+3` 拒、两端空白含 tab 可），m,n∈[0,30]，u_val 下限按型（gamma=0 其余=1）；
-  frac 字段同 /calculate 语法但允许负号；**coef/rational 不校验、原文回显**。
-- `/decompose_inequality`：POST `problem`；空/不可解析→400 `请输入一个只包含一个 > 或 < 的不等式`；
-  含非基础常数乘积→400 `当前乘积证明只支持基础常数的乘积`。
-- 非 2xx 全 JSON：未知路径 404 `请求的页面不存在`；错方法→500 `服务器内部错误，请稍后再试`；
-  `/en/`→404（无斜杠跳转）；`/favicon.ico`→204 空。
-- 求解语义：方向假（float64 判定）报 `方向反了` 先于搜索耗尽；真但搜不到→`未找到{方向}方向的解`
-  （cap：pi/e=30 其余=10，按单指数计 m,n 各自 ≤cap）；精确有理相等→404 `二者相等`（仅 Niven 点可达）。
+- 全部响应：`json.dumps(sort_keys=True, ensure_ascii=True, separators=(",",":")) + "\n"`； 错误体裸 `{"error": ...}`（主站）或 `{"error","ok":false}`（姊妹应用新约定）。
+- `/calculate`：POST 表单；type 缺省→pi、comparison 缺省→'>'；校验序 = type→comparison→**右侧整组**（格式 `^\d+(/\d+)?$`→分母 0→≥10^16）→**左侧整组**→ 类型值域 404→求解。数值字段先全局删 `" "`、`"\n"` 再卡格式（`"2 2/7"`→22/7，tab 拒）。
+- `/get_integral_image`：GET only；逐字段 400——int 字段 strip 后 `^-?\d+$` （`+3` 拒、两端空白含 tab 可），m,n∈[0,30]，u_val 下限按型（gamma=0 其余=1）； frac 字段同 /calculate 语法但允许负号；**coef/rational 不校验、原文回显**。
+- `/decompose_inequality`：POST `problem`；空/不可解析→400 `请输入一个只包含一个 > 或 < 的不等式`； 含非基础常数乘积→400 `当前乘积证明只支持基础常数的乘积`。
+- 非 2xx 全 JSON：未知路径 404 `请求的页面不存在`；错方法→500 `服务器内部错误，请稍后再试`； `/en/`→404（无斜杠跳转）；`/favicon.ico`→204 空。
+- 求解语义：方向假（float64 判定）报 `方向反了` 先于搜索耗尽；真但搜不到→`未找到{方向}方向的解` （cap：pi/e=30 其余=10，按单指数计 m,n 各自 ≤cap）；精确有理相等→404 `二者相等`（仅 Niven 点可达）。
 
 ### 站点 bug 清单（必须原样复现，verify-report.md 有全案）
 - gauss `<`：m≤4 正常解，m=5 档跑**转置错误**的方程组（rows=基矩向量转置），发出数学为假的恒等式。
 - varpi `<` 从不触发转置（转置解恒 a<0）。
 - `>` 方向 varpi/gauss 走 sqrt 路径（cu_val=1, t=3·power gauss / t=5·bound varpi）。
-- trig_pi 四型**不积分**：α 代入 Mathematica 预存闭式；(1,8) j=0 存式带
-  δ(α)·(C−1) 伪项（`kernels/trig_pi.py` BIAS18_NUM）；50dps 方向预检 + defer 非正判负。
+- trig_pi 四型**不积分**：α 代入 Mathematica 预存闭式；(1,8) j=0 存式带 δ(α)·(C−1) 伪项（`kernels/trig_pi.py` BIAS18_NUM）；50dps 方向预检 + defer 非正判负。
 - ln_q_square q∈{5,7}：命题真→500，假→404 方向反了。
 - 渲染端逐字回显（不约分、`\frac` 宏原样）；type 回显内核归一名（degree→`_pi_q`）。
 - 休眠类型确认已死：`ln_pi/arcsin_q/arccos_q/Gamma_1_3_2_3/psi/zeta/erf` 服务端同样 400。
@@ -71,88 +53,46 @@ parity → 三份重放 → verify → 聚合报告）。
 
 ### 1. decompose.py（组合拆解）— ✅ 已完成（wip `6e9b850`，双判官全绿）
 
-`src/attention_calculator/decompose.py` 落地：combo 87/87 字节级、decompose 182/182
-JSON 级（transport_error 记录只需 400+error 键）。钉死的关键机制已抽出为正式规格：
-**`docs/decompose-notes.md`**（sympy 表示/惰性 k_min 记录链/'<' 翻转域分配/
-make_args 拆序/SympifyError→RuntimeError 路由/输入去空白规则）。
+`src/attention_calculator/decompose.py` 落地：combo 87/87 字节级、decompose 182/182 JSON 级（transport_error 记录只需 400+error 键）。钉死的关键机制已抽出为正式规格： **`docs/decompose-notes.md`**（sympy 表示/惰性 k_min 记录链/'<' 翻转域分配/ make_args 拆序/SympifyError→RuntimeError 路由/输入去空白规则）。
 
 ### 2. kernel 边缘分歧 — ✅ 已完成（wip `b6af6b9`+`b3bb0ab`）
 
-**验收全绿**：parity 3454/3454（eq_match 1588/1588）、replay_fuzz 922/922、
-replay_edge 剩余 10 条全属其他 agent（7 float + 1 decompose + 2 姊妹页）。
-钉死的机制（详见 git 历史与 test_edge.py 84 例）：'<' 退化模板在普通搜索耗尽后、
-转置尝试前发射（t≥0∧b>0 严格门）；崩溃型核先做 float64 方向预检
-（CONST_F/PRE_F 覆盖双曲/arctan/pi_n/e_q/gamma——q=0 不对称即由此产生）；
-pi_n `wire_pair` 不约分原对；gamma coef 折叠 + u=0 `\tilde\infty` + cf/u 约分显示；
-golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain→lt_bound→transposed。
-- **新 proof family（最重要）**：varpi/gauss「elementary + remainder」模板——
-  宽松界走 m=n=0、`∫poly·(1-x)·√(1-x⁴)dx + 有理余项`（余项在积分号**外**）、
-  cu_val∈{1,2}、x 幂按 4k+r 余数。触发条件（vs 主搜索谁先谁后）要探测钉死。
-  golden 新数据里 5 条 site_ok_ours_fail + 1 条 param_diff 属此。
-- 退化解：gauss/varpi power=0 的 200 退化参数组（含 cu_val=2 变体）、
-  `"00"` power、10^15 溢出垃圾、可解时退化仍触发；power=0 渲染不对称
-  （golden 0<0 站端输出字面 `∫0dx`、zeta3 保留未化简式、catalan 退化参数让
-  我方 image 500）。
-- 双曲 q=0 崩溃不对称：cosh 0 `>`→站 404 我 500；sinh/tanh 0 `<`→站 500 我 404；
-  cosh 10^15 `<`→站 500 我 404。
-- gamma 渲染：系数折叠进首段 kernel（`∫2(1/(1-x)+1/lnx−1/2)dx`，golden 新数据
-  22 条 eq_diff）；u_val=0 → 字面 `\tilde{\infty}`；gamma 0>正数 → 方向预检 404。
+**验收全绿**：parity 3454/3454（eq_match 1588/1588）、replay_fuzz 922/922、 replay_edge 剩余 10 条全属其他 agent（7 float + 1 decompose + 2 姊妹页）。 钉死的机制（详见 git 历史与 test_edge.py 84 例）：'<' 退化模板在普通搜索耗尽后、 转置尝试前发射（t≥0∧b>0 严格门）；崩溃型核先做 float64 方向预检 （CONST_F/PRE_F 覆盖双曲/arctan/pi_n/e_q/gamma——q=0 不对称即由此产生）； pi_n `wire_pair` 不约分原对；gamma coef 折叠 + u=0 `\tilde\infty` + cf/u 约分显示； golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain→lt_bound→transposed。
+- **新 proof family（最重要）**：varpi/gauss「elementary + remainder」模板—— 宽松界走 m=n=0、`∫poly·(1-x)·√(1-x⁴)dx + 有理余项`（余项在积分号**外**）、 cu_val∈{1,2}、x 幂按 4k+r 余数。触发条件（vs 主搜索谁先谁后）要探测钉死。 golden 新数据里 5 条 site_ok_ours_fail + 1 条 param_diff 属此。
+- 退化解：gauss/varpi power=0 的 200 退化参数组（含 cu_val=2 变体）、 `"00"` power、10^15 溢出垃圾、可解时退化仍触发；power=0 渲染不对称 （golden 0<0 站端输出字面 `∫0dx`、zeta3 保留未化简式、catalan 退化参数让 我方 image 500）。
+- 双曲 q=0 崩溃不对称：cosh 0 `>`→站 404 我 500；sinh/tanh 0 `<`→站 500 我 404； cosh 10^15 `<`→站 500 我 404。
+- gamma 渲染：系数折叠进首段 kernel（`∫2(1/(1-x)+1/lnx−1/2)dx`，golden 新数据 22 条 eq_diff）；u_val=0 → 字面 `\tilde{\infty}`；gamma 0>正数 → 方向预检 404。
 - pi_n：power∉[1,10]→500（非 400）；负系数渲染 `(\pi^{-9/8})^{8}`。
-- 六条双 200 方程 diff：cos 内层 `\dfrac` 剥壳、e_q 负系数丢负号、ln_q 负参分母、
-  tan_q 负因子布局、degree 族缺 `\cdot`。
-- coef 回显归一：仅 `"1"`/缺省→裸常数；`"1/1"`→`1\pi`；`"01"`→`01\pi`；
-  `" 1 "`→` 1 \pi`；`"2/4"`→`\dfrac{2}{4}\pi` 不约分——共享 `coef_tex` 助手进 render.py。
-- 自查工具：`bench/replay_edge.py`（305 条）+ `bench/replay_fuzz.py`（922 条）
-  离线重放，剩余 mismatch 应清零。
+- 六条双 200 方程 diff：cos 内层 `\dfrac` 剥壳、e_q 负系数丢负号、ln_q 负参分母、 tan_q 负因子布局、degree 族缺 `\cdot`。
+- coef 回显归一：仅 `"1"`/缺省→裸常数；`"1/1"`→`1\pi`；`"01"`→`01\pi`； `" 1 "`→` 1 \pi`；`"2/4"`→`\dfrac{2}{4}\pi` 不约分——共享 `coef_tex` 助手进 render.py。
+- 自查工具：`bench/replay_edge.py`（305 条）+ `bench/replay_fuzz.py`（922 条） 离线重放，剩余 mismatch 应清零。
 
 ### 3. float-fidelity 保真边界 — ✅ 已收敛（wip `443e0d5`）
-文件：`engine.py`、`solve.py`、`integrand.py`、`tests/test_fidelity.py`、
-`docs/fidelity-notes.md`。
-- **最终模型**：外层精确预检保留（cap:*-tight 六条证明站端确实有精确判反）；
-  '>' 扫描途中命中非正 P 站端从不报方向反了——耗尽后统一 float64 真假复核
-  （`float(C)−float(bound)` 严格判号），即已有 NoSolution 兜底的推广。
-  等值界 4 条（fid:cos-gt-cf 等）由此修复：float64 相等→复核放行→扫描→NS。
-- `integrand.constant_mpf` 潜伏 bug 顺带挖出：catalan/zeta3 漏乘 power
-  （kernel/direction_f 都乘、它没乘），replay_edge 抓回归时发现。
-- 判官：`bench/replay_capture.py` 重放 fidelity 228/228 + probes 160 条全绿
-  （7 条站端瞬态 500 skip）；trig_pi 四型等值界行为已核同型。
-- 仍未探测（无可测分歧，纯未知区）：e/pi/e_q/sin_q 搜索上限（输入上限 10^16
-  够不到）、gamma N-cap（现取 600）、ln_q s 搜索序与下界、(m,n) 同分 tie-break。
+文件：`engine.py`、`solve.py`、`integrand.py`、`tests/test_fidelity.py`、 `docs/fidelity-notes.md`。
+- **最终模型**：外层精确预检保留（cap:*-tight 六条证明站端确实有精确判反）； '>' 扫描途中命中非正 P 站端从不报方向反了——耗尽后统一 float64 真假复核 （`float(C)−float(bound)` 严格判号），即已有 NoSolution 兜底的推广。 等值界 4 条（fid:cos-gt-cf 等）由此修复：float64 相等→复核放行→扫描→NS。
+- `integrand.constant_mpf` 潜伏 bug 顺带挖出：catalan/zeta3 漏乘 power （kernel/direction_f 都乘、它没乘），replay_edge 抓回归时发现。
+- 判官：`bench/replay_capture.py` 重放 fidelity 228/228 + probes 160 条全绿 （7 条站端瞬态 500 skip）；trig_pi 四型等值界行为已核同型。
+- 仍未探测（无可测分歧，纯未知区）：e/pi/e_q/sin_q 搜索上限（输入上限 10^16 够不到）、gamma N-cap（现取 600）、ln_q s 搜索序与下界、(m,n) 同分 tie-break。
 
 ### 4. /health 克隆 — ✅ 已完成（wip `349646a`）
 
-**417/417 字节级 parity**（`bench/parity_health.py`，~560 次探测去重后 417 个 tag）；
-568 测试绿。`health.py` = 校验链 + ~20 公式 + 36-key items + tips/tips_en +
-JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/health-notes.md`。
-残留 4 处不可判定/假设点已记录（70 边界 ≥vs>、超龄优先级、bool 报错一致性、429 限流不复现）。
-注意：`/convex/prove` 的 catch-all 目前用主站 500 文案（无句号），若 convex 探针
-发现站端 500 带「。」需换 `SIBLING_INTERNAL_ERROR`（已转告 convex-probe agent）。
+**417/417 字节级 parity**（`bench/parity_health.py`，~560 次探测去重后 417 个 tag）； 568 测试绿。`health.py` = 校验链 + ~20 公式 + 36-key items + tips/tips_en + JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/health-notes.md`。 残留 4 处不可判定/假设点已记录（70 边界 ≥vs>、超龄优先级、bool 报错一致性、429 限流不复现）。 注意：`/convex/prove` 的 catch-all 目前用主站 500 文案（无句号），若 convex 探针 发现站端 500 带「。」需换 `SIBLING_INTERNAL_ERROR`（已转告 convex-probe agent）。
 
 ### 5. /convex 行为探测 — ✅ 已完成
-- 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr；
-  注意 Python 3.14 `ast.dump` 需 `show_empty=True` 才与老版本逐字一致）。
-- 已落盘：`bench/data/convex-probes.jsonl`（333 tags，13 个探针族）、
-  `docs/convex-behavior.md`（错误面/原子表/归一化/分类/minimum/tangent 全谱）、
-  `bench/archive/convex_model.py`（离线假设模型）。
-- `docs/convex-behavior.md` 经独立复核（/tmp/convex-doc-audit.md）：333 条语料
-  零硬矛盾；7 处弱支撑点均朝「参考实现常数」方向、无反例。
+- 契约：`docs/sibling-apps.md` §1。语法 = Python ast（错误串直接泄漏 AST repr； 注意 Python 3.14 `ast.dump` 需 `show_empty=True` 才与老版本逐字一致）。
+- 已落盘：`bench/data/convex-probes.jsonl`（333 tags，13 个探针族）、 `docs/convex-behavior.md`（错误面/原子表/归一化/分类/minimum/tangent 全谱）、 `bench/archive/convex_model.py`（离线假设模型）。
+- `docs/convex-behavior.md` 经独立复核（/tmp/convex-doc-audit.md）：333 条语料 零硬矛盾；7 处弱支撑点均朝「参考实现常数」方向、无反例。
 - 判官：`bench/parity_convex.py` 逐字节重放。
 
 ### 6. /convex 求解器 — ✅ 已完成（`4675217`，parity 333/333 字节级）
-- `src/attention_calculator/convex.py` = 上游开源实现
-  `lianghuatiaojiushi/ConvexConcaveProver` 的 scripts/prove.py 移植（float64
-  项模型 + 160 次折半导数定号 + CF 切点候选 12 项/分母≤10000）+ 站端 JSON/latex
-  包装：normalized/*_latex、status/reason 五串、line/domain 参数全量复现。
-- 隐藏参数 `domain` 已接线（`prove(inequality, line, domain)`）；
-  `line` 是惰性解析——只在进入证明路径时才 parse（x>0+foo(x)→200，可证路径→400）。
-- 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）；未匹配路径
-  一律 500 `服务器内部错误，请稍后再试。`（带句号）。
+- `src/attention_calculator/convex.py` = 上游开源实现 `lianghuatiaojiushi/ConvexConcaveProver` 的 scripts/prove.py 移植（float64 项模型 + 160 次折半导数定号 + CF 切点候选 12 项/分母≤10000）+ 站端 JSON/latex 包装：normalized/*_latex、status/reason 五串、line/domain 参数全量复现。
+- 隐藏参数 `domain` 已接线（`prove(inequality, line, domain)`）； `line` 是惰性解析——只在进入证明路径时才 parse（x>0+foo(x)→200，可证路径→400）。
+- 姊妹应用共享 `in_sibling()` 错误包络（{"error","ok":false}）；未匹配路径 一律 500 `服务器内部错误，请稍后再试。`（带句号）。
 
 ## 协作约定（照此执行过的）
 
 - 每个 agent 只动自己名下的文件；server.py 是共享区，改动保持最小且成块。
 - 探测站端限速 ≤1 req/s；数据文件一律存 `bench/data/*.jsonl` 带原始响应体。
-- 判分工具独立于我写的实现（parity_decompose/replay_edge/replay_fuzz 都是
-  leader 写的离线重放器，防止 agent 自己给自己判分）。
+- 判分工具独立于我写的实现（parity_decompose/replay_edge/replay_fuzz 都是 leader 写的离线重放器，防止 agent 自己给自己判分）。
 - 文档只记核实过的事实；站点行为一律以实测为准，文章/文档只做线索。
 - 每完成一块：跑该域 parity → pytest → commit（Conventional Commits）。

@@ -2,8 +2,7 @@
 
 benchmark 是本项目一切结论的依据。**任何实现决策（核族参数、搜索顺序、失败边界）都要落到数据上的数字**。
 
-`bench/data/` 全部 gitignored（站端采集语料，体积大，不入库——rsync/手动同步）；
-`bench/probes/*.json` 入库——是 tests/ 里内联断言的引用源；`bench/out/` 是评测输出。
+`bench/data/` 全部 gitignored（站端采集语料，体积大，不入库——rsync/手动同步）； `bench/probes/*.json` 入库——是 tests/ 里内联断言的引用源；`bench/out/` 是评测输出。
 
 ## 数据集 ↔ 判官对照表
 
@@ -71,8 +70,5 @@ benchmark 是本项目一切结论的依据。**任何实现决策（核族参�
 ## 目录组织
 
 - 顶层 `*.py` = 活跃判官（`parity*.py`、`replay_*.py`、`verify.py`、`report.py`）
-    - 语料生产者（`harvest.py`、`cases.py`、`fuzz.py`、`probe_*.py`、`edge_probe*.py`、
-      `fidelity_probe*.py`）+ `cf_bounds.py`（CF 界生成器）。
-- `archive/` = 已收敛的一次性分析脚本（sim_\*/trace_\* 假设甄别、rule_search、
-  analyze_decomp、`convex_model.py`/`decompose_model.py` 离线模型）——结论已钉进
-  src/ 与 tests/，保留作溯源，不再运行。
+    - 语料生产者（`harvest.py`、`cases.py`、`fuzz.py`、`probe_*.py`、`edge_probe*.py`、 `fidelity_probe*.py`）+ `cf_bounds.py`（CF 界生成器）。
+- `archive/` = 已收敛的一次性分析脚本（sim_\*/trace_\* 假设甄别、rule_search、analyze_decomp、`convex_model.py`/`decompose_model.py` 离线模型）——结论已钉进 src/ 与 tests/，保留作溯源，不再运行。
