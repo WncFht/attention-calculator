@@ -193,6 +193,24 @@ def true_value(typ, q):
         return mp.sqrt(mp.pi) / 2 * mp.exp(-(x**2)) * mp.erfi(x)
     if typ == "erfiint_q":
         return mp.sqrt(mp.pi) / 2 * mp.erfi(x)
+    if typ == "li2_q":
+        return mp.polylog(2, x)
+    if typ == "psi1_q":
+        return mp.psi(1, x)
+    if typ == "pi_sqrt2":
+        return x * mp.pi * mp.sqrt(2)
+    if typ == "pi3":
+        return x * mp.sqrt(3) * mp.gamma(mpf(1) / 3) ** 3 / (2 * mp.pi)
+    if typ == "pi3_u":
+        return x * mp.gamma(mpf(2) / 3) ** 2 / mp.gamma(mpf(1) / 3)
+    if typ == "pi3_a":
+        return x * 2 * mp.pi / mp.sqrt(3)
+    if typ == "gamma14":
+        return x * mp.gamma(mpf(1) / 4)
+    if typ == "gamma34":
+        return x * mp.gamma(mpf(3) / 4)
+    if typ == "gamma12":
+        return x * mp.sqrt(mp.pi)
     if typ == "sin_q":
         return mp.sin(x)
     if typ == "cos_q":

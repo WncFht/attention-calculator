@@ -85,6 +85,33 @@ EXACT_ONLY = {
     "gaussint_q": [Fraction(1), Fraction(2), Fraction(1, 2), Fraction(0), Fraction(-1)],
     "dawson_q": [Fraction(1), Fraction(2), Fraction(1, 2), Fraction(0), Fraction(-1)],
     "erfiint_q": [Fraction(1), Fraction(2), Fraction(1, 2), Fraction(0), Fraction(-1)],
+    # 441a7d7 批：pi_sqrt2/pi3 系/复合 Γ 是系数型；li2_q/psi1_q 参数型
+    "pi_sqrt2": POWERS,
+    "pi3": POWERS,
+    "pi3_u": POWERS,
+    "pi3_a": POWERS,
+    "gamma14": POWERS,
+    "gamma34": POWERS,
+    "gamma12": POWERS,
+    "li2_q": [
+        Fraction(1, 2),
+        Fraction(-1, 2),
+        Fraction(1, 4),
+        Fraction(3, 4),
+        Fraction(-3, 2),
+        Fraction(0),
+        Fraction(1),
+        Fraction(2),
+    ],
+    "psi1_q": [
+        Fraction(1),
+        Fraction(1, 2),
+        Fraction(2),
+        Fraction(5),
+        Fraction(1, 3),
+        Fraction(0),
+        Fraction(-1),
+    ],
 }
 
 # pi_n 新域探针（bb6e35a β/η 生成器）：表外整数、分子 >10 的分数幂、
