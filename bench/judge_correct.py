@@ -110,7 +110,7 @@ def in_domain(kind: str, q: Fraction) -> bool:
     """
     if kind == "pi_n":
         return q.numerator >= 1 and q.denominator <= 64
-    if kind in ("ln_q", "ln_q_square", "ln_q_cube"):
+    if kind in ("ln_q", "ln_q_square", "ln_q_cube", "ln_q_quad"):
         return q > 1
     if kind == "arcsin_q":
         return 0 < q < 1

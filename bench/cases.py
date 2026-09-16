@@ -183,6 +183,8 @@ def true_value(typ, q):
         return mp.log(x) ** 2
     if typ == "ln_q_cube":
         return mp.log(x) ** 3
+    if typ == "ln_q_quad":
+        return mp.log(x) ** 4
     if typ == "arcsin_q":
         return mp.asin(x)
     if typ == "arsinh_q":

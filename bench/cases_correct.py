@@ -79,6 +79,15 @@ EXACT_ONLY = {
         Fraction(0),
         Fraction(-1),
     ],
+    "ln_q_quad": [
+        Fraction(2),
+        Fraction(3),
+        Fraction(5),
+        Fraction(1),
+        Fraction(1, 2),
+        Fraction(0),
+        Fraction(-1),
+    ],
     "arcsin_q": [
         Fraction(1, 2),
         Fraction(1, 4),
