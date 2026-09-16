@@ -99,6 +99,10 @@ image 端点校验、unified_form、页面与方法学边缘。与 behavior-note
 
 ## 7. 站端求解是数值近似的（保真边界）
 
+> 本节的分歧已由 fidelity 统一模型收口（solve.prove 拦截 WD + 耗尽后 float64
+> 复核，443e0d5 落地）——最终语义以 `fidelity-notes.md` 与 kernel-spec
+> 方向判定三层为准，本节保留作探针原始记录。
+
 以下分裂全部归因于站端 P 定号/方向判定在 float 精度下进行，本方是精确有理：
 
 - **假命题、float 等值界**：`pi < float64(π)`、`e < float64(e)`（实际小 ~1e-16）

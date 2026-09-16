@@ -10,7 +10,7 @@
 
 - `src/attention_calculator/` — `engine.py`（搜索序/精确消元/定号判定）、`kernels/`（8 族实现 29 型）、`solve.py`（方向预检 + 分发）、`render.py`（LaTeX 逐字回显）、`decompose.py`（复合式拆解 + 记录链界值分配）、`server.py` + `templates/` + `static/`（Flask 站点）、`integrand.py`（常数高精值/被积函数重建）、`convex.py`、`health.py`（姊妹应用）
 - `bench/` — 判官套件与站端采集语料：`parity*.py`（golden/decompose/health/convex 字节级）、`replay_*.py`（edge/fuzz/capture 离线重放）、`verify.py`（恒等式真值核验）、`run_all.sh`（一键全量）；`data/*.jsonl` 不入库（gitignored，rsync 同步）
-- `docs/` — `kernel-spec.md`（29 型数学规格，唯一事实源）、`api-spec.md`、`sibling-apps.md`、`fidelity-notes.md`、`verify-report.md`、`HANDOFF.md` 等
+- `docs/` — `kernel-spec.md`（29 型数学规格，唯一事实源）、`api-spec.md`、`decompose-notes.md`、`sibling-apps.md`、`fidelity-notes.md`、`verify-report.md`、`HANDOFF.md`（完成记录）等
 - `tests/` — pytest（607 过 + 21 跳）
 - `tools/`、`scripts/` — 预计算与维护脚本
 

@@ -1,15 +1,18 @@
 # 复现路线图与分工
 
+> **已完成（2026-09-16）**：四个阶段全部收口，wip 分支全部判官零分歧，
+> 仅剩合回 master 待定。本文件保留作过程记录。
+
 目标产物：与 zhuyidao.net 行为一致的完整实现（solver + Web + 组合拆解 + 姊妹应用 /convex、/health），全部结论由 `bench/data/golden.jsonl` 上的 parity/verify 数字背书。
 
 **范围（2026-09-15 用户确认）**：主站注意力计算器 29 型 + `/convex` 凹凸不等式求解器 + `/health` 健康计算器。契约见 `docs/sibling-apps.md`；`/convex` 按同一方法学走「探测 → golden → parity」路线（`docs/convex-behavior.md` 测绘中），`/health` 是纯表单算术（公式印在页面上，`site-health-en.html` 内含全部翻译表）。
 
 ## 阶段
 
-1. **benchmark 先行**（进行中）：`bench/harvest.py` 在 devbox 采集 29 型 × 多界 golden 数据集 + combo 集；`bench/verify.py` 数值+符号双重验证每条恒等式；`bench/parity.py` 跑本方 solver 对 golden 的一致率。
-2. **核族实现**（进行中）：8 个 family 模块按 kernel-spec.md 实现 `prove`/`render_equation`，矩用闭式/递推（文章印的展开式做 ground truth 测试）。
-3. **装配**：solve.py 调度 → server.py 端点 → 前端复刻 → decompose.py。
-4. **评测收口**：全量 parity + verify；不一致的 case 逐个归因（搜索序/上限/模板差异）迭代。
+1. **benchmark 先行**（完成）：`bench/harvest.py` 在 devbox 采集 29 型 × 多界 golden 数据集 + combo 集；`bench/verify.py` 数值+符号双重验证每条恒等式；`bench/parity.py` 跑本方 solver 对 golden 的一致率。
+2. **核族实现**（完成）：8 个 family 模块按 kernel-spec.md 实现 `prove`/`render_equation`，矩用闭式/递推（文章印的展开式做 ground truth 测试）。
+3. **装配**（完成）：solve.py 调度 → server.py 端点 → 前端复刻 → decompose.py。
+4. **评测收口**（完成）：全量 parity + verify；不一致的 case 逐个归因（搜索序/上限/模板差异）迭代。
 
 ## Agent 分工（agentId 尾号 → 任务 → 产出文件）
 

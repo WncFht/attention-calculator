@@ -1,7 +1,8 @@
 # golden 扩容采集笔记（2026-09-15）
 
 `bench/cases.py` PARAM_SETS 扩充了 7 个最薄类型，devbox 端 `bench/harvest.py
---only golden` 续跑采集，golden.jsonl 由 2969 → **3453** 条（+484，无重复键）。
+--only golden` 续跑采集，golden.jsonl 由 2969 → **3454** 条（+485，无重复键；
+含 article-audit 补记追加的 `pi < 14885392687/4738167652` 算例一条）。
 
 ## 扩容内容
 

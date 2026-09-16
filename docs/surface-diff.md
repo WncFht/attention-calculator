@@ -22,7 +22,7 @@
 | `GET /attention`、`/attention/`、`/attention/en` | 200，99037 B（`/static` → `/attention/static`） | 404 | **缺失** |
 | `POST /calculate` | 正常 | 正常 | 已实现（细微差异见下） |
 | `GET /calculate` | 500 `{"error":"服务器内部错误，请稍后再试"}` | 405 HTML | **不同** |
-| `POST /decompose_inequality` | 正常 | **500 HTML——`from . import decompose` ImportError，包里没有 `decompose` 模块（只在 `bench/decompose_model.py`），该端点整体坏掉** | **已挂但坏** |
+| `POST /decompose_inequality` | 正常 | **500 HTML——`from . import decompose` ImportError，包里没有 `decompose` 模块（只在 `bench/archive/decompose_model.py`），该端点整体坏掉** | **已挂但坏** |
 | `GET /decompose_inequality` | 500 JSON | 405 HTML | **不同** |
 | `GET /get_integral_image` | 有序 400 校验（见下） | 一切失败都 500 | **不同** |
 | `POST /get_integral_image`、`POST /`、`POST /en` | 500 JSON catch-all | 405 HTML | **不同** |
@@ -98,4 +98,9 @@
 - `/en/`→404、`/favicon.ico`→204 空响应、`/attention`（含 /attention/、/attention/en）挂载同页（attention.html 静态前缀 /attention/static/，已存字节版）。
 - `templates/index.html` 换成线上字节版（含 BOM、CSS 残注释、双 #result、死代码全保留）；历史记录持久化差异随之消失（线上版本不写 sessionStorage）。
 - `/decompose_inequality` 空输入文案改为 `请输入一个只包含一个 > 或 < 的不等式`（decompose 模块本体由另一 agent 实现中）。
-- 遗留未克隆：`/convex`、`/health` 两个独立子应用（不属于注意力计算器本体）。
+
+## 收口（2026-09-16）
+
+上文两处遗留均已解决：`decompose.py` 已实现（双判官全绿，规格见
+decompose-notes.md）；`/convex`、`/health` 两个姊妹应用已克隆，
+parity 分别 333/333、420/420 字节级全绿（详见 sibling-apps.md）。

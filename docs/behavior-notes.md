@@ -73,7 +73,10 @@
    因为界越紧，"恰好定号"靠运气；实现上 parity 对 golden 的 (m,n) 命中率会受这种 luck 支配。
 4. 方向反的判据先行：`pi_n 2 > 9869604401089358/1e15`（真方向，d≈6e-16）返回
    `要证明的式子不等号方向反了`——说明搜索中遇到 P≤0 的解即提前抛 WrongDirection，
-   而不是搜完再报"未找到"。**WrongDirection 会抢在 NoSolution 之前触发**（engine.search 现有语义与此一致）。
+   而不是搜完再报"未找到"。**WrongDirection 会抢在 NoSolution 之前触发**。
+   （2026-09-16 更新：该原语之后被 solve.prove 拦截重映射——'<' 已映射型改报
+   NoSolution、'>' 落入统一 float64 复核，见 fidelity-notes.md 与 kernel-spec
+   方向判定三层。）
 
 ## 3. 指数上限
 

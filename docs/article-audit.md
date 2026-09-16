@@ -110,7 +110,7 @@
   `当前乘积证明只支持基础常数的乘积`；整式为假 → `经数值检验，该不等式不成立`；
   内层失败包装 `基础证明「φ<8/5」生成失败：方向反了`。
 - **实现状态**：**/(c) 最大缺口**——`src/attention_calculator/decompose.py`
-  不存在，`/decompose_inequality` 在本方 500；`bench/decompose_model.py`
+  不存在，`/decompose_inequality` 在本方 500；`bench/archive/decompose_model.py`
   已有完整界分配模型 + `bench/data/decompose.jsonl`（182）+ `combo.jsonl`（87）
   + 逐题 JSON 目录 + `bench/parity_decompose.py` 评分器，移植条件齐备。
 
@@ -233,12 +233,16 @@ Frullani、Coxeter 等），逐一确认与本仓库无关。
 
 ## P0 — 高价值、条件齐备
 
+（2026-09-16 收口：#1 已探——7 个休眠类型服务端全部 400；#2 已实现——
+decompose.py 落地、双判官全绿，规格见 decompose-notes.md；#3 已入 golden——
+算例 parity 记录已追加。见文末补记。）
+
 1. **探测休眠类型名**：POST /calculate `type ∈ {ln_pi, arcsin_q, arccos_q,
    Gamma_1_3_2_3, psi, zeta, erf}`（另有注释重复块里的 live 型别名可顺带）。
    400 `无效的证明类型` 即死；若出解/值域错则站点实现面 >29 型，核公式已在
    kernel-spec 备好。（探测任务，交给在线 agent）
 2. **实现 `src/attention_calculator/decompose.py`**：当前端点 ImportError→500，
-   是全站唯一整块缺失的功能。`bench/decompose_model.py`（Chain record 界分配、
+   是全站唯一整块缺失的功能。`bench/archive/decompose_model.py`（Chain record 界分配、
    K_MIN_UP/K_MIN_LO、FACTOR_RANK、reciprocal_split）+ 269 条探测语料 +
    `bench/parity_decompose.py` 就绪。（实现任务）
 3. **补文章算例 parity 回归**（界均 <10¹⁶ 可表达，现全不在 golden）：
@@ -285,7 +289,7 @@ Frullani、Coxeter 等），逐一确认与本仓库无关。
   HTML 注释是未启用的规划项，类型面确认为 29 型无隐藏。
 - **文章算例已入 golden**：`pi < 14885392687/4738167652` → 站端 (m,n)=(17,23)、
   ~e30 系数，与文章截图一致；本方输出逐字节相同，记录已追加进
-  `bench/data/golden.jsonl`（现 2970 条）。
+  `bench/data/golden.jsonl`（现 3454 条）。
 - **GitHub 仓库核实**：`lianghuatiaojiushi/AttentionCalculator` 是作者发布的
   skill 薄客户端（仅 API 调用，明确不公开求解器内部），非站点源码；
   已镜像到 `~/src/reference/AttentionCalculator` 备查。

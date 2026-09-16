@@ -1,8 +1,8 @@
-# HANDOFF — 暂停点上下文（2026-09-15）
+# HANDOFF — 完成记录（2026-09-16 收口）
 
-在 devbox 上继续开发时读本文件。**Canonical 仓库：`devbox:~/src/attention-calculator`**；
-本地 `~/src/attention-calculator` 只是镜像。Python 用 `.venv/bin/python`（两边都有）。
-devbox sudo 密码 REDACTED（仅装系统包用；优先 uv/pip 用户级安装）。
+本文件原是 2026-09-15 的暂停点交接；全部六项任务现已收敛，改写为完成记录。
+**Canonical 仓库即本机 `~/src/attention-calculator`**（本机即 devbox，无 rsync）。
+Python 用 `.venv/bin/python`。
 
 ## 项目是什么
 
@@ -15,15 +15,10 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 
 ## Git 状态
 
-- `master` = 最后一个全绿提交 `1a3f283`（golden 原 2969 条全字节 parity）。
-- `wip/pause-2026-09-15`（当前 checkout）= 暂停时刻 6 个 agent 的在制品快照
-  `882b717`（含 handoff 文档）—— kernels/render/tests/scipy 依赖/模板/探测脚本都在里面。
-  续作直接在 wip 分支上继续；完成并验证后合回 master。
-- **wip 快照的 parity 实测（devbox，3454 条全量）：status_match=3454/3454、
-  body_exact=3454/3454、err_match=1866/1866、crashes=0、param/solution 1588/1588，
-  仅剩 eq_match 1571/1588 = 17 条方程文本 diff**——kernel-edge 停前已把
-  「elementary+remainder」新模板和大部分边缘修复做到接近完工，wip 比看起来更接近收敛。
-- `bench/data/*.jsonl` 是 gitignored 数据资产，不进 git 但 rsync 会带；
+- `wip/pause-2026-09-15`（当前分支）= 完成态：下表全部判官零分歧。
+- `master` 停在 `1a3f283`（golden 原 2969 条时期）——**wip 领先未合，
+  待主人确认后 merge 回 master**，这是唯一未完成项。
+- `bench/data/*.jsonl` 是 gitignored 数据资产（rsync/手动同步）；
   golden.jsonl 现 **3454 条**。
 
 ## 已验证的基线（全部实测）
@@ -39,10 +34,10 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 | convex parity（姊妹应用，333 tags） | **333/333 字节级全绿** | `bench/parity_convex.py` |
 | decompose parity | **全绿：combo 87/87 字节级 + decompose 182/182 JSON 级**（wip `6e9b850`） | `bench/parity_decompose.py` |
 | 页面字节级 | `/`、`/en`、`/attention`、`/convex`、`/health`、`/health/en` 与站端逐字节一致 | test_client vs `bench/data/site-*.html` |
-| pytest | 603 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
+| pytest | 607 绿 + 21 skip | `.venv/bin/python -m pytest tests/` |
 
-全量评测一条命令：`bench/run_all.sh`（同步 devbox → parity → decompose parity →
-两份重放 → verify → 聚合报告）。
+全量评测一条命令：`bench/run_all.sh`（parity → decompose parity → health/convex
+parity → 三份重放 → verify → 聚合报告）。
 
 ## 站点行为模型（已钉死的关键点）
 
@@ -72,29 +67,14 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 - 渲染端逐字回显（不约分、`\frac` 宏原样）；type 回显内核归一名（degree→`_pi_q`）。
 - 休眠类型确认已死：`ln_pi/arcsin_q/arccos_q/Gamma_1_3_2_3/psi/zeta/erf` 服务端同样 400。
 
-## 暂停时的在制品（6 个任务，按文件归属续作）
+## 六项任务终态（过程记录，机制规格已抽到各 notes 文档）
 
 ### 1. decompose.py（组合拆解）— ✅ 已完成（wip `6e9b850`，双判官全绿）
 
 `src/attention_calculator/decompose.py` 落地：combo 87/87 字节级、decompose 182/182
-JSON 级（transport_error 记录只需 400+error 键）。钉死的关键机制：
-
-- **sympy 表示**：函数全部用 undefined `sp.Function`，创建序 ln,sin,cos,tan,
-  arctan,sinh,tanh,exp——未定义应用函数按类创建序排 canon，逐字节复刻站端项序；
-  常数全是 Symbol（e/pi/gamma/golden/catalan/gauss/varpi/zeta3），`π` 字面量→`_PI`。
-- **记录链 k_min（惰性）**：up 链从第一个满足 `ceil(vk)/k ≤ 6v/5` 的 k 起
-  （ln2/ln3→4、ln5→3、pi→2、gamma/golden→3、cos/arctan→5 全由此出）；lo 链从第一个
-  `floor(vk) ≥ 1` 的 k 起（e 在 k=1 即有界 2，`pi+e+phi>6` 实测钉死，否定 5v/6 对称律）。
-- **单原子 |coef|=1 项走原子自己的链**，其余走 |项值| 的 val_chain（k_min=1）——
-  flip 后落到 −1 系数的项曾误走 val_chain，是最后的批量 diff 根因。
-- **'<' 无乘积项 → 翻转到 '>' 域分配**：全部系数取负、R→−R 按 '>' 规则分配，
-  resid 位置仍按原 '<' 规则选（最后负系数位，否则位 0），done 界最后翻回。
-- **倒数/因子拆序** = sympy `Mul.make_args` canon 序：`pi/e`→(pi,1/e) 取分子侧、
-  `pi^2/e`→(1/e,pi²) 取分母侧、`e^2/pi`→(e²,1/pi) 取分子侧，`reciprocal_split(first_j=0)` 直通。
-- **SympifyError 是 ValueError 子类**——须重抛 RuntimeError 让路由 `except Exception`
-  兜到 500 `组合证明生成失败，请稍后再试`；其余 ValueError→400 原文回显。
-- 输入先做 `replace(" ","").replace("\n","")` 去空白再解析；文法情报同上（`e^pi` 合法、
-  `ln2` 不带括号 400 等，见 `bench/decompose_model.py` 与 judge 数据）。
+JSON 级（transport_error 记录只需 400+error 键）。钉死的关键机制已抽出为正式规格：
+**`docs/decompose-notes.md`**（sympy 表示/惰性 k_min 记录链/'<' 翻转域分配/
+make_args 拆序/SympifyError→RuntimeError 路由/输入去空白规则）。
 
 ### 2. kernel 边缘分歧 — ✅ 已完成（wip `b6af6b9`+`b3bb0ab`）
 
@@ -153,7 +133,7 @@ JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/h
   注意 Python 3.14 `ast.dump` 需 `show_empty=True` 才与老版本逐字一致）。
 - 已落盘：`bench/data/convex-probes.jsonl`（333 tags，13 个探针族）、
   `docs/convex-behavior.md`（错误面/原子表/归一化/分类/minimum/tangent 全谱）、
-  `bench/convex_model.py`（离线假设模型）。
+  `bench/archive/convex_model.py`（离线假设模型）。
 - `docs/convex-behavior.md` 经独立复核（/tmp/convex-doc-audit.md）：333 条语料
   零硬矛盾；7 处弱支撑点均朝「参考实现常数」方向、无反例。
 - 判官：`bench/parity_convex.py` 逐字节重放。
@@ -175,5 +155,4 @@ JSON record_id 计数器（`HEALTH_DB` env）。细节全部钉死，见 `docs/h
 - 判分工具独立于我写的实现（parity_decompose/replay_edge/replay_fuzz 都是
   leader 写的离线重放器，防止 agent 自己给自己判分）。
 - 文档只记核实过的事实；站点行为一律以实测为准，文章/文档只做线索。
-- 每完成一块：跑该域 parity → pytest → commit（Conventional Commits）→
-  rsync 回本地。
+- 每完成一块：跑该域 parity → pytest → commit（Conventional Commits）。
