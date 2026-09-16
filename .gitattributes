@@ -1,1 +1,5 @@
 * text=auto eol=lf
+*.png binary
+uv.lock linguist-generated
+package-lock.json linguist-generated
+src/attention_calculator/static/vendor/** linguist-vendored
