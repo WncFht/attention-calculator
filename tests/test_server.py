@@ -50,7 +50,7 @@ def test_index_served(client):
 def test_routes_and_error_envelope(client, monkeypatch):
     """Site-surface details: JSON error bodies, /en/ 404, /attention mount."""
 
-    def fake(*a):
+    def fake(*a, **kw):
         return {"parameters": dict(PARAMS), "solution": "a = 47/120, b = -13/120"}
 
     monkeypatch.setattr(solve, "prove", fake)
@@ -86,7 +86,7 @@ def test_routes_and_error_envelope(client, monkeypatch):
 def test_calculate_success(client, monkeypatch):
     """Successful prove -> site envelope; type echoes the request verbatim."""
 
-    def fake(*a):
+    def fake(*a, **kw):
         return {"parameters": dict(PARAMS), "solution": "a = 47/120, b = -13/120"}
 
     monkeypatch.setattr(solve, "prove", fake)
@@ -107,7 +107,7 @@ def test_calculate_success(client, monkeypatch):
 def test_calculate_wrong_direction(client, monkeypatch):
     """WrongDirection -> 404 with the site's '方向反了' message."""
 
-    def fake(*a):
+    def fake(*a, **kw):
         raise engine.WrongDirection
 
     monkeypatch.setattr(solve, "prove", fake)
@@ -119,7 +119,7 @@ def test_calculate_wrong_direction(client, monkeypatch):
 def test_calculate_no_solution_limits(client, monkeypatch):
     """NoSolution -> 404, message carries the per-type exponent budget."""
 
-    def fake(*a):
+    def fake(*a, **kw):
         raise engine.NoSolution
 
     monkeypatch.setattr(solve, "prove", fake)
@@ -206,7 +206,7 @@ def test_calculate_domain_errors(client):
 def test_calculate_kernel_value_error(client, monkeypatch):
     """Kernel-side ValueError -> 400 with the kernel's message."""
 
-    def fake(*a):
+    def fake(*a, **kw):
         raise ValueError("左侧系数格式无效")
 
     monkeypatch.setattr(solve, "prove", fake)
