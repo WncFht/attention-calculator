@@ -67,6 +67,17 @@ def run(kind, power, comp, bound):
         ("zeta7", "2", ">", "2"),
         ("zeta7", "1/2", ">", "1/2"),
         ("zeta7", "1/2", "<", "51/100"),
+        # ζ(9) ≈ 1.00200839282608221442, ζ(11) ≈ 1.00049418860411946456
+        ("zeta9", "1", ">", "1"),
+        ("zeta9", "1", ">", "499/498"),  # err -3.6e-7
+        ("zeta9", "1", "<", "2"),
+        ("zeta9", "1", "<", "5488/5477"),  # err +5.9e-9
+        ("zeta9", "3", "<", "4"),
+        ("zeta9", "1/2", ">", "1/2"),
+        ("zeta11", "1", ">", "1"),
+        ("zeta11", "1", "<", "101/100"),
+        ("zeta11", "1", "<", "4049/4047"),  # err +4.6e-9
+        ("zeta11", "2", ">", "2"),
         # negative coefficient flips the inequality's constant side only
         ("zeta5", "-1", "<", "-1"),
         # degenerate power=0: true constant identity, like zeta3's 0-vs-r

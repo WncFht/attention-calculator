@@ -1,7 +1,7 @@
-"""zeta_odd kernel family: power·ζ(5) / power·ζ(7) vs rational — exact-mode only.
+"""zeta_odd kernel family: power·ζ(s), s ∈ {5,7,9,11} — exact-mode only.
 
 W3 extension types with no site counterpart (plan doc W3.1: the quadlog ln^r
-moment machine already covers them). Same integrand as zeta3 with r = 4, 6:
+moment machine already covers them). Same integrand as zeta3 with r = s−1:
 
     x^{2m+1} (1-x^2)^n (a + b x^2) ln^r(1/x) / (1 + x^2)   on [0,1]
 
@@ -26,6 +26,8 @@ from .quadlog import basis_moments, factors_tex, ln_moment, numerator
 ZETA = {
     "zeta5": (4, Fraction(15, 16)),
     "zeta7": (6, Fraction(63, 64)),
+    "zeta9": (8, Fraction(255, 256)),
+    "zeta11": (10, Fraction(1023, 1024)),
 }
 
 LIMIT = 10

@@ -43,6 +43,8 @@ FAMILY = {
     # EXACT_TYPES — no site counterpart; kernels are exact-path only
     "zeta5": "zeta_odd",
     "zeta7": "zeta_odd",
+    "zeta9": "zeta_odd",
+    "zeta11": "zeta_odd",
     "ln_q_cube": "ln_pow",
     "arcsin_q": "arcsin",
     "arsinh_q": "invhyp",

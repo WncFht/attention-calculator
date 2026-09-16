@@ -249,6 +249,8 @@ def constant_mpf(kind: str, power: Fraction):
         # exact-mode-only types (kernels/EXACT_TYPES); power is the coefficient
         "zeta5": lambda: q * mp.zeta(5),
         "zeta7": lambda: q * mp.zeta(7),
+        "zeta9": lambda: q * mp.zeta(9),
+        "zeta11": lambda: q * mp.zeta(11),
         # ln_q_cube 的 power 槽携带 q 本身（与 ln_q 同），常数是 (ln q)^3
         "ln_q_cube": lambda: mp.log(q) ** 3,
         "arcsin_q": lambda: mp.asin(q),
