@@ -15,17 +15,23 @@ honestly NoSolution — the window closes as the kernel steepens).
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.gauss_erf import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.gauss_erf import prove, render_equation
 
-mp.mp.dps = 60
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
+
+
 _ZERO = mp.mpf(0)
 
 KINDS = ("gaussint_q", "dawson_q", "erfiint_q")
@@ -281,11 +287,9 @@ def test_verify_dispatch(monkeypatch, kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_full_pipeline_when_registered(kind):
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the family, solver.prove(exact=True) must emit self-checking proofs."""
-    if kind not in solver.FAMILY or kind not in EXACT_TYPES:
-        pytest.skip(f"{kind} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline(kind):
+    """Through the registered family, solver.prove(exact=True) must emit
+    self-checking proofs."""
     bound = {"gaussint_q": "7/10", "dawson_q": "1/2", "erfiint_q": "7/5"}[kind]
     resp = solver.prove(kind, "1", ">", bound, exact=True)
     res = check(kind, Fraction(1), ">", Fraction(bound), resp["parameters"])

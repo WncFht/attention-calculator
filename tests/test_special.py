@@ -639,7 +639,7 @@ def test_sqrt_fallback_identity(kind, comp, bound, poly):
     res = solve.prove(kind, "1", comp, bound)
     f, lo, hi = reconstruct(kind, comp, F(1), res["parameters"])
     assert sp.simplify(f - (poly + F(res["parameters"]["b_val"]))) == 0
-    mp.dps = 35
-    val = mp.quad(sp.lambdify(x, f, modules="mpmath"), [mp.mpf(str(lo)), mp.mpf(str(hi))])
-    lhs = lhs_mpf(kind, comp, F(1), F(bound))
-    assert abs(val - lhs) < mp.mpf("1e-25")
+    with mp.workdps(35):
+        val = mp.quad(sp.lambdify(x, f, modules="mpmath"), [mp.mpf(str(lo)), mp.mpf(str(hi))])
+        lhs = lhs_mpf(kind, comp, F(1), F(bound))
+        assert abs(val - lhs) < mp.mpf("1e-25")

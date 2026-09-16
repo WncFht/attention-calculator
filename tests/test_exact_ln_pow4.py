@@ -1,9 +1,9 @@
 """Exact-mode tests for ln_q_quad (kernels.ln_pow, quartic branch).
 
-The type is exact-mode-only and not yet registered in kernels.EXACT_TYPES /
-solve.FAMILY (merge wiring), so tests drive kernels.ln_pow.prove and
-exact_check.ln_pow.check directly; the dispatch and full-pipeline tests are
-skip-guarded until then. The power slot carries q itself (constant is
+The type is exact-mode-only and registered in kernels.EXACT_TYPES /
+solve.FAMILY; tests drive kernels.ln_pow.prove and
+exact_check.ln_pow.check directly, with dispatch and full-pipeline tests
+below. The power slot carries q itself (constant is
 (ln q)^4 — mirror ln_q_cube), and the quartic P is sign-tested by the
 Sturm odd-part rule ln_pow.quartic_nonneg.
 """
@@ -17,7 +17,7 @@ from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import ln_pow as check_mod
 from attention_calculator.exact_check import verify
-from attention_calculator.kernels import EXACT_TYPES, ln_pow
+from attention_calculator.kernels import ln_pow
 
 KIND = "ln_q_quad"
 
@@ -173,11 +173,9 @@ def test_verify_dispatch(monkeypatch):
     assert res["nonneg"]
 
 
-def test_full_pipeline_when_registered():
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the type, solver.prove(exact=True) must emit self-checking proofs."""
-    if KIND not in solver.FAMILY or KIND not in EXACT_TYPES:
-        pytest.skip(f"{KIND} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline():
+    """Through the registered type, solver.prove(exact=True) must emit
+    self-checking proofs."""
     resp = solver.prove(KIND, "2", "<", "1/4", exact=True)
     res = check_mod.check(KIND, Fraction(2), "<", Fraction(1, 4), resp["parameters"])
     assert res["identity_ok"]

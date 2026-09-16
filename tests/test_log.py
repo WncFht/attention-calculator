@@ -14,7 +14,12 @@ from mpmath import mp
 from attention_calculator import engine, solve
 from attention_calculator.kernels import log_family
 
-mp.dps = 50
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(50):
+        yield
 
 
 def tomf(f):

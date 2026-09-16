@@ -11,13 +11,18 @@ site-failure assertions here compare against site-mode solve.prove).
 from fractions import Fraction
 from math import comb
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import pade, solve
 from attention_calculator.engine import NoSolution, WrongDirection
 
-mp.mp.dps = 60
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
 
 
 def rat_bound(c: mp.mpf, digits: int, above: bool) -> Fraction:
@@ -103,23 +108,24 @@ def test_residual_path_single_term():
 # raises); the gaps were measured by sweeping solve.prove against the
 # constants.  Padé crosses them at the index recorded in the notes.
 
-SITE_FAIL_CASES = [
-    # ln 2 > floor at 1e-20 (gap ~7e-21): site reach is only ~1e-15
-    ("ln_q", "2", ">", rat_bound(mp.log(2), 20, False), 14),
-    # ln 3 > floor at 1e-18 (gap ~4e-19): site reach ~1e-11
-    ("ln_q", "3", ">", rat_bound(mp.log(3), 18, False), 17),
-    # ln(3/2) > floor at 1e-25 (gap ~2e-26)
-    ("ln_q", "3/2", ">", rat_bound(mp.log(mp.mpf(3) / 2), 25, False), 13),
-    # ln(9/2) < 1.5040773968 (gap ~3e-10): site reach ~1e-8 but this
-    # particular bound is below it... verified empirically -> NoSolution
-    ("ln_q", "9/2", "<", Fraction(940048373, 625000000), 12),
-    # arctan 1 = pi/4 < ceil at 1e-20 (gap ~4e-21): site reach ~1e-9
-    ("arctan_q", "1", "<", rat_bound(mp.pi / 4, 20, True), 13),
-    # arctan 2 < 692/625 = 1.1072 (gap ~5e-5): site reach only ~1e-3 here
-    ("arctan_q", "2", "<", Fraction(692, 625), 5),
-    # arctan(1/2) > floor at 1e-19 (gap ~2e-20)
-    ("arctan_q", "1/2", ">", rat_bound(mp.atan(mp.mpf(1) / 2), 19, False), 8),
-]
+with mp.workdps(60):  # collection-time: the module fixture cannot reach here
+    SITE_FAIL_CASES = [
+        # ln 2 > floor at 1e-20 (gap ~7e-21): site reach is only ~1e-15
+        ("ln_q", "2", ">", rat_bound(mp.log(2), 20, False), 14),
+        # ln 3 > floor at 1e-18 (gap ~4e-19): site reach ~1e-11
+        ("ln_q", "3", ">", rat_bound(mp.log(3), 18, False), 17),
+        # ln(3/2) > floor at 1e-25 (gap ~2e-26)
+        ("ln_q", "3/2", ">", rat_bound(mp.log(mp.mpf(3) / 2), 25, False), 13),
+        # ln(9/2) < 1.5040773968 (gap ~3e-10): site reach ~1e-8 but this
+        # particular bound is below it... verified empirically -> NoSolution
+        ("ln_q", "9/2", "<", Fraction(940048373, 625000000), 12),
+        # arctan 1 = pi/4 < ceil at 1e-20 (gap ~4e-21): site reach ~1e-9
+        ("arctan_q", "1", "<", rat_bound(mp.pi / 4, 20, True), 13),
+        # arctan 2 < 692/625 = 1.1072 (gap ~5e-5): site reach only ~1e-3 here
+        ("arctan_q", "2", "<", Fraction(692, 625), 5),
+        # arctan(1/2) > floor at 1e-19 (gap ~2e-20)
+        ("arctan_q", "1/2", ">", rat_bound(mp.atan(mp.mpf(1) / 2), 19, False), 8),
+    ]
 
 
 @pytest.mark.parametrize(("kind", "power", "comp", "bound", "cross"), SITE_FAIL_CASES)

@@ -12,8 +12,6 @@ import sys
 import types
 from fractions import Fraction
 
-import pytest
-
 import attention_calculator
 from attention_calculator import engine, server, solve
 
@@ -28,11 +26,6 @@ PARAMS = {
     "cu_val": 0,
     "u_val": 120,
 }
-
-
-@pytest.fixture
-def client():
-    return server.app.test_client()
 
 
 def post_calc(client, **form):

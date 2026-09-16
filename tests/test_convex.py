@@ -11,8 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from attention_calculator import server
-
 MISSING = "请输入一个不等式。"
 REASON_INCONCLUSIVE = (
     "整理后左侧不是凸函数/仿射函数，或右侧不是凹函数/仿射函数，因此当前证明器无法处理。"
@@ -24,11 +22,6 @@ REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索�
 SAMPLE = "exp(x)-log(x)-261/112>0"
 
 SITE_CONVEX_HTML = Path("bench/data/site-convex.html")
-
-
-@pytest.fixture
-def client():
-    return server.app.test_client()
 
 
 def prove(client, **form):

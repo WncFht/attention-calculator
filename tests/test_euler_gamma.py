@@ -12,13 +12,18 @@ site-mode failures are asserted alongside).
 import json
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
-from attention_calculator import euler_gamma, solve
+from attention_calculator import certificate, euler_gamma, solve
 from attention_calculator.engine import NoSolution, WrongDirection
 
-mp.mp.dps = 80
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(80):
+        yield
 
 
 def rat_bound(c: mp.mpf, digits: int, above: bool) -> Fraction:
@@ -153,7 +158,7 @@ def test_tampered_certificates_fail(cert):
 
 def test_forged_child_fails(cert):
     # a valid pade cert for a different ln-2 bound does not match expect
-    forged = euler_gamma._ln_cert("<", Fraction(8, 10), 30)
+    forged = euler_gamma.ln_cert("<", Fraction(8, 10), 30)
     bad = dict(cert, children=[cert["children"][0], forged])
     assert not euler_gamma.verify_cert(bad)
     # expect table disagreeing with the child cert
@@ -190,43 +195,17 @@ def test_json_round_trip():
     assert euler_gamma.cert_jsonable(euler_gamma.cert_parse(wire)) == wire
 
 
-def test_end_to_end_wired_or_patched(monkeypatch):
+def test_end_to_end_wired():
     """solve.prove(exact=True) -> certificate.verify_cert round trip.
 
-    The kernel exhausts on this bound; if the leader already wired the
-    euler_gamma fallback into solve.prove_exact this runs the real path,
-    otherwise the intended wiring is patched in and exercised identically.
-    The certificate.verify_cert dispatch is exercised the same way: when
-    wired it must accept the emitted cert, and tampering must fail.
+    The kernel exhausts on this bound, so solve.prove's euler_gamma
+    fallback emits the cert; certificate.verify_cert's euler_gamma dispatch
+    must accept it, and tampering must fail.
     """
     bound = str(rat_bound(mp.euler, 10, above=False))
-    try:
-        resp = solve.prove("gamma", "1", ">", bound, exact=True)
-    except NoSolution:
-        real_prove = solve.prove
-
-        def patched(kind, power, comp, rational, exact=False):
-            try:
-                return real_prove(kind, power, comp, rational, exact=exact)
-            except NoSolution:
-                if exact and kind == "gamma":
-                    cert = euler_gamma.prove(kind, Fraction(power), comp, Fraction(rational))
-                    if cert is not None:
-                        return {"type": kind, "prover": "euler_gamma", "certificate": cert}
-                raise
-
-        monkeypatch.setattr(solve, "prove", patched)
-        resp = solve.prove("gamma", "1", ">", bound, exact=True)
+    resp = solve.prove("gamma", "1", ">", bound, exact=True)
     assert resp.get("prover") == "euler_gamma" and resp["type"] == "gamma"
     cert = resp["certificate"]
-
-    import inspect
-
-    from attention_calculator import certificate
-
-    if "euler_gamma" not in inspect.getsource(certificate.verify_cert):
-        assert euler_gamma.verify_cert(cert)
-        pytest.skip("certificate.verify_cert not yet wired for euler_gamma")
     assert certificate.verify_cert(cert)
     bad = dict(cert, lo=str(Fraction(cert["lo"]) + 1))
     assert not certificate.verify_cert(bad)

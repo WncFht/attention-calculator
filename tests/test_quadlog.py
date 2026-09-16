@@ -10,16 +10,22 @@ Ground truth comes from three independent sources, compared exactly:
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
 import sympy as sp
+from mpmath import mp
 
 from attention_calculator import solve
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.kernels import quadlog
 
 F = Fraction
-mp.mp.dps = 50
+
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(50):
+        yield
 
 
 def even_term(k, r):

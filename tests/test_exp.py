@@ -95,7 +95,12 @@ def test_article_hyperbolic_expansion(q):
 
 # ---------------------------------------------------------------- moment <-> numeric integration
 
-mp.dps = 40
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(40):
+        yield
 
 
 def tomf(f):

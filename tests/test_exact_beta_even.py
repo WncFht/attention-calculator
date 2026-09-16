@@ -1,9 +1,9 @@
 """Exact-mode tests for the beta_even family: beta4..beta10 (new W7 types).
 
-Drives kernels.beta_even.prove + exact_check.beta_even.check directly — the
-types are not yet wired into solve.FAMILY/EXACT_TYPES and have no site
-counterpart. Bounds are CF convergents of β(s) computed with mpmath at
-80dps (workdps, not bare mp.dps assignment):
+Drives kernels.beta_even.prove + exact_check.beta_even.check directly; the
+types are wired into solve.FAMILY/EXACT_TYPES (full-pipeline test below)
+and have no site counterpart. Bounds are CF convergents of β(s) computed
+with mpmath at 80dps (workdps, not bare mp.dps assignment):
 
     β(4) ≈ 0.98894455174110533611   β(6) ≈ 0.99868522221843813544
     β(8) ≈ 0.99984999024682965634   β(10) ≈ 0.99998316402619687741
@@ -24,7 +24,7 @@ from attention_calculator.certificate import verify_cert
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.beta_even import check
-from attention_calculator.kernels import EXACT_TYPES, beta_even
+from attention_calculator.kernels import beta_even
 
 KINDS = ("beta4", "beta6", "beta8", "beta10")
 
@@ -172,12 +172,9 @@ def test_verify_dispatch(monkeypatch, kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_full_pipeline_when_registered(kind):
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the family, solver.prove(exact=True) must emit self-checking proofs whose
-    certificates verify_cert accepts."""
-    if kind not in solver.FAMILY or kind not in EXACT_TYPES:
-        pytest.skip(f"{kind} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline(kind):
+    """Through the registered family, solver.prove(exact=True) must emit
+    self-checking proofs whose certificates verify_cert accepts."""
     resp = solver.prove(kind, "1", ">", "9/10", exact=True)
     res = check(kind, Fraction(1), ">", Fraction(9, 10), resp["parameters"])
     assert res["identity_ok"]

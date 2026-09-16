@@ -15,14 +15,13 @@ honestly NoSolution — the alternating families cover -1 <= q < 0.
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.li2 import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.li2 import prove, render_equation
 
 KIND = "li2_q"
@@ -234,11 +233,9 @@ def test_verify_dispatch(monkeypatch):
     assert res["nonneg"]
 
 
-def test_full_pipeline_when_registered():
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the type, solver.prove(exact=True) must emit self-checking proofs."""
-    if KIND not in solver.FAMILY or KIND not in EXACT_TYPES:
-        pytest.skip("li2_q not yet registered (merge wiring is the leader's)")
+def test_full_pipeline():
+    """Through the registered type, solver.prove(exact=True) must emit
+    self-checking proofs."""
     resp = solver.prove(KIND, "1/2", ">", "4/9", exact=True)
     res = check(KIND, Fraction(1, 2), ">", Fraction(4, 9), resp["parameters"])
     assert res["identity_ok"]

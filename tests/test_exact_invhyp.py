@@ -1,7 +1,7 @@
 """Exact-mode tests for the invhyp family: arsinh_q (new W3 type).
 
 Drives kernels.invhyp.prove + exact_check.invhyp.check directly — the type
-is not yet wired into solve.FAMILY/EXACT_TYPES and has no site counterpart.
+is wired into solve.FAMILY/EXACT_TYPES and has no site counterpart.
 Bounds are CF convergents of arsinh(q) chosen with mpmath:
 
     arsinh(1/2) ≈ 0.4812118250596   arsinh(1) ≈ 0.8813735870195

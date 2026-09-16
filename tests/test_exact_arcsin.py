@@ -10,15 +10,20 @@ so near-1 q at tight bounds honestly report NoSolution.
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check.arcsin import check
 from attention_calculator.kernels.arcsin import prove
 
-mp.mp.dps = 60
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
 
 
 def tight_bounds(q: Fraction, digs: int) -> tuple[Fraction, Fraction]:
@@ -140,11 +145,9 @@ def test_render_equation_matches_author_example():
 # 11/21 > asin(1/2)=0.523598… would be a false claim; the '>' bound must sit
 # just below the true value (261799/500000 = 0.523598 < 0.5235987…)
 @pytest.mark.parametrize(("comp", "bound"), [(">", "261799/500000"), ("<", "11/20")])
-def test_full_pipeline_when_registered(comp, bound):
-    """Once solve.FAMILY/integrand register arcsin_q, the certified path
-    must emit only self-checking proofs."""
-    if "arcsin_q" not in solver.FAMILY:
-        pytest.skip("arcsin_q not yet registered in solve.FAMILY")
+def test_full_pipeline(comp, bound):
+    """Through the registered type, the certified path must emit only
+    self-checking proofs."""
     resp = solver.prove("arcsin_q", "1/2", comp, bound, exact=True)
     res = check("arcsin_q", Fraction(1, 2), comp, Fraction(bound), resp["parameters"])
     assert res["identity_ok"]

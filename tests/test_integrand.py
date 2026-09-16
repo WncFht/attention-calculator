@@ -9,6 +9,7 @@
 
 from fractions import Fraction
 
+import pytest
 import sympy as sp
 from mpmath import mp
 
@@ -19,6 +20,14 @@ from attention_calculator.integrand import (
     s,
     x,
 )
+
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(35):
+        yield
+
 
 CASES = [
     ("arccot_q", ">", "2", "9/20", 0, 1, "1/40", "-3/160", "0", "160", None),
@@ -122,7 +131,6 @@ def params(m, n, a, b, c, u, au="0", bu="0", cu="0"):
 
 def test_all_identities_numeric():
     """全部实测参数样本：重建后数值积分须等于恒等式左端。"""
-    mp.dps = 35
     fails = []
     for row in CASES:
         kind, comp, pw, rat, m, n, av, bv, cv, uv, *extra = row
@@ -173,7 +181,6 @@ def test_varpi_lower_bound_has_pi_and_inverse_lhs():
     )
     assert sp.simplify(f - expected) == 0
     assert (a, b) == (0, 1)
-    mp.dps = 30
     varpi = mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi))
     assert abs(
         lhs_mpf("varpi", ">", Fraction(1), Fraction(5, 2)) - (1 - mp.mpf(5) / 2 / varpi)

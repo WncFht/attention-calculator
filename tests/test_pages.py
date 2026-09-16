@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from attention_calculator import server
-
 DATA = Path("bench/data")
 
 # (route, site capture) — /en is byte-identical to / (client-side language);
@@ -25,11 +23,6 @@ PAGES = [
     ("/health/", "site-health.html"),
     ("/health/en", "site-health-en.html"),
 ]
-
-
-@pytest.fixture
-def client():
-    return server.app.test_client()
 
 
 @pytest.mark.parametrize(

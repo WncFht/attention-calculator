@@ -21,7 +21,6 @@ from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import verify, verify_response
 from attention_calculator.exact_check.dixon import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.dixon import prove, render_equation
 
 KINDS = ("pi3", "pi3_u", "pi3_a")
@@ -268,12 +267,10 @@ FALSE_BOUNDS = {
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_full_pipeline_when_registered(kind):
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the family, solver.prove(exact=True) must emit self-checking proofs —
-    and certified_cmp must reject false claims with WrongDirection."""
-    if kind not in solver.FAMILY or kind not in EXACT_TYPES:
-        pytest.skip(f"{kind} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline(kind):
+    """Through the registered family, solver.prove(exact=True) must emit
+    self-checking proofs — and certified_cmp must reject false claims with
+    WrongDirection."""
     for comp, bound in TRUE_BOUNDS[kind]:
         resp = solver.prove(kind, "1", comp, bound, exact=True)
         res = verify_response(kind, Fraction(1), comp, Fraction(bound), resp)

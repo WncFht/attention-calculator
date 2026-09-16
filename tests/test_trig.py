@@ -5,14 +5,21 @@ import re
 from fractions import Fraction as F
 from math import comb
 
-import mpmath as mp
 import pytest
 import sympy as sp
+from mpmath import mp
 
 from attention_calculator.engine import WrongDirection
 from attention_calculator.kernels import trig_pi, trig_q
 
 q_, a_, b_, c_ = sp.symbols("q a b c")
+
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(40):
+        yield
 
 
 def symbolic_moment_trig_q(m, n, j):
@@ -58,7 +65,6 @@ def test_trig_q_n1_article_expansion():
 
 def test_trig_q_moments_numeric():
     """S_k recurrence agrees with direct numerical integration."""
-    mp.mp.dps = 40
     qf = mp.mpf("0.7")
     s = trig_q.sin_moments(10, F(7, 10))
     for k, mom in enumerate(s):
@@ -148,7 +154,6 @@ def test_trig_pi_n1_article_expansions():
 
 def test_trig_pi_moments_numeric():
     """T_j product-to-sum moments agree with direct numerical integration."""
-    mp.mp.dps = 40
     alpha = F(3, 8)
     th = mp.pi * mp.mpf(3) / 8 / 2
     for j in range(12):
@@ -203,7 +208,6 @@ def test_site_params(kind, power, comp, bound, expected):
 def numeric_check_trig_q(kind, q, comp, bound, m, n, au, bu, cu, u):
     """Verify the identity: integral equals the claimed difference, and the
     integrand is sign-definite on [0,1]."""
-    mp.mp.dps = 40
     qf = mp.mpf(q.numerator) / q.denominator
 
     def integ(x):
@@ -250,7 +254,6 @@ def test_identity_numeric(kind, power, comp, bound, expected):
 
 
 def numeric_check_trig_pi(kind, power, comp, bound, m, n, au, bu, u, alpha):
-    mp.mp.dps = 40
     alf = mp.mpf(alpha.numerator) / alpha.denominator
     q_deg = F(power)
     q_eff = q_deg / 180 if kind.endswith("_degree") else q_deg

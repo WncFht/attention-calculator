@@ -6,47 +6,32 @@ x^{4m+3}(1-x)(a+bx⁴). Every emitted proof is re-verified by
 exact_check.pi_sqrt2.check — a dict-equal moment identity plus the
 a >= 0 and a+b >= 0 nonneg rule on P.
 
-The type predates its registry entries (solve.FAMILY, kernels.EXACT_TYPES
-and integrand.constant_mpf are the leader's wiring); tests install the
-three through monkeypatch so the full solve.prove(exact=True) ->
+The type is registered through solve.FAMILY, kernels.EXACT_TYPES and
+integrand.constant_mpf, so the full solve.prove(exact=True) ->
 certificate path runs for real.
 """
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
-from attention_calculator import certificate, integrand, solve
+from attention_calculator import certificate, solve
 from attention_calculator.engine import EqualClaim, NoSolution, WrongDirection
 from attention_calculator.exact_check import verify, verify_response
 from attention_calculator.exact_check.pi_sqrt2 import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.pi_sqrt2 import prove, render_equation
 
-mp.mp.dps = 60
-S = mp.pi * mp.sqrt(2)
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
 
 
-@pytest.fixture(autouse=True)
-def registered(monkeypatch):
-    """Wire pi_sqrt2 into the exact pipeline the way the leader will.
-
-    constant_mpf is looked up lazily inside solve.certified_cmp, so
-    patching the integrand attribute covers it; FAMILY is the shared dict
-    exact_check/certificate read; EXACT_TYPES is solve's imported name.
-    """
-    orig = integrand.constant_mpf
-
-    def const(kind: str, power: Fraction):
-        if kind == "pi_sqrt2":
-            q = mp.mpf(power.numerator) / power.denominator
-            return q * mp.pi * mp.sqrt(2)
-        return orig(kind, power)
-
-    monkeypatch.setattr(integrand, "constant_mpf", const)
-    monkeypatch.setitem(solve.FAMILY, "pi_sqrt2", "pi_sqrt2")
-    monkeypatch.setattr(solve, "EXACT_TYPES", [*EXACT_TYPES, "pi_sqrt2"])
+with mp.workdps(60):
+    S = mp.pi * mp.sqrt(2)
 
 
 def tight_bound(comp: str, digs: int) -> Fraction:

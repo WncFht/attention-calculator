@@ -1,7 +1,7 @@
 """Exact-mode tests for the zeta_odd family: zeta5, zeta7 (new W3 types).
 
 Drives kernels.zeta_odd.prove + exact_check.zeta_odd.check directly — the
-types are not yet wired into solve.FAMILY/TYPES and have no site counterpart.
+types are wired into solve.FAMILY/EXACT_TYPES and have no site counterpart.
 Bounds are CF convergents of ζ(5)/ζ(7) chosen with mpmath:
 
     ζ(5) ≈ 1.03692775514336992633   ζ(7) ≈ 1.00834927738192282684

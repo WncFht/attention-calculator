@@ -13,17 +13,23 @@ moments plus the sign certificate. Constants are mp.psi(1, q) directly.
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.trigamma import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.trigamma import prove, render_equation
 
-mp.mp.dps = 60
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
+
+
 KIND = "psi1_q"
 
 
@@ -252,21 +258,17 @@ def test_verify_dispatch(monkeypatch):
     assert res["nonneg"]
 
 
-def test_full_pipeline_when_registered():
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the type, solver.prove(exact=True) must emit self-checking proofs."""
-    if KIND not in solver.FAMILY or KIND not in EXACT_TYPES:
-        pytest.skip(f"{KIND} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline():
+    """Through the registered type, solver.prove(exact=True) must emit
+    self-checking proofs."""
     resp = solver.prove(KIND, "1", ">", "8/5", exact=True)
     res = check(KIND, Fraction(1), ">", Fraction(8, 5), resp["parameters"])
     assert res["identity_ok"]
     assert res["nonneg"]
 
 
-def test_full_pipeline_false_claim_when_registered():
+def test_full_pipeline_false_claim():
     """Through solve.prove(exact=True) a false claim is WrongDirection —
     certified_cmp decides before the kernel scan."""
-    if KIND not in solver.FAMILY or KIND not in EXACT_TYPES:
-        pytest.skip(f"{KIND} not yet registered (merge wiring is the leader's)")
     with pytest.raises(WrongDirection):
         solver.prove(KIND, "1", ">", "2", exact=True)

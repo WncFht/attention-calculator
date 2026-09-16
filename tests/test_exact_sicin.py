@@ -13,17 +13,22 @@ unreachable — false claims exhaust honestly as NoSolution.
 
 from fractions import Fraction
 
-import mpmath as mp
 import pytest
+from mpmath import mp
 
 from attention_calculator import solve as solver
 from attention_calculator.engine import NoSolution
 from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.sicin import check
-from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.sicin import prove, render_equation
 
-mp.dps = 60
+
+@pytest.fixture(autouse=True, scope="module")
+def module_dps():
+    """本模块数值校验的 mpmath 精度。"""
+    with mp.workdps(60):
+        yield
+
 
 KINDS = ("si_q", "cin_q")
 
@@ -294,11 +299,9 @@ def test_verify_dispatch(monkeypatch, kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_full_pipeline_when_registered(kind):
-    """Once kernels.EXACT_TYPES / solve.FAMILY / integrand.constant_mpf wire
-    the family, solver.prove(exact=True) must emit self-checking proofs."""
-    if kind not in solver.FAMILY or kind not in EXACT_TYPES:
-        pytest.skip(f"{kind} not yet registered (merge wiring is the leader's)")
+def test_full_pipeline(kind):
+    """Through the registered family, solver.prove(exact=True) must emit
+    self-checking proofs."""
     bound = "9/10" if kind == "si_q" else "23/100"
     resp = solver.prove(kind, "1", ">", bound, exact=True)
     res = check(kind, Fraction(1), ">", Fraction(bound), resp["parameters"])

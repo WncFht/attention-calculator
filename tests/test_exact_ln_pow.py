@@ -1,9 +1,9 @@
 """Exact-mode tests for ln_q_cube (kernels.ln_pow).
 
-The type is exact-mode-only and not yet registered in kernels.TYPES /
-solve.FAMILY (merge wiring), so tests drive kernels.ln_pow.prove and
-exact_check.ln_pow.check directly. Once wired, direction decisions run
-through solve.certified_cmp (constant_mpf entry ``mp.log(q)**3``); at
+The type is exact-mode-only and registered in kernels.EXACT_TYPES /
+solve.FAMILY; tests drive kernels.ln_pow.prove and
+exact_check.ln_pow.check directly. Through solve.prove, direction decisions
+run through solve.certified_cmp (constant_mpf entry ``mp.log(q)**3``); at
 kernel level a false claim already dies as WrongDirection — the solved
 uniformly non-positive P certifies the opposite inequality — or as
 NoSolution, never a fake proof.
