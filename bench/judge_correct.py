@@ -108,6 +108,10 @@ def in_domain(kind: str, q: Fraction) -> bool:
     分子 >= 1 且分母 <= 64——β/η 生成器让任意正分子可证，分母上界
     防 bound**pd 整数爆炸。
     """
+    # 7d240c9 统一闸门：q=0 使命题退化为有理数比较，全型 rejected-input；
+    # 等值(bound=0)与假命题在 certified_cmp 层先行，不经此门
+    if q == 0:
+        return False
     if kind == "pi_n":
         return q.numerator >= 1 and q.denominator <= 64
     if kind in ("ln_q", "ln_q_square", "ln_q_cube", "ln_q_quad"):
