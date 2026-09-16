@@ -2,6 +2,8 @@
 
 zhuyidao.net 上除注意力计算器外还有两个同域应用：`/convex`（凹凸不等式计算器）和 `/health` （健康计算器）。本文档是克隆它们的侦察记录：端点契约、JS 调用图、数学规模评估与成本建议。 全部为实测（2026-09-15，约 30 次请求，≤1 req/s）；捕获页面见 `bench/data/site-convex.html`、 `site-health.html`、`site-health-en.html`，当日重新抓取与捕获**字节一致**。
 
+> **落地状态（2026-09-16）**：两应用均已实现并全绿——/health 420/420（`bench/parity_health.py`）、/convex 333/333（`bench/parity_convex.py`，实现为上游 ConvexConcaveProver 源码移植）；终态见 `docs/2026-09-16-site-parity-status.md`。
+
 ## 0. 共性
 
 - 两个应用的响应包络与主站一致：`json.dumps(sort_keys=True, ensure_ascii=True)` 风格—— 键按字典序排列、紧凑分隔符、非 ASCII 一律 `\uXXXX` 转义、正文以 `\n` 结尾。 `server: waitress`，前置 `via: 1.1 Caddy`，与主站同一栈。

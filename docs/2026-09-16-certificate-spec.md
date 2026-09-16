@@ -35,3 +35,14 @@ mode=exact 每条 emitted proof 附一份机器可检证书：`src/attention_cal
 ## 序列化与 CLI
 
 规范化序列化用 `json.dumps(cert, sort_keys=True, ensure_ascii=False)`；Moment 内部键已排序。`cert_tex(cert)` 给一行人类可读摘要（target 向量渲染为 `22/7 - \pi = \int f dx > 0` 形）。离线复核：`tools/verify_cert.py cert.json`（或 stdin），打印重算的 `identity_ok`/`nonneg`/命题行，退出码 0/1/2 分别对应核验通过、核验失败、输入或格式错误。
+
+## Padé 证书变体（W4 第二证明器）
+
+`prove_exact` 在 (m,n) 搜索 NoSolution 后回落 `pade.py`（ln_q/arctan_q 的 Padé 插值证法）；其响应无 `parameters`，`prover: "pade"`，证书是另一套 schema：
+
+```json
+{"kind": "ln_q", "comp": ">", "q": "...", "p": "...",
+ "n": 1, "m": 3, "a": "...", "b": "...", "resid": "0", "serr": "..."}
+```
+
+含 `serr` 键即 Padé 证书，`verify_cert`/`recheck`/`verify_response` 见到该键自动分发到 `pade.verify_cert`：重推 [L/M] 逼近与误差单项形（正系数单项 + 分母无正极点）、重核 `resid` 恒等式，全程 ℚ。配对规则与退化（resid≠0）情形见 `docs/2026-09-16-pade-notes.md`。

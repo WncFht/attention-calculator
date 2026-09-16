@@ -1,6 +1,6 @@
 # 注意力计算器复现 — 数学规格
 
-来源：作者知乎专栏文章（本地归档 `obsidian/output/zhihu-mathematical/量化调酒师的数学文章/`）+ 对 zhuyidao.net 线上 API 的实测。
+来源：作者知乎专栏文章（本机归档 `~/src/obsidian/output/zhihu-mathematical/量化调酒师的数学文章/`；Mac 上是 `~/Desktop/obsidian/...`，别混）+ 对 zhuyidao.net 线上 API 的实测。
 
 ## 总框架
 
@@ -17,7 +17,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 ```
 
 - `B_{m,n}` 是族基函数（如 `x^m(1-x)^n`、`x^{2m}(1-x^2)^n`、`sin^m x (1-sin x)^n`），在域上恒非负；
-- `P` 是带 2~3 个待定系数的小多项式 `a+bx` 或 `a+bx+cx^2`（偶核用 `a+bx^2`；lemniscate 两型用 `a+bx^4`；[0,π] 与 [0,π/2] 域用 `a+b·sin x`）；
+- `P` 是带 2~4 个待定系数的小多项式 `a+bx` 或 `a+bx+cx^2`（偶核用 `a+bx^2`；lemniscate 两型用 `a+bx^4`；[0,π] 与 [0,π/2] 域用 `a+b·sin x`；exact-only 的 `ln_q_cube` 升到三次 `a+bx+cx^2+dx^3` 配 4 维矩空间）；
 - `K` 是核函数，使所有"矩" `∫ B·x^k·K dx` 落在 `span_Q{1, C, D_1, ...}` 有限维空间里。
 
 求解：矩对 (a,b,c) 线性 → 在 Q 上解小线性方程组（engine.gauss_solve，要求唯一解）
@@ -142,13 +142,35 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 - **方向判定**：`solve.certified_cmp` 递增精度（80→2400 dps）数值+护栏带认证 `sign(C−r)`；假命题预检即 `方向反了`、等值 `二者相等`、常数不可实值求值（域外输入）→ None 交给核内域校验。扫描中命中非正 P（真矩下即对偶不等式认证）→ 直接 WrongDirection 上报，不做 '<'→未找到 的站点映射。耗尽 → NoSolution（真命题预算内证不出的诚实回答）。
 - **核内真系统**：`module.prove(..., exact=True)` 要求核用真矩求解——trig_pi 走 `basis_moment`（非 site_bias）、beta '<' 不走转置档、ln_q_square q∈{5,7} 正常求解、power≠1 令发射参数满足印刷 LHS（∫印刷被积函数 == `power·C − bound` 的符号向量）。
+- **ln_q_square 崩溃机理**（行列式级解释，exact 侧推导）：(m,n)=(1,0) 档 det `∝ −(c−4)(c+1)/(72c⁶)`、(1,1) 档 `∝ −(c−6)(c+1)³/(576c⁸)`、(2,1) 档 `∝ (c−12)`，c=q−1——q=5,7 恰好把浅档行列式清零（站端 500 的根因），q=13 可预言同型崩溃（未探测核实）；det(2,0)/det(3,0) 的根非有理。推论警示：q=5 '>' 且界 ≲0.64 时站端走的不是 500 而是会发证明——崩溃清单别过度概括。
 - **发射自检**：`exact_check.verify(kind, power, comp, bound, params)` 对每条发射证明做 ℚ 字典相等复核（`combine(coeffs, true_basis) == target` 且 `poly_nonneg`）；失败是自家 bug → InternalError。exact_check 与模式无关：对 site 模式参数跑它即可复核站点输出的真伪（verify.py 的 ℚ 精确版）。
-- **exact-only 类型**：`kernels.EXACT_TYPES` 注册无站端对应的新类型（当前：zeta5、zeta7、ln_q_cube）。/calculate 仅在 mode=exact 下接受（site 模式仍按站端口径 400）；solve.prove 对不带 exact 的调用报 ValueError；certified_cmp 常数走 `integrand.constant_mpf` 表。/get_integral_image 仍只认站端 29 型——exact 类型的渲染经 kernel 的 render_equation 程序化调用。
+- **exact-only 类型**：`kernels.EXACT_TYPES` 注册无站端对应的新类型（当前 11 型：zeta5、zeta7、ln_q_cube、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q 八个矩核型 + gamma14、gamma34、gamma12 三个复合命题型，逐型规格见下「exact-only 型清单」）。/calculate 仅在 mode=exact 下接受（site 模式仍按站端口径 400）；solve.prove 对不带 exact 的调用报 ValueError；certified_cmp 常数走 `integrand.constant_mpf` 表。/get_integral_image 仍只认站端 29 型——exact 类型的渲染经 kernel 的 render_equation 程序化调用。
 
 ### exact-only 型清单
 
 - `zeta5` / `zeta7`（kernels/zeta_odd.py）：`power·ζ(5)`、`power·ζ(7)`，复用 quadlog ln_moment 的 r=4/6 行，η 系数乘 1−2^{−r} 得 ζ（r=4 → 15/16 出 ζ(5)，r=6 → 63/64 出 ζ(7)）——实现细节见核 docstring。
 - `ln_q_cube`（kernels/ln_pow.py）：`(ln q)³ ⋚ bound`，q>1 由 power 槽携带。核 `ln²(1+cx)/(1+cx)^s`（s=max(m,n,1)，c=q−1），矩空间 4 维 span{ln³q, ln²q, ln q, 1}——ln 族"核低一次、u⁻¹ 项产目标常数"的同构升幂。P 升三次 a+bx+cx²+dx³（4 符号需 4 系数），参数在九槽基础上扩 `d_val`/`du_val`；非负判据为 QQ(√D) 精确三次规则（临界点 P(x*±)=A∓B₀√D，qsign 原语判号），推导见 docs/2026-09-16-ln-cube-derivation.md。
+- `arcsin_q`（kernels/arcsin.py）：`arcsin q ⋚ bound`，q∈(0,1) 有理数。核 `1/√(1−q²x²)`（arcsin q = ∫₀¹ q·dx/√(1−q²x²)），矩递推 `M_k = (k−1)/(kq²)·M_{k−2} − w/(kq²)`（w=√(1−q²)，M₀=arsin(q)/q、M₁=(1−w)/q²）落 span{arcsin q, w, 1}，w 为寄生常数——同 sin_q 的 cos_q 模式。退化档：`1−q²` 为有理平方（3-4-5 族 q=3/5, 4/5, 5/13…）时空间坍缩成 span{arcsin q, 1}，w 折入有理项按 2 维解（P=a+bx）——q=4/5 符号系任何预算都不可证、折叠后 (4,8) 可解。覆盖窗口不对称：q→1 需 m~1/(1−q)，q≳0.8 超预算。LIMIT=30。
+- `arsinh_q`（kernels/invhyp.py）：`arsinh q ⋚ bound`，q≠0（奇函数，负 q 走 |q|）。核 `1/√(1+q²x²)`（arsinh q = ∫₀¹ q·dx/√(1+q²x²)），递推 `√(1+q²) = (k−1)·M_{k−2} + kq²·M_k`（k≥2）落 span{arsinh q, √(1+q²), 1}，P=a+bx+cx² 三系数消寄生根号。q=0 在 M₀ 的 1/q 上自然死亡。**arcosh_q 未实现**：其矩空间 {arcosh q, √(q²−1), √(2(q−1))} 无 "1" 方向，有理界进不了恒等式（详见核 docstring）。
+- `gaussint_q` / `dawson_q` / `erfiint_q`（kernels/gauss_erf.py）：erf 本体不可及——每个矩的 erf 分量带 √π 无法被吸收（docs/2026-09-16-w3-research-erf.md §√π障碍），改为证三个缩放常数：`G(q)=∫₀^q e^{−t²}dt = √π·erf(q)/2`（核 `e^{−q²x²}`）、`F(q)=e^{−q²}∫₀^q e^{t²}dt` Dawson（核 `q·e^{q²(x²−1)}`，归一化使 F 本身而非 e^{q²}F/q 进 span）、`H(q)=∫₀^q e^{t²}dt = √π·erfi(q)/2`（核 `e^{q²x²}`）。三者共用一条两步 IBP 链（t=1/(2q²)，边界项落寄生符号 e^{±q²}），矩空间 span{C_q, e^{±q²}, 1}，P=a+bx+cx² 消寄生。皆奇函数：负 q 折进目标符号 σ=sign(q)（σ·C(|q|)=C(q) 直接回显原命题）；q=0 全退化拒收。LIMIT=10。
+- `gamma14` / `gamma34` / `gamma12`（kernels/gamma_special.py，在途）：复合命题型而非矩核型——Γ(1/4) 被 quarter-lattice 奇偶引理锁在偶次幂（docs/2026-09-16-w3-research-gamma-quarter.md），落地走作者原机制：g²=2ϖ·√(2π) 拆成一条 varpi 界 + 一条 pi 界再开方转移；Γ(3/4)=π√2/g 多一级除法转移；Γ(1/2)=√π 单条 pi 界开方。证书是 `rule`+`witness`+`children` 的小证明 DAG（规则 sqrt_mul/sqrt_div/sqrt/pos_transfer），certificate.verify_cert 递归复核子证书并在 ℚ 上重算转移算术。
+
+### exact 路径的预算与域差异（与站端口径对照）
+
+- **搜索上限**：各核 `LIMIT` 默认 10（EXPONENT_LIMIT 例外表：pi/e=30 同站端，arcsin_q=30 因 q→1 需 m~1/(1−q)）；beta 族 '<' 在 exact 下不再走转置档、上限放宽为 `EXACT_LT_LIMIT=256`（beta_family.py），更深的真证明仍诚实 NoSolution。
+- **pi_n exact 域**（quadlog.py）：`power.numerator < 1 or power.denominator > 64` → ValueError 域拒；分子不设上界——exact 侧新增 beta_pi/eta_pi 生成器（Euler/Bernoulli 系）支持表外指数，site 侧仍限查表。
+- **arctan_q / arccot_q exact**：power=0 → ValueError 域拒（矩基例带 1/q；arctan 0=0 有理、arccot 0=π/2 不在 span）。
+- **hyperbolic exact**（hyperbolic.py）：q<0 先按奇偶归约到 |q| 再解（cosh 偶、sinh/tanh/coth 奇——site 路径同型直接 WrongDirection，exact 修掉对真命题撒谎）；q=0 退化输入域拒。
+- **方向判定**：`solve.certified_cmp` 用 mpmath 80→240→800→2400 dps 递增 + 护栏带 `2^(30−dps)·max(1,|c|)` 认证 sign(C−r)，返回 +1/−1/0/None；None（不可实值求值）交给核内域校验。
+
+### exact_check 复核器契约（checker 作者必读，4 个 agent 独立踩过的坑）
+
+`exact_check.<family>.check(kind, power, comp, bound, params) -> {"identity_ok","nonneg","integrand","target"}`。两条硬性规则：
+
+1. **Moment dict 必须滤零值键**：`combine/add/scale` 产出的 dict 省略零系数；手搭 target 字面量若保留 `"1": Fraction(0)` 会造成字典相等误判——构造后过 `{k: v for k, v in t.items() if v}`。
+2. **nonneg 必须含非恒零守卫**：`identity_ok=True` 挡不住 `0 = ∫0 dx > 0` 式空洞"证明"（站端 golden/power=0 记录里真有这样的成功记录——等式成立但命题为假）。nonneg 判定要并入 `bool(integrand)`（或等价的非零被积函数检查）。
+
+另：trig_pi 复核时若记录的 `c_val`（α）与精确 α 不一致，不要强行重映射 `"C"` 键——让恒等式诚实失败，而不是凑出匹配。
 
 ## 参数语义（a_val/b_val/c_val/au_val/bu_val/cu_val/u_val）
 
@@ -187,9 +209,9 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 ## Padé 插值法（ln q、arctan q 的第二套方案，进阶教程文章）
 
 - `ln(1+x)`：`l_n = P_{n,n}` 严格下界、`u_n = P_{n+1,n}` 严格上界（Topsøe）。误差函数 `s_n = (ln-l_n)' = x^{2n}/((1+x)D_n²)`、`t_n = (u_n-ln)' = x^{2n+1}/((1+x)D̃_n²)` 恒正。
-- 证 `ln(1+q) > p`：找最小 n 使 `l_n(q) ≤ p`，取 m<n 使 `l_m(q) > p`，插值 `a+b=1, a·l_n+b·l_m = p` → `ln(1+q)-p = ∫₀^q (a·s_n+b·s_m)dx > 0`。
+- 证 `ln(1+q) > p`：`l_n` 单调递增至 ln——取同侧最弱下界 `l_1` 与首个越界下标 `m`（`l_m(q) > p`，必 m>n），插值 `a+b=1, a·l_1+b·l_m = p` → `ln(1+q)-p = ∫₀^q (a·s_1+b·s_m)dx > 0`。（本节旧文"取 m<n"方向写反，以 `docs/2026-09-16-pade-notes.md` 与实现为准；`p<l_1(q)` 时无同侧逼近可配，退化为单项证书 `resid = l_m(q)-p > 0`。）
 - arctan 同理：`l_n = P_{2n,2n}` 下界、`u_n = P_{2n+1,2n+1}` 上界，`s_n,t_n` 为对应导数（恒正有理函数）。
-- 网站实测的 ln 输出用的是 `(1+cx)^s` 核（非 Padé），Padé 方案作为备选/对照实现。
+- 网站实测的 ln 输出用的是 `(1+cx)^s` 核（非 Padé）。**落地状态（2026-09-16）**：`pade.py` 已作为 mode=exact 的在线兜底——`prove_exact` 对 ln_q/arctan_q 在 (m,n) 搜索耗尽后回落 Padé（预算 MAX_N=50），响应 `prover:"pade"`、无 parameters、证书为 Padé schema（`docs/2026-09-16-certificate-spec.md` §Padé 证书变体）。
 
 ## 组合不等式 /decompose_inequality
 

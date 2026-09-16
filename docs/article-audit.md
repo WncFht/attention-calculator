@@ -1,6 +1,6 @@
 # 文章语料审计（article corpus as primary spec）
 
-语料：`~/Desktop/obsidian/output/zhihu-mathematical/量化调酒师的数学文章/`（38 篇， `量化调酒师的数学文章.md` 索引）。`zhihu-mathematical/` 下无其它文章目录。
+语料：`~/Desktop/obsidian/output/zhihu-mathematical/量化调酒师的数学文章/`（38 篇， `量化调酒师的数学文章.md` 索引）。`zhihu-mathematical/` 下无其它文章目录。（2026-09-16 补记：本机即 devbox，语料在 `~/src/obsidian/output/zhihu-mathematical/量化调酒师的数学文章/`；`~/Desktop/...` 是 Mac 侧路径。）
 
 本文逐篇抽取关于站点行为的具体断言，逐条标注：
 
@@ -8,7 +8,7 @@
 - **(b) 与站点实测矛盾**：文章说法与 zhuyidao.net 实测不一致，以站点为准；
 - **(c) 未实现/未测试**：文章描述的行为既不在 golden 覆盖内也未实现——每条都是 一个探测或实现任务，汇总在文末优先级清单。
 
-相关证据文档：`kernel-spec.md`（29 型核表）、`behavior-notes.md`（线上行为规格）、 `edge-notes.md`（边缘输入）、`fuzz-notes.md`（918 探针差分）、`log-notes.md`（ln 族）、 `surface-diff.md`（页面逐字节 diff）、`bench/data/summary.md`（golden/decompose 统计）。
+相关证据文档：`kernel-spec.md`（29 型核表）、`behavior-notes.md`（线上行为规格）、 `edge-notes.md`（边缘输入）、`fuzz-notes.md`（922 探针差分）、`log-notes.md`（ln 族）、 `surface-diff.md`（页面逐字节 diff）、`bench/data/summary.md`（golden/decompose 统计）。
 
 ---
 

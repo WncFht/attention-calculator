@@ -1,11 +1,13 @@
 # 注意力计算器复现项目
 
-目标：完整复现 zhuyidao.net（注意力计算器）——输入"常数 ⋚ 有理数"，输出积分恒等式证明。
+目标分两阶段：zhuyidao.net（注意力计算器）的**字节级行为复现**已完成并冻结于 tag `v1.0.0-site-parity`；当前阶段是 **mode=exact 数学正确性**——产出真恒等式证明 + 机器可检证书，并扩展站端没有的类型。输入"常数 ⋚ 有理数"，输出积分恒等式证明。
 
 ## 必读文档
 
-- `docs/kernel-spec.md` — 全部 29 种类型的核函数/矩空间/搜索顺序（唯一事实源，改实现先改它）
+- `docs/kernel-spec.md` — 全部 29 种类型的核函数/矩空间/搜索顺序 + mode=exact 规格与 exact-only 型清单（唯一事实源，改实现先改它）
 - `docs/api-spec.md` — 线上 API 协议（实测）
+- `docs/2026-09-16-math-correctness-plan.md` — exact 阶段的 W0–W5 工作流划分
+- `docs/2026-09-16-site-parity-status.md` — 站点复刻阶段的冻结基线与失真面盘点
 - `bench/README.md` — benchmark 数据集与评测口径
 
 ## 代码风格（继承自用户全局约定）
@@ -18,9 +20,17 @@
 
 ## 工作流约定
 
-- 重计算（矩表生成、大规模验证、benchmark 抓取）在远程机 `devbox` 上跑（ssh devbox，12 核，Python 3.14）；本机只做开发。
-- 远端工作目录 `~/attention-calculator`；用 rsync 同步仓库，不要手工改远端文件。
-- 所有结论以 benchmark 为准：golden 数据集在 `bench/data/golden.jsonl`，评测脚本 `bench/`。
+- **canonical 仓即本机 `~/src/attention-calculator`**（本机即 devbox，12 核，Python 3.14）——重计算直接本地跑，无 rsync/远端同步；`bench/data/*.jsonl` 是 gitignored 数据资产，随仓走。
+- 多 session 协作：本仓常有多个 Claude session 并行，git 写操作（commit/branch/rebase）前先 `ListAgents`/`SendMessage` 通气；每个 agent 只动自己名下的文件，server.py 等共享区改动保持最小成块。
+- 所有结论以 benchmark 为准：站点语料在 `bench/data/golden.jsonl`，判官与评测口径见 `bench/README.md`；探测线上站限速 ≤1 req/s。
+
+## 会话工作习惯（多 session 实测沉淀）
+
+- 解释器固定 `.venv/bin/python`——不走 `uv run`/`python`，依赖以 `uv.lock` 为准。
+- 重批（judge_correct 全量、parity 3454 条）后台跑或加 `timeout`；**不要前台 `sleep` 轮询**（Bash 工具 2 分钟超时，曾 `sleep 240` 被杀），等异步任务用 ScheduleWakeup/任务通知。
+- 中间产物、dump、实验脚本放 `/tmp/`（天然免疫 pre-commit stash 竞态与其他 session 的 git 操作），确认有价值再收进 `tools/`/`bench/`。
+- worktree 里跑判官：`ln -sfn` 主仓 `bench/data/` 进 worktree，语料不复制。
+- 多 session 协作 playbook（文件归属、判官/实现分离、racer 模式、探针治理）：`docs/collab-notes.md`。
 
 ## 格式化工具链
 

@@ -2,6 +2,8 @@
 
 目标：对每条"恒等式声称"（站点 golden 或本方 solver 输出）判定 `claimed_lhs = ∫_a^b f(x)dx > 0` 是否成立、被积函数是否定号。 这是整个复现工程的基准工具：重建错了会在这里暴露，solver 证错了也是。
 
+> **补记（2026-09-16，exact_check 复核后重归因）**：verify.py 全量复核的 146 条 flag 中约 100 条是**判官自身的重建伪影**，非站点/求解器 bug。机理有两处：(1) `claimed_lhs` 未乘 `power`——重建恒按 p=1 的方程还原 LHS，凡 power≠1 的记录系统性偏 |power−1| 倍，全被误记为"系数缩放"失真；(2) gamma 子证明分母幂当时按 "'<' 取 n、'>' 取 cu_val" 猜（见下文参数编码节），真规则是 `s'=max(m,n,1)`（与 ln 族同）。权威失真面以 `exact_check` 对 1588 条 golden 成功记录的 ℚ 复核为准（46 identity-false + 6 nondefinite，见 `docs/2026-09-16-site-parity-status.md`）。verify.py 保留为站端行为审计工具，正确性裁决已由 exact_check 接管。
+
 ## 威胁模型
 
 verify 要区分三类情况：

@@ -2,6 +2,8 @@
 
 基线：tag `v1.0.0-site-parity`（f64c230），站点字节级复刻全绿。新目标：**产出数学上为真的恒等式证明**——恒等式等号在 ℚ 上精确成立、被积函数定号有精确证书、方向判定有认证依据；并在此基础上大规模扩展类型与命题覆盖。站点复刻行为整体冻结为 compat 层。
 
+> **进展速记（2026-09-16 当日）**：W0 exact_check 复核层、W1 四个失真簇修复、W2 对抗判官（judge_correct + cases_correct）、W4 Padé 在线兜底证明器、W5 证书字段全部当日落地（比原定顺序大幅提前）；W3 已注册 8 个 exact-only 矩核型（zeta5、zeta7、ln_q_cube、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q），另有复合命题型 gamma14/gamma34/gamma12 在途（`kernels/gamma_special.py`）；其余调研结论见各 `2026-09-16-w3-research-*.md` 头部状态行。当前状态汇总见 `docs/2026-09-16-exact-status.md`。
+
 ## 总体判断
 
 现有架构对这个转向几乎是准备好的：`Moment` 就是 ℚ-向量（`{常数符号: Fraction}`），每个核已有真矩生成器，`solve_moment` 在 ℚ 上求解。数学验证 = `combine(coeffs, true_basis(m,n)) == target` 的字典相等，零新数学依赖。真正的工作在三层：(1) 每族暴露真 basis/目标构造供校验复用；(2) 四个失真簇的正确路径；(3) 新类型的矩空间推导。瓶颈只有第 (3) 层要研究，其余是工程。
@@ -12,7 +14,7 @@
 
 ## 工作流划分
 
-### W0 精确验证层（主干，最先做）
+### W0 精确验证层（主干，最先做）——已落地
 
 新增 `exact_check/` 包：harness + 每族一个模块。统一接口
 
@@ -24,7 +26,7 @@ def check(kind, power, comp, bound, params) -> bool
 
 同时它也是 mode=exact 的行内断言（emit 前自检）与 benchmark 判官的裁决器。特殊结构各自处理：gamma 复合积分（主核 + ln 子证明两段矩相加）、beta 兜底模板（t·poly·√(1−x⁴)[/π] + b 的矩已知）、tan/cot/tanh/coth 的整体除因子。
 
-### W1 失真面修复（exact 路径）
+### W1 失真面修复（exact 路径）——已落地
 
 - **trig_pi (1,8)**：exact 模式直接用 `basis_moment`（真矩，核内已存在），不走 `site_basis`。顺带把"预存闭式"升级为真矩递推，解除 (m,n) 存储表范围限制。
 - **beta '<' 转置**：删 `transposed_lt_proof`，正确解继续向上搜（LT_M_LIMIT 是站端任意上限）；保留两个 sqrt 兜底模板（其恒等式本身为真，W0 会核证）。落地决定：exact '<' 扫描上限 EXACT_LT_LIMIT=256——更深的真证明（如 gauss 1<1398/1675 需 m~10⁶）诚实 NoSolution，预算上限作为可调参数留档；bench/verify.py 的 gamma 重建伪影不单独修，exact_check 已取代它做正确性裁决（verify.py 保留为站端审计工具）。
@@ -32,11 +34,11 @@ def check(kind, power, comp, bound, params) -> bool
 - **ln_q_square q∈{5,7}**：诊断站端崩溃根因（疑似矩系统奇异/实现除零），exact 路径按真系统正常求解。
 - **方向判定认证**：float64 预检/兜底替换为 `mp.iv` 区间比较（精度递增至符号确定）；代数常数（golden=√5 型）走 ℚ 精确平方比较。等值命题报 `二者相等` 保持。
 
-### W2 正确性 benchmark
+### W2 正确性 benchmark——已落地
 
 `bench/judge_correct.py`：语料 = 全 golden 输入（ground truth 用区间比较认证，不信仰站端标签）+ 随机/对抗生成（紧界 1e-30、巨大分子分母、power∈{0,±1/2,±2,…}、边界等值点）。指标：每条 emitted proof 过 W0（**零容忍假恒等式**）、真命题证明覆盖率、方向判定正确率、与 site 模式的输出分歧清单（分歧应恰好落在失真簇上）。运行仍全本地，不打站端。
 
-### W3 类型扩展（主体扩展面，下一阶段并行铺开）
+### W3 类型扩展（主体扩展面，下一阶段并行铺开）——部分落地（8 型已注册）
 
 作者文章目录 ~45 型，站端活 29。每型 = 推导矩空间 + 一个核文件 + 进注册表 + benchmark 用例，天然一型一 agent。按可达性排序：
 
@@ -45,11 +47,11 @@ def check(kind, power, comp, bound, params) -> bool
 3. **ln π、e^π 已在外需复核边界**；ψ′(q)（级数核）、Glaisher、Li₂(q)、Si/Cin、Ein/Ei、erf、arsinh/arcosh —— 各需一次矩空间推导（调研任务，先出推导笔记再实现）。
 4. decompose 数学模式：子界分配用连分数最佳逼近保证可证；项文法扩到商/幂/嵌套。
 
-### W4 证明器强度
+### W4 证明器强度——已落地（pade.py 在线兜底）
 
 Padé 插值证法（kernel-spec 已有完整规格：误差函数恒正有理函数，构造性严格）作 ln/arctan 族的独立第二证法，与 (m,n) 搜索互为补充——能证搜索预算外或高次 P 才够的界；P 升次（≥3 系数，矩空间维数随升）；预算策略改自适应（先小预算快答，未命中递增）。
 
-### W5 证书输出与接口
+### W5 证书输出与接口——已落地（certificate 字段 + tools/verify_cert.py）
 
 exact 响应附 `certificate`：`{integrand, domain, nonneg: {rule, coeffs}, moments: 目标向量, basis: 符号表}`——一个独立脚本（或 sympy/mpmath 小段）可离线复核。CLI `attention-calculator --exact`；docs 出证书格式 spec。远期可出 Lean/sympy 可检形式（非承诺）。
 

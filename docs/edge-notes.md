@@ -1,6 +1,6 @@
 # 边缘输入探测笔记（zhuyidao.net 实测）
 
-数据：`bench/data/edge-probes.jsonl`（305 次请求，~1 req/s，2026-09-15）， 采集脚本 `bench/edge_probe.py`（第一波 226 条）、`bench/edge_probe2.py`（第二波 79 条）， 离线重放脚本 `bench/replay_edge.py`（就地刷新 ours_* 字段，不触网）。
+数据：`bench/data/edge-probes.jsonl`（376 次请求，~1 req/s，2026-09-15）， 采集脚本 `bench/edge_probe.py`（第一波 226 条）、`bench/edge_probe2.py`（第二波 79 条）、`bench/edge_probe3.py`/`edge_probe3b.py`（第三波 71 条）， 离线重放脚本 `bench/replay_edge.py`（就地刷新 ours_* 字段，不触网）。
 
 覆盖 behavior-notes/golden 未触达的输入空间：相等判定、指数上限、退化输入、 image 端点校验、unified_form、页面与方法学边缘。与 behavior-notes.md 互补， 本节只记新事实。
 

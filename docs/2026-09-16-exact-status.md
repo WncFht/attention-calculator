@@ -1,0 +1,39 @@
+# mode=exact 阶段状态汇总（2026-09-16）
+
+方案见 `2026-09-16-math-correctness-plan.md`（W0–W5）；本文件是当日晚间的实际落地快照。site 路径冻结于 `v1.0.0-site-parity`，本文不涉及它。
+
+## W0–W5 落地情况
+
+- **W0 验证层**：`exact_check/` 包按族实现 `check(kind, power, comp, bound, params) -> {identity_ok, nonneg, integrand, target}`，`verify`/`verify_response` 两条入口；既是 mode=exact 的发射自检（失败→InternalError），也是判官裁决器与站端输出的复核器。checker 契约两条硬规则（Moment dict 滤零值键、nonneg 含 `bool(integrand)` 非空守卫）已写进 kernel-spec「exact_check 复核器契约」节——四个 agent 独立踩过同一个坑。
+- **W1 失真修复**：trig_pi exact 走 `basis_moment` 真矩（绕开 (1,8) 损坏存式）；beta '<' 删转置档、`EXACT_LT_LIMIT=256` 诚实 NoSolution 兜底；power≠1 令发射参数满足印刷 LHS；ln_q_square q∈{5,7} 崩溃完成行列式级根因（det(1,0)∝−(c−4)(c+1)/72c⁶ 等，预言 q=13 同型崩溃未探）；方向判定换 `certified_cmp`（mpmath 80→240→800→2400dps + 护栏带 `2^(30−dps)·max(1,|c|)`）。
+- **W2 正确性判官**：`bench/judge_correct.py` + `cases_correct.py`（commit 89c221b）。ground truth 用 `constant_mpf` 区间比较独立裁决，不信仰站端标签；emitted proof 必须过 exact_check（零容忍假恒等式）；site 对照分歧按已知失真簇归因，`unattributed:*` 是要追的。
+- **W4 Padé 第二证明器**：`pade.py` 作 ln_q/arctan_q 的在线兜底（(m,n) 搜索耗尽后，预算 MAX_N=50，commits 3fbd546/371f087）。响应形 `{"success","type","prover":"pade","certificate"}`——**无 parameters**，证书即证明；渲染与判官不得假设 parameters 存在。
+- **W5 证书**：`certificate.py` + `tools/verify_cert.py`（schema：`docs/2026-09-16-certificate-spec.md`，含 Padé 变体与 gamma_special 的 proof-DAG 变体）。
+
+## exact-only 型清单（EXACT_TYPES 现 11 型）
+
+| 型 | 落地 | 出处 |
+|---|---|---|
+| zeta5 / zeta7 | 矩核（quadlog η/β 行复用） | kernels/zeta_odd.py |
+| ln_q_cube | 矩核（4 维 span，三次 P + QQ(√D) 判据） | kernels/ln_pow.py，推导 `2026-09-16-ln-cube-derivation.md` |
+| arcsin_q / arsinh_q | 矩核（根号核 + 寄生常数） | kernels/arcsin.py / invhyp.py |
+| gaussint_q / dawson_q / erfiint_q | 矩核（erf 缩放常数三连，commit 80e6b74） | kernels/gauss_erf.py |
+| gamma14 / gamma34 / gamma12 | 复合命题型（证书 DAG，**在途未提交**） | kernels/gamma_special.py |
+
+调研已完成但未注册：li2_q、Si/Cin（各一型，需三次 poly_nonneg）、trigamma ψ′(q)（对称望远镜核）、Γ(1/3)³-类常数。已否决：erf 本体（√π 障碍）、Γ(1/4)/Γ(1/3) 字面幂（格点奇偶锁）、lnA/Glaisher（矩空间符号数恒超 P 系数）、arcosh_q（span 无 "1" 方向）。逐篇结论见 `2026-09-16-w3-research-*.md` 头部状态行。命名注意：erf 调研文里的 `expint_q` 落地名为 **erfiint_q**。
+
+## 判官结果与修复史
+
+8830 条全量扫描（golden 输入 + 对抗语料）快照：proved 3178、rejected-false 4295、unsolved-true 733、rejected 476、equal-claim 86、**BUG ×62**。两类 BUG 均已修复并复测转阴：
+
+- `BUG:wd-on-true` ×41（hyperbolic q<0 未做奇偶归约）→ commit 460c5b1 奇偶归约到 |q|；
+- `BUG:crash` ×21（power=0 触发 Fraction(1,0)）→ 同 commit 退化域拒（e_q/cosh_q q=0、coth_q q≤0 等报 ValueError）。
+
+复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。**注意 `bench/out/judge_correct-a9.jsonl` 与 `judge_correct.d/*.jsonl` 均早于修复**，引用数字前先重跑。
+
+## 在途项
+
+- `decompose_exact.py`（commit 4856f27，含 `tests/test_decompose_exact.py`、`docs/2026-09-16-decompose-math.md`）：可证构造的界分配，每个子界实际跑 `solve.prove(exact=True)` 验证。**已入库但未接线**——`/decompose_inequality` 端点仍只走 site 版 decompose，无 mode 参数。
+- `gamma_special.py`：复合 Γ 型（上表），工作树未提交；`certificate.py` 的 verify_cert 已接 dispatch（dispatch 在提交区、kernel 本体不在，注意配对）。
+- 新增在途调研/实现笔记：`docs/2026-09-16-li2-impl-notes.md`、`docs/2026-09-16-pi-sqrt2-impl-notes.md`（均未提交）。
+- 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例）。

@@ -2,6 +2,8 @@
 
 数据：`bench/data/probes.jsonl`（约 170 次请求，2026-09-15），重放脚本 `bench/probe_api.py`。 恒等式抽样经 mpmath 40 位验证全部精确成立——返回参数**确实满足**渲染出的恒等式 （此前"e 型参数不满足恒等式"的观察是探测方字段名 bug：误用 `constant=` 导致缺省回退 pi）。
 
+> **补记（2026-09-16）**：抽样成立≠全量成立——exact_check 对全部 1588 条 golden 成功记录的 ℚ 复核发现 46 条假恒等式 + 6 条零被积函数退化（站端 bug，已原样复刻进 site 路径）。权威盘点见 `docs/2026-09-16-site-parity-status.md`。
+
 ## 1. 协议层
 
 ### POST /calculate 表单字段

@@ -1,5 +1,10 @@
 # HANDOFF — 完成记录（2026-09-16 收口）
 
+> **阶段提示**：本文件是**站点复刻阶段**的完成记录（终点 = tag `v1.0.0-site-parity`）。
+> 之后项目目标切换为数学正确性（mode=exact），该阶段的方案/进度见
+> `docs/2026-09-16-math-correctness-plan.md`、`docs/kernel-spec.md` §mode=exact
+> 与各 `docs/2026-09-16-*.md`。
+
 本文件原是 2026-09-15 的暂停点交接；全部六项任务现已收敛，改写为完成记录。 **Canonical 仓库即本机 `~/src/attention-calculator`**（本机即 devbox，无 rsync）。 Python 用 `.venv/bin/python`。
 
 ## 项目是什么
@@ -18,7 +23,7 @@
 | 评测 | 数字 | 入口 |
 |---|---|---|
 | golden parity（/calculate + /get_integral_image，含响应体逐字节） | **wip 全绿：3454/3454 status+body，eq_match 1588/1588** | `bench/parity.py bench/data/golden.jsonl` |
-| verify（恒等式数学真值，50dps） | 1438 成功记录中 1438 真/假随数据集增长——verify 把复现的站点 bug 也计入假（30 trig-bias + 3 gauss-window 等） | `bench/verify.py` |
+| verify（恒等式数学真值，50dps） | 1438 成功记录中 1438 真/假随数据集增长——verify 把复现的站点 bug 也计入假（30 trig-bias + 3 gauss-window 等）。**注：verify 的 false-identity 计数含判官重建伪影；权威失真面是 exact_check 复核的 46+6（`docs/2026-09-16-site-parity-status.md`）** | `bench/verify.py` |
 | edge 重放（376 条边缘探针离线重放） | **376/376 全绿** | `bench/replay_edge.py` |
 | fuzz 重放（922 条随机探针离线重放） | **922/922 全绿** | `bench/replay_fuzz.py` |
 | fidelity+probes 重放（395 条孤儿采集） | **全绿**：fidelity 228/228 + probes 160 吻合（7 条站端瞬态 500 skip） | `bench/replay_capture.py` |

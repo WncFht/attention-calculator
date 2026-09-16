@@ -1,6 +1,6 @@
 # 复现路线图与分工
 
-> **已完成（2026-09-16）**：四个阶段全部收口，wip 分支全部判官零分歧， 仅剩合回 master 待定。本文件保留作过程记录。
+> **已完成（2026-09-16）**：四个阶段全部收口并合入 master，终点打 tag `v1.0.0-site-parity`（里程碑报告 `docs/2026-09-16-site-parity-status.md`）。本文件保留作过程记录；当前阶段为 mode=exact 数学正确性，方案见 `docs/2026-09-16-math-correctness-plan.md`。
 
 目标产物：与 zhuyidao.net 行为一致的完整实现（solver + Web + 组合拆解 + 姊妹应用 /convex、/health），全部结论由 `bench/data/golden.jsonl` 上的 parity/verify 数字背书。
 
@@ -31,7 +31,7 @@
 - **端到端验证**：pi<22/7 现场返回 m=3,n=3,a=47/120,b=-13/120 —— 与引擎原型（mn_order+solve_moment+poly_nonneg + J_k 递推）逐位一致，架构与搜索序已对齐。
 - **power 语义**：e 型的 power 是**系数**（power=2 → 2e，渲染 `19/3 - 2e`）；e_q 的 power 是**指数**（power=2 → e²，核 e^{2x}）。
 - **API 字段陷阱**：/calculate 的字段是 `type`；误发 `constant=e` 会被**静默忽略并缺省回退到 type=pi**（响应 `"type":"pi"`）。曾因此误判"e 型恒等式为假"——实为 π 型参数被 e 渲染器渲染；e 型实测完全正常（双向支持：`e<3`→(0,1)P=x、`e>8/3`→(1,1)P=x/3）。**parity/探测脚本必须发 `type=` 字段**。
-- **搜索序 tie-break**：同 m+n、同 |m−n| 时 **m 小者优先**（pi>8/3→(0,1)；全部非对称 pi golden 均 m<n；400+ 条参数逐位一致）。
+- **搜索序 tie-break**：同 m+n、同 |m−n| 时 **m 小者优先**（pi>8/3→(0,1)；全部非对称 pi golden 均 m<n；400+ 条参数逐位一致）。**更正（2026-09-16 第三轮探测）**：此规则只覆盖奇数和情形；完整规则按 m+n 奇偶定向——和为奇数 m 小者先、和为偶数 m 大者先（决定性证据：ln²(3/2)<17/100 取 (2,0) 而非 (0,2)）。以 `docs/kernel-spec.md` 搜索顺序节为准。
 - **指数上限按单指数计**：m≤cap 且 n≤cap（pi 实测用到 (15,18)，m+n=33>30）。
 - **ln 类分母幂**：`s=max(m,n,1)`（ln_q 61/61 + ln_q_square 31/31 数值拟合全中；s 不回传）。
 - **错误码分层**：格式错误 400；值域/方向/无解 404；image 端点失败统一 500。错误响应体只有 `{"error"}` 无 `success` 键。

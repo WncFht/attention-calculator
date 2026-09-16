@@ -1,5 +1,7 @@
 # golden 扩容采集笔记（2026-09-15）
 
+> **过时提醒（2026-09-16）**：文末"复跑方式"的 rsync→ssh devbox 流程已废——本机即 devbox，直接在本地跑 `bench/harvest.py` / `bench/parity.py`。文中"本方无实现"的站点行为（初等核+余项模板、gamma 系数折叠、power=0 退化渲染等）随后均已落地，`cu_val∈{1,2}` 含义已查明（兜底模板方向标志），终态见 `docs/2026-09-16-site-parity-status.md` 与 `docs/kernel-spec.md` varpi/gauss 节。
+
 `bench/cases.py` PARAM_SETS 扩充了 7 个最薄类型，devbox 端 `bench/harvest.py
 --only golden` 续跑采集，golden.jsonl 由 2969 → **3454** 条（+485，无重复键；
 含 article-audit 补记追加的 `pi < 14885392687/4738167652` 算例一条）。

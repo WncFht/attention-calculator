@@ -101,3 +101,5 @@ G⁻¹ 的系数真值 ~1026 对声称 ~0.83，常数项也不符；转置解出
 ## 2026-09-16 复跑补记（数据集 2969→3454）
 
 `bench/out/verify.jsonl`（3454 条新版输出）：1438 valid、**146 false-identity**、 4 harness-error、1866 fail 记录方向自洽。146 = 上文 33 条两个已知簇 + **~113 条 新簇「系数缩放」**：gamma/catalan/zeta3/varpi/gauss 在 power≠1（含 0、1/2）时， 站端印刷式把 power 乘进被积函数、LHS 声称 power·C−bound——真值核验 claimed = power×actual（已精确成立 19/116，其余疑似同族不同子机制）。 例：`gamma 2>1` 站端 raw_image 字面印刷 `2γ−1 = ∫2·kernel dx > 0`，而真积分 是 γ−1/2。**已抽查站端原文确证是站端发出的假恒等式，非我方渲染分歧**—— 复现侧不受影响（逐字节照发）。4 条 harness-error 为 varpi/gauss power=None 记录的 verify 侧重建缺口（次要）。
+
+> **重归因更正（同日稍后）**：上段"~113 条系数缩放"的归因被 exact_check 复核推翻——其中约 100 条是 verify.py **判官自身的重建伪影**（reconstruct 丢 `coef` 因子、claimed_lhs 未乘 power；归一化求解 `C ⋚ bound/power` 本就自洽），真站端错误只有 13 条（9 条 gauss 转置 power 变体 + 4 条 e_pi power=0）。权威失真面以 `docs/2026-09-16-site-parity-status.md` 的 exact_check 口径为准：**46 条假恒等式 + 6 条零被积函数退化**。本段保留作 verify.py 数值口径的历史记录。

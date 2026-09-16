@@ -2,7 +2,7 @@
 
 > **已收口（2026-09-16）**：199 条分歧全部修复，`bench/replay_fuzz.py` 离线重放 922/922 全绿。本文件保留作采集快照与归因记录。
 
-2026-09-15，`bench/fuzz.py --seed 1`：对 zhuyidao.net 与本机克隆做同请求差分。共 918 条探针（/calculate 756、/get_integral_image 162），站端限速 1 req/s，全程无 传输失败、无本机超时，**199 条分歧全部是真实行为差异**，无一 harness 工件。 探针原文在 `bench/data/fuzz-probes.jsonl`（gitignored）。
+2026-09-15，`bench/fuzz.py --seed 1`：对 zhuyidao.net 与本机克隆做同请求差分。共 922 条探针（去重后入库条数；本文初稿按采集途中快照写 918），站端限速 1 req/s，全程无 传输失败、无本机超时，**199 条分歧全部是真实行为差异**，无一 harness 工件。 探针原文在 `bench/data/fuzz-probes.jsonl`（gitignored）。
 
 结论：站端在三个层面和我们不同——/calculate 的字段校验细节（空 comparison、 空白字符）、/get_integral_image 的逐字段校验与越界渲染、若干核路径（退化零解、 q=0 崩溃不对称、度数类型回显名）。
 

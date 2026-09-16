@@ -57,3 +57,11 @@
 
 - `/convex`（凸函数不等式计算器）、`/health`（健康计算器）为姊妹应用，已复现——协议细节见 `docs/sibling-apps.md`。
 - 前端：服务端渲染 + MathJax + KaTeX + html2canvas；中英双语；sessionStorage 历史 10 条。
+
+## 本地扩展（非站端行为）
+
+以上全是站端实测协议。本实现另加以下扩展，站端不存在：
+
+- `POST /calculate` 表单加 `mode=exact`：走数学正确性路径（`solve.prove_exact`）。语义差异：方向判定经 `certified_cmp` 递增精度认证（不做 float64 预检/兜底）；接受 `EXACT_TYPES` 里的 exact-only 类型（site 模式按站端口径 400）；响应附 `certificate` 字段（机器可检证书，格式 `docs/2026-09-16-certificate-spec.md`，离线复核 `tools/verify_cert.py`）；假恒等式/失真簇不发——发不出就 `未找到解`。缺省或 `mode` 为其他值时行为与站端逐字节一致。
+- exact 模式下 ln_q/arctan_q 在 (m,n) 搜索耗尽后回落 Padé 第二证法（`pade.py`）：此时响应为 `{"success","type","prover":"pade","certificate"}`——无 `parameters`/`equations`，证书是 Padé schema（`serr` 键标记）。
+- exact-only 类型的 equation 渲染不经 `/get_integral_image`（该端点仍只认站端 29 型），由核的 `render_equation` 程序化产出。

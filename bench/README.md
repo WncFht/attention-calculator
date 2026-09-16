@@ -2,7 +2,7 @@
 
 benchmark 是本项目一切结论的依据。**任何实现决策（核族参数、搜索顺序、失败边界）都要落到数据上的数字**。
 
-`bench/data/` 全部 gitignored（站端采集语料，体积大，不入库——rsync/手动同步）； `bench/probes/*.json` 入库——是 tests/ 里内联断言的引用源；`bench/out/` 是评测输出。
+`bench/data/` 全部 gitignored（站端采集语料，体积大，不入库——本机即 devbox canonical 仓，语料随仓走）； `bench/probes/*.json` 入库——是 tests/ 里内联断言的引用源；`bench/out/` 是评测输出。
 
 ## 数据集 ↔ 判官对照表
 
@@ -23,6 +23,20 @@ benchmark 是本项目一切结论的依据。**任何实现决策（核族参�
 | `decompose/`、`*.log`、`summary.md` | —    | 采集副产物                      | —                                    | 溯源档案                                             |
 
 全部判官当前**零分歧**。一键全量：`bench/run_all.sh`。
+
+## mode=exact 正确性评测（W2）
+
+与站点 parity 套件并列的第二套判官——不打站端、不信仰站端标签（golden 的 success/error 字段只当输入，不当结论）：
+
+| 资产                      | 角色                                                                                                                                                                                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `judge_correct.py`        | exact 正确性判官：每条输入独立裁决 ground truth（`cases.true_value` 区间比较，80→2400 dps 递增 + 护栏带）、exact 路径输出（emitted proof 必须过 `exact_check.verify`，零容忍假恒等式）、site 路径对照（`--no-site` 可关；分歧按已知失真簇归因，`unattributed:*` 是要追的）。`-o` 出 jsonl 明细，`--limit` 截断 |
+| `cases_correct.py`        | 对抗语料生成器：`--adversarial` 时被 judge 调用——power∈{1,2,3,1/2,0,−1} 网格 × 1e-1…1e-12 距离夹逼界 × 连分数收敛子多深度 + 等值点（Niven/power=0）/域边界/零负界探针                                                                                                                                          |
+| `decompose_math_probe.py` | 量各 (kind,power,comp) 的 (m,n) 搜索可证前沿（界距 vs 所需最小深度），产 markdown 表供 `docs/2026-09-16-decompose-math.md`                                                                                                                                                                                     |
+| `tools/verify_cert.py`    | exact 证明证书的离线独立复核（证书格式见 `docs/2026-09-16-certificate-spec.md`）                                                                                                                                                                                                                               |
+| `exact_sweep.py`          | 在 golden 风格语料上批量跑 `exact_check.verify` 并计数（`--types` 过滤、`--include-fail` 含失败记录、`--exact-mode` 改为重证发射参数、`--list-fail` 列明细）；identity-false/nondefinite/校验崩溃时非零退出，可当 gate 用                                                                                      |
+
+`verify.py` 的角色变化：恒等式正确性裁决已由 `exact_check`（ℚ 字典相等，全称证明）取代；verify.py 保留为 site 输出的 50dps 数值审计工具，其 146 条 flag 中约 100 条是重建伪影（权威失真面数字见 `docs/2026-09-16-site-parity-status.md`）。
 
 ## golden.jsonl 格式
 
