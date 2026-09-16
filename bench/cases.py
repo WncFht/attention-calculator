@@ -181,6 +181,18 @@ def true_value(typ, q):
         return mp.log(x)
     if typ == "ln_q_square":
         return mp.log(x) ** 2
+    if typ == "ln_q_cube":
+        return mp.log(x) ** 3
+    if typ == "arcsin_q":
+        return mp.asin(x)
+    if typ == "arsinh_q":
+        return mp.asinh(x)
+    if typ == "gaussint_q":
+        return mp.sqrt(mp.pi) / 2 * mp.erf(x)
+    if typ == "dawson_q":
+        return mp.dawson(x)
+    if typ == "erfiint_q":
+        return mp.sqrt(mp.pi) / 2 * mp.erfi(x)
     if typ == "sin_q":
         return mp.sin(x)
     if typ == "cos_q":
@@ -221,6 +233,10 @@ def true_value(typ, q):
         return x * mp.catalan
     if typ == "zeta3":
         return x * mp.zeta(3)
+    if typ == "zeta5":
+        return x * mp.zeta(5)
+    if typ == "zeta7":
+        return x * mp.zeta(7)
     if typ == "e_pi":
         return x * mp.exp(mp.pi)
     if typ == "varpi":
