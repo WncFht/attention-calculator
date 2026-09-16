@@ -41,6 +41,10 @@ class EqualClaim(ValueError):
     """
 
 
+# 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
+EXPONENT_LIMIT = {"pi": 30, "e": 30}
+
+
 def mn_order(limit: int) -> Iterator[tuple[int, int]]:
     """Yield (m, n) with m+n ascending, |m-n| ascending, then the parity rule.
 
@@ -113,7 +117,6 @@ class Solved:
     m: int
     n: int
     coeffs: list[Fraction]
-    sign: int  # +1 integrand >= 0, -1 integrand <= 0
 
 
 def search(
@@ -139,7 +142,7 @@ def search(
             continue
         check = poly_nonneg if nonneg else poly_nonpos
         if check(coeffs):
-            return Solved(m, n, coeffs, +1)
+            return Solved(m, n, coeffs)
         if check([-c for c in coeffs]):
             if not defer:
                 raise WrongDirection

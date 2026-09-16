@@ -84,8 +84,6 @@ ERR_RHS_FORM = "当前乘积组合只支持“乘积 与 有理数”比较"
 
 BAD_CHARS = re.compile(r"[^0-9A-Za-z_()+\-*/^.\sπ]")
 
-EXPONENT_LIMIT = {"pi": 30, "e": 30}
-
 
 def parse_atom(expr):
     """sympy 因子 → (kind, arg)；不支持的形状抛对应站端错误串。"""
@@ -168,10 +166,10 @@ def atom_value(kind, arg):
         "arctan_q": lambda: math.atan(f),
         "sinh_q": lambda: math.sinh(f),
         "tanh_q": lambda: math.tanh(f),
-        "gamma": lambda: f * 0.5772156649015329,
+        "gamma": lambda: f * solve.EULER_F,
         "golden": lambda: f * (1 + math.sqrt(5)) / 2,
-        "catalan": lambda: 0.915965594177219 * f,
-        "zeta3": lambda: 1.2020569031595942 * f,
+        "catalan": lambda: solve.CATALAN_F * f,
+        "zeta3": lambda: solve.ZETA3_F * f,
         "varpi": lambda: VARPI_V * f,
         "gauss": lambda: GAUSS_V * f,
     }[kind]()
@@ -557,11 +555,8 @@ def make_step(kind, arg, coef_disp, comp, bound, is_factor=False):
     bl = frac(bound)
     try:
         res = solve.prove(kind, power, comp, str(bound_eff))
-    except WrongDirection:
-        inner = "要证明的式子不等号方向反了"
-    except NoSolution:
-        limit = EXPONENT_LIMIT.get(kind, 10)
-        inner = f"在指数不超过{limit}的范围内未找到{comp}方向的解"
+    except (WrongDirection, NoSolution) as exc:
+        inner = solve.failure_text(exc, kind, comp)
     except EqualClaim as exc:
         inner = str(exc)
     except ValueError as exc:
@@ -695,7 +690,7 @@ def decompose_inequality(problem):
     for coef, factors in raw_terms:
         v = float(coef)
         for f in factors:
-            kind, arg = parse_atom(f) if len(factors) else None
+            kind, arg = parse_atom(f)
             v *= atom_value(kind, abs(arg))
         buggy += v
     if not (buggy > float(R) if comp == ">" else buggy < float(R)):
@@ -705,7 +700,6 @@ def decompose_inequality(problem):
         raise ValueError(ERR_NO_SPLIT)
     if not has_product:
         R -= rationals
-        terms = [(c, a) for c, a in terms]
     # 单原子负幂项（1/pi 这类）在加法里拆不动
     if any(len(atoms) == 1 and atoms[0][1] < 0 for _, atoms in terms):
         raise ValueError(ERR_NO_SPLIT)

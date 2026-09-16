@@ -6,7 +6,7 @@ from fractions import Fraction
 
 import mpmath as mp
 
-from .engine import NoSolution, WrongDirection
+from .engine import EXPONENT_LIMIT, NoSolution, WrongDirection
 from .kernels import TYPES
 
 # type -> module under attention_calculator.kernels
@@ -56,7 +56,7 @@ with mp.workdps(60):
     E_PI_F = float(mp.exp(mp.pi))
     VARPI_F = float(mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi)))
     GAUSS_F = float(mp.gamma(mp.mpf(1) / 4) ** 2 / (2 * mp.sqrt(2 * mp.pi**3)))
-EULER_F = 0.5772156649015329  # 与 kernels.gamma 的站端字面量一致
+EULER_F = 0.5772156649015329  # 站端 float64 字面量，kernels.gamma / decompose 共用
 
 
 def trig_in_domain(kind: str, q: Fraction) -> bool:
@@ -130,6 +130,14 @@ def direction_f(kind: str, q: Fraction):
 def parse_rational(text: str) -> Fraction:
     """Parse '3', '22/7' into a Fraction."""
     return Fraction(text.strip())
+
+
+def failure_text(exc: Exception, kind: str, comp: str) -> str:
+    """站端 404 文案：WrongDirection -> 方向反了；NoSolution -> 预算内未找到解。"""
+    if isinstance(exc, WrongDirection):
+        return "要证明的式子不等号方向反了"
+    limit = EXPONENT_LIMIT.get(kind, 10)
+    return f"在指数不超过{limit}的范围内未找到{comp}方向的解"
 
 
 def prove(kind: str, power: str, comp: str, rational: str) -> dict:

@@ -33,9 +33,6 @@ def respond(payload: dict, status: int = 200) -> Response:
     return Response(body, status=status, mimetype="application/json")
 
 
-# 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
-EXPONENT_LIMIT = {"pi": 30, "e": 30}
-
 # 站端只接受 "n" 或 "n/d" (非负整数组成); 小数、负数、其它写法都算格式错误
 NUM_RE = re.compile(r"^\d+(/\d+)?$")
 
@@ -145,13 +142,13 @@ def en_slash():
 # 本地演示页：站端页面引用 jsdelivr/hertzen 三个 CDN 依赖（MathJax/KaTeX/
 # html2canvas），离线或 CDN 不可达时公式不排版。/demo 把 URL 改写为
 # static/vendor 下的本地副本；/ 与 /en 保持站端逐字节不动（parity 夹具）。
-_DEMO_CDN = (
+DEMO_CDN = (
     ("https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js", "mathjax/tex-mml-chtml.js"),
     ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css", "katex/katex.min.css"),
     ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js", "katex/katex.min.js"),
     ("https://html2canvas.hertzen.com/dist/html2canvas.min.js", "html2canvas.min.js"),
 )
-DEMO_ASSETS = {cdn: f"/static/vendor/{name}" for cdn, name in _DEMO_CDN}
+DEMO_ASSETS = {cdn: f"/static/vendor/{name}" for cdn, name in DEMO_CDN}
 
 
 @app.get("/demo")
@@ -230,11 +227,8 @@ def calculate():
     rational_wire = "/".join(map(str, bound_parts))
     try:
         result = solve.prove(kind, power_wire, comp, rational_wire)
-    except engine.WrongDirection:
-        return fail("要证明的式子不等号方向反了", 404)
-    except engine.NoSolution:
-        limit = EXPONENT_LIMIT.get(kind, 10)
-        return fail(f"在指数不超过{limit}的范围内未找到{comp}方向的解", 404)
+    except (engine.WrongDirection, engine.NoSolution) as exc:
+        return fail(solve.failure_text(exc, kind, comp), 404)
     except engine.EqualClaim as exc:
         return fail(str(exc), 404)
     except ValueError as exc:

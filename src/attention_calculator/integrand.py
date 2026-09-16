@@ -81,6 +81,9 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
     polyx2 = poly(p, x**2)
     # sin 基与 x⁴ 基的 P 都只有两项（a+b·t）；c_val 在这些类型里被复用或恒零
     a_, b_ = frac(p["a_val"]), frac(p["b_val"])
+    polyx1 = (
+        sp.Rational(a_.numerator, a_.denominator) + sp.Rational(b_.numerator, b_.denominator) * x
+    )
     polysin = sp.Rational(a_.numerator, a_.denominator) + sp.Rational(
         b_.numerator, b_.denominator
     ) * sp.sin(x)
@@ -128,15 +131,7 @@ def reconstruct(kind: str, comp: str, power: Fraction, p: dict):
     if kind in ("artanh_q", "arcoth_q"):
         # c_val 复用为归约后的 ln 参数 q'，不是多项式系数
         qq = frac(p["c_val"])
-        f = (
-            base
-            * (
-                sp.Rational(frac(p["a_val"]).numerator, frac(p["a_val"]).denominator)
-                + sp.Rational(frac(p["b_val"]).numerator, frac(p["b_val"]).denominator) * x
-            )
-            / (1 + (qq - 1) * x) ** s
-        )
-        return f, *DOMAIN_UNIT
+        return base * polyx1 / (1 + (qq - 1) * x) ** s, *DOMAIN_UNIT
     if kind == "golden":
         return base * polyx * sp.sqrt(4 + x), *DOMAIN_UNIT
     if kind == "catalan":
