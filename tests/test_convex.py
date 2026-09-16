@@ -23,6 +23,8 @@ REASON_SEARCH_MISS = "不等式数值上已通过，但内置有限候选搜索�
 
 SAMPLE = "exp(x)-log(x)-261/112>0"
 
+SITE_CONVEX_HTML = Path("bench/data/site-convex.html")
+
 
 @pytest.fixture
 def client():
@@ -34,9 +36,10 @@ def prove(client, **form):
     return client.post("/convex/prove", data=form)
 
 
+@pytest.mark.skipif(not SITE_CONVEX_HTML.exists(), reason="bench/data 语料不入库（rsync 同步）")
 def test_convex_page_and_routes(client):
     """GET /convex/ 与 /convex/en 返回 site-convex.html 原字节；错误带 ok:false。"""
-    expected = Path("bench/data/site-convex.html").read_bytes()
+    expected = SITE_CONVEX_HTML.read_bytes()
     for path in ("/convex/", "/convex/en"):
         resp = client.get(path)
         assert resp.status_code == 200
