@@ -132,26 +132,31 @@ def parse_rational(text: str) -> Fraction:
     return Fraction(text.strip())
 
 
-def certified_cmp(kind: str, q: Fraction, r: Fraction) -> int:
+def certified_cmp(kind: str, q: Fraction, r: Fraction) -> int | None:
     """Certified sign of C - r for mode=exact direction decisions.
 
     Evaluates the target constant at escalating mpmath precision and
     accepts the sign only when |C - r| clears a wide guard band around
     the evaluation error (2^30 ulp at the working precision). Returns
-    +1/-1/0; raises NoSolution when 2400 dps still cannot decide, which
-    for an irrational C means |C - r| < ~2^-7000 — practically unreachable.
+    +1/-1/0, or None when the constant is not real-evaluable at this q
+    (out-of-domain input — the kernel's own validation then decides).
     """
     from .integrand import constant_mpf
 
     for dps in (80, 240, 800, 2400):
         with mp.workdps(dps):
-            c = constant_mpf(kind, q)
-            diff = c - mp.mpf(r.numerator) / r.denominator
-            guard = mp.mpf(2) ** (30 - dps) * max(1, abs(c))
-            if diff > guard:
-                return 1
-            if diff < -guard:
-                return -1
+            try:
+                c = constant_mpf(kind, q)
+                if not mp.isfinite(c):
+                    return None
+                diff = c - mp.mpf(r.numerator) / r.denominator
+                guard = mp.mpf(2) ** (30 - dps) * max(1, abs(c))
+                if diff > guard:
+                    return 1
+                if diff < -guard:
+                    return -1
+            except (TypeError, ValueError, OverflowError, ZeroDivisionError):
+                return None
             if abs(diff) <= guard and dps == 2400:
                 # |C - r| below the smallest guard band: treat as equality
                 # (only reachable for rational C, e.g. Niven points)
@@ -234,7 +239,7 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
     sign = certified_cmp(kind, q, r)
     if sign == 0:
         raise EqualClaim("二者相等")
-    if (sign < 0) == (comp == ">"):
+    if sign is not None and (sign < 0) == (comp == ">"):
         raise WrongDirection
     resp = module.prove(kind, q, comp, r, exact=True)
     res = verify(kind, q, comp, r, resp["parameters"])
