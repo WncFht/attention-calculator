@@ -25,7 +25,7 @@ from attention_calculator.exact_check.gauss_erf import check
 from attention_calculator.kernels import EXACT_TYPES
 from attention_calculator.kernels.gauss_erf import prove, render_equation
 
-mp.dps = 60
+mp.mp.dps = 60
 _ZERO = mp.mpf(0)
 
 KINDS = ("gaussint_q", "dawson_q", "erfiint_q")

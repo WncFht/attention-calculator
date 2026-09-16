@@ -18,7 +18,7 @@ from attention_calculator.engine import NoSolution, WrongDirection
 from attention_calculator.exact_check.arcsin import check
 from attention_calculator.kernels.arcsin import prove
 
-mp.dps = 60
+mp.mp.dps = 60
 
 
 def tight_bounds(q: Fraction, digs: int) -> tuple[Fraction, Fraction]:
