@@ -40,7 +40,7 @@
 
 ## 在途项
 
-- W7 第二证明器波（进行中）：`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）、`w7-decomp-ext`（decompose_exact 原子表覆盖全部 EXACT_TYPES）。已落地：`w7-agm`（AGM 区间证法 commit d5e3000——gauss 双向 ~1e-2000 间隙、varpi ~1e-16 受 pi oracle 地板限）、`w7-ln4`（ln_q_quad，见上表）。
+- W7 第二证明器波（收尾中）：`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）仍在跑。已落地：`w7-agm`（AGM 区间证法 commit d5e3000——gauss 双向 ~1e-2000 间隙、varpi ~1e-16 受 pi oracle 地板限）、`w7-ln4`（ln_q_quad，见上表）、`w7-decomp-ext`（commit 09225b5——decompose_exact 原子表覆盖全部 26 型 + 11 个原不可拼写的 site 型，修掉 arg<0 被误读为倒数的预存 bug）。
 - `decompose_exact.py`（commit 4856f27）：可证构造的界分配；**已接线**——`/decompose_inequality` 的 `mode=exact` 走 decompose_exact（commit a492d0d），site 路径不变。
 - 已修复的精度陷阱：`decompose_exact` 的 slack 曾在 `workdps` 外与 mpf 字面量相乘塌缩成 float64（commit e00e5cd 改 Fraction 侧乘）；`import mpmath as mp` 下 `mp.dps = N` 是模块属性静默无操作（真精度留在 15），须用 `mp.mp.dps` 或 workdps——测试文件已清查。
 - 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例，待 w7-agm 第二证法接管）。
