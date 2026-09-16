@@ -10,17 +10,23 @@
 - **W4 Padé 第二证明器**：`pade.py` 作 ln_q/arctan_q 的在线兜底（(m,n) 搜索耗尽后，预算 MAX_N=50，commits 3fbd546/371f087）。响应形 `{"success","type","prover":"pade","certificate"}`——**无 parameters**，证书即证明；渲染与判官不得假设 parameters 存在。
 - **W5 证书**：`certificate.py` + `tools/verify_cert.py`（schema：`docs/2026-09-16-certificate-spec.md`，含 Padé 变体与 gamma_special 的 proof-DAG 变体）。
 
-## exact-only 型清单（EXACT_TYPES 现 11 型）
+## exact-only 型清单（EXACT_TYPES 现 25 型）
 
 | 型 | 落地 | 出处 |
 |---|---|---|
-| zeta5 / zeta7 | 矩核（quadlog η/β 行复用） | kernels/zeta_odd.py |
+| zeta5 / zeta7 / zeta9 / zeta11 | 矩核（quadlog η 支路 + 1−2^{1−s} 换算） | kernels/zeta_odd.py |
+| beta4 / beta6 / beta8 / beta10 | 矩核（ln_moment 偶支路，β 直入无换算） | kernels/beta_even.py |
 | ln_q_cube | 矩核（4 维 span，三次 P + QQ(√D) 判据） | kernels/ln_pow.py，推导 `2026-09-16-ln-cube-derivation.md` |
 | arcsin_q / arsinh_q | 矩核（根号核 + 寄生常数） | kernels/arcsin.py / invhyp.py |
 | gaussint_q / dawson_q / erfiint_q | 矩核（erf 缩放常数三连，commit 80e6b74） | kernels/gauss_erf.py |
-| gamma14 / gamma34 / gamma12 | 复合命题型（证书 DAG，**在途未提交**） | kernels/gamma_special.py |
+| pi_sqrt2 | 矩核（lemniscate 余元常数 π√2，两核两基） | kernels/pi_sqrt2.py |
+| pi3 / pi3_u / pi3_a | 矩核（Dixon/B(1/3,1/3) 格点六格双射） | kernels/dixon.py |
+| li2_q | 矩核（3 维 span + 位移见证族，n×(fam,d) 双轴） | kernels/li2.py |
+| psi1_q | 矩核（望远镜核对，一维 m 扫描） | kernels/trigamma.py |
+| si_q / cin_q | 矩核（4 维 span，Taylor 余量阶梯 t∈{0,1,2}） | kernels/sicin.py |
+| gamma14 / gamma34 / gamma12 | 复合命题型（证书 DAG） | kernels/gamma_special.py |
 
-调研已完成但未注册：li2_q、Si/Cin（各一型，需三次 poly_nonneg）、trigamma ψ′(q)（对称望远镜核）、Γ(1/3)³-类常数。已否决：erf 本体（√π 障碍）、Γ(1/4)/Γ(1/3) 字面幂（格点奇偶锁）、lnA/Glaisher（矩空间符号数恒超 P 系数）、arcosh_q（span 无 "1" 方向）。逐篇结论见 `2026-09-16-w3-research-*.md` 头部状态行。命名注意：erf 调研文里的 `expint_q` 落地名为 **erfiint_q**。
+逐型规格已并入 `kernel-spec.md`「exact-only 型清单」节。已否决：erf 本体（√π 障碍）、Γ(1/4)/Γ(1/3) 字面幂（格点奇偶锁）、lnA/Glaisher（矩空间符号数恒超 P 系数）、arcosh_q（span 无 "1" 方向）。逐篇结论见 `2026-09-16-w3-research-*.md` 头部状态行；实现笔记见 `2026-09-16-*-impl-notes.md`。命名注意：erf 调研文里的 `expint_q` 落地名为 **erfiint_q**。
 
 ## 判官结果与修复史
 
@@ -29,11 +35,11 @@
 - `BUG:wd-on-true` ×41（hyperbolic q<0 未做奇偶归约）→ commit 460c5b1 奇偶归约到 |q|；
 - `BUG:crash` ×21（power=0 触发 Fraction(1,0)）→ 同 commit 退化域拒（e_q/cosh_q q=0、coth_q q≤0 等报 ValueError）。
 
-复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。**注意 `bench/out/judge_correct-a9.jsonl` 与 `judge_correct.d/*.jsonl` 均早于修复**，引用数字前先重跑。
+修复后 a9 复扫 9594 例（含 exact-only 型）：**零 BUG**。覆盖率地板前三弱：varpi 26/113、gauss 28/105、gamma 32/109——由 W7 第二证明器波次（AGM 区间法、Euler–Maclaurin）对症补齐中。复测残余 `FLAG:rejected-true-claim` 个位数，全部是退化域拒的真命题（`e_q 0 > 1/2` 即 `1>1/2` 之类）——域校验按设计拒收，属判官口径问题而非求解器缺陷。
 
 ## 在途项
 
-- `decompose_exact.py`（commit 4856f27，含 `tests/test_decompose_exact.py`、`docs/2026-09-16-decompose-math.md`）：可证构造的界分配，每个子界实际跑 `solve.prove(exact=True)` 验证。**已入库但未接线**——`/decompose_inequality` 端点仍只走 site 版 decompose，无 mode 参数。
-- `gamma_special.py`：复合 Γ 型（上表），工作树未提交；`certificate.py` 的 verify_cert 已接 dispatch（dispatch 在提交区、kernel 本体不在，注意配对）。
-- 新增在途调研/实现笔记：`docs/2026-09-16-li2-impl-notes.md`、`docs/2026-09-16-pi-sqrt2-impl-notes.md`（均未提交）。
-- 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例）。
+- W7 第二证明器波（进行中）：`w7-agm`（AGM 区间证法，补 gauss/varpi 覆盖率地板）、`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）、`w7-ln4`（(ln q)⁴ 核 + Sturm 四次非负判据）、`w7-decomp-ext`（decompose_exact 原子表覆盖全部 EXACT_TYPES）。
+- `decompose_exact.py`（commit 4856f27）：可证构造的界分配；**已接线**——`/decompose_inequality` 的 `mode=exact` 走 decompose_exact（commit a492d0d），site 路径不变。
+- 已修复的精度陷阱：`decompose_exact` 的 slack 曾在 `workdps` 外与 mpf 字面量相乘塌缩成 float64（commit e00e5cd 改 Fraction 侧乘）；`import mpmath as mp` 下 `mp.dps = N` 是模块属性静默无操作（真精度留在 15），须用 `mp.mp.dps` 或 workdps——测试文件已清查。
+- 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例，待 w7-agm 第二证法接管）。
