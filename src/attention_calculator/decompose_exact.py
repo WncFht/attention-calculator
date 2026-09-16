@@ -392,7 +392,9 @@ def decompose_exact(problem: str) -> dict:
             "failures": [{"reason": "claim_certified_false"}],
             "slack": "0",
         }
-    slack = frac60(slack_mpf * mp.mpf("0.99"))  # keep 1% guard below certified slack
+    # 1% guard below the certified slack — 必须在 Fraction 侧做乘法：
+    # slack_mpf * mp.mpf("0.99") 在模块默认 dps=15 下会把预算压回 float64
+    slack = frac60(slack_mpf) * Fraction(99, 100)
 
     # ---- single-term single-atom: prove directly against R (loosest bound)
     if len(terms) == 1 and len(terms[0].subs) == 1 and terms[0].subs[0].sigma > 0:
