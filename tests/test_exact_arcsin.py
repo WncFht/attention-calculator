@@ -137,7 +137,9 @@ def test_render_equation_matches_author_example():
     )
 
 
-@pytest.mark.parametrize(("comp", "bound"), [(">", "11/21"), ("<", "11/20")])
+# 11/21 > asin(1/2)=0.523598… would be a false claim; the '>' bound must sit
+# just below the true value (261799/500000 = 0.523598 < 0.5235987…)
+@pytest.mark.parametrize(("comp", "bound"), [(">", "261799/500000"), ("<", "11/20")])
 def test_full_pipeline_when_registered(comp, bound):
     """Once solve.FAMILY/integrand register arcsin_q, the certified path
     must emit only self-checking proofs."""
