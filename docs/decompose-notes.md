@@ -2,6 +2,8 @@
 
 组合不等式（如 `pi^2+8*pi>35`、`e*pi+phi+sin(1)<11`）拆成若干基本型子证明。 端点见 api-spec.md；实现 `src/attention_calculator/decompose.py`。 判官 `bench/parity_decompose.py`：combo 87/87 字节级 + decompose 182/182 JSON 级 （transport_error 记录只需 400+error 键）。全部机制由线上探针钉死。
 
+本文只钉站端冻结行为；exact 侧两篇见 `docs/2026-09-16-decompose-math.md`（可证构造的界分配）与 `docs/2026-09-16-decompose-exact-kinds.md`（原子型全表覆盖）。
+
 ## 输入与解析
 
 - 输入先做 `replace(" ","").replace("\n","")` 去空白再解析。

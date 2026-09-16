@@ -1,5 +1,7 @@
 # convex-behavior.md 独立复核报告
 
+日期：2026-09-16（时间点文档，一次性复核快照）。
+
 复核对象：`docs/convex-behavior.md`（303 行）vs `bench/data/convex-probes.jsonl`（333 条）。 方法：全量 digest + 逐节断言→记录对照 + 程序化交叉扫描。全程离线，未探站。
 
 ## 结论

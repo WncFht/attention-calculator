@@ -1,8 +1,8 @@
 # W3 调研：Γ(1/3) 能否成为新 type 的目标常数
 
-> **落地状态（2026-09-16）**：未落地——Γ(1/3) 一次幂结构性不可行；Γ(1/3)³-类常数（三次类比 π₃=B(1/3,1/3)，与 lemniscate 机器同构）可行但未注册。
+> **落地状态（2026-09-16）**：部分落地（`kernels/dixon.py`）——Γ(1/3) 一次幂结构性不可行（结论不变）；Γ(1/3)³-类常数（三次类比 π₃=B(1/3,1/3)，与 lemniscate 机器同构）已注册 `pi3`/`pi3_u`/`pi3_a` 三型进 `EXACT_TYPES`，实现笔记见 `docs/2026-09-16-dixon-impl-notes.md`。
 
-日期：2026-09-16。范围：只做调研，不改实现。所有数值断言均用 `.venv/bin/python` 在 `mp.dps = 100` 下复核（注意 mpmath 的坑：`mp.workdps = N` 是无效赋值——`workdps` 是方法不是属性，静默不改精度；正确写法是 `mp.dps = 100`）。
+日期：2026-09-16。范围：只做调研，不改实现。所有数值断言均用 `.venv/bin/python` 在 `mp.dps = 100` 下复核（注意 mpmath 的坑：`mp.workdps = N` 是无效赋值——`workdps` 是方法不是属性，静默不改精度；正确写法是 `mp.dps = 100`，限 `from mpmath import mp` 拿到 context 对象的形态——`import mpmath as mp` 拿到模块时此句同样静默无效，须 `mpmath.mp.dps = 100`）。
 
 ## 结论
 

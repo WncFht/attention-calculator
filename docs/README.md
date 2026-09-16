@@ -4,7 +4,7 @@
 
 ## 活规格（改动实现前先读/先改）
 
-- `kernel-spec.md` — 29 个站端类型 + 8 个 exact-only 型的核函数/矩空间/搜索顺序/渲染怪癖，数学层唯一事实源
+- `kernel-spec.md` — 29 个站端类型 + 26 个 exact-only 型的核函数/矩空间/搜索顺序/渲染怪癖，数学层唯一事实源
 - `api-spec.md` — 线上 API 协议实测（含 mode=exact 本地扩展节）
 - `behavior-notes.md` — 站端行为规格（power 语义、校验顺序、错误分层）
 - `fidelity-notes.md` — 方向判定的 float64 保真机制
@@ -26,6 +26,12 @@
 - `2026-09-16-ln-quad-impl-notes.md` — ln_q_quad 落地：ln³ 核矩空间、四次 P 的 Sturm 非负判据、实测深度
 - `2026-09-16-agm-impl-notes.md` — AGM 区间第二证明器（gauss/varpi）：isqrt 包络、cert schema、实测地板
 - `2026-09-16-euler-gamma-impl-notes.md` — Euler–Maclaurin γ 第二证明器：EM 界证明、ln2 子证 DAG、Bernstein 符号引理重证
+- `2026-09-16-beta-even-impl-notes.md` — beta4/beta6 落地：Dirichlet β 偶数点、zeta_odd 同构镜像
+- `2026-09-16-dixon-impl-notes.md` — pi3/pi3_u/pi3_a 落地：Γ(1/3) 格三常数（Dixon 椭圆周期 π₃）、六配置双向覆盖
+- `2026-09-16-li2-impl-notes.md` — li2_q 落地：三符号矩空间、q<0 凹性引理更正、交错级数替代 lifted 族
+- `2026-09-16-pi-sqrt2-impl-notes.md` — pi_sqrt2 落地：lemniscate 格点末个单核型（S=π√2）、两方向各一核
+- `2026-09-16-sicin-impl-notes.md` — si_q/cin_q 落地：一族两型同机、四维 span 的三次非负判据
+- `2026-09-16-trigamma-impl-notes.md` — psi1_q 落地：对称望远镜核双向二次收敛、N 不进参数、一维 m 扫描
 - `2026-09-16-decompose-exact-kinds.md` — decompose_exact 原子表全型覆盖 + arg<0 预存 bug 修复记录
 - `2026-09-16-decompose-math.md` — exact 模式 decompose（可证构造的界分配）
 - `2026-09-16-lean4-integration.md` — Lean4 接入调研：verified-checker 路线选型、逐族矩引理工作量、W8 分阶段建议

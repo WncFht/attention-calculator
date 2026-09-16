@@ -77,12 +77,14 @@ if kind in ("varpi", "gauss"):
 if result.get("prover") == "agm":
     from . import agm
 
-    return respond({
-        "success": True,
-        "type": result.get("type", kind),
-        "prover": "agm",
-        "certificate": agm.cert_jsonable(result["certificate"]),
-    })
+    return respond(
+        {
+            "success": True,
+            "type": result.get("type", kind),
+            "prover": "agm",
+            "certificate": agm.cert_jsonable(result["certificate"]),
+        }
+    )
 ```
 
 `exact_check/__init__.py` `verify_response`，加在 pade 分支旁：

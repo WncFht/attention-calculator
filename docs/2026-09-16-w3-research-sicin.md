@@ -1,8 +1,8 @@
 # W3 调研：Si(q) 与 Cin(q) 能否成为新 type 的目标常数
 
-> **落地状态（2026-09-16）**：可行、未注册——Si(q) 与 Cin(q) 各成一型（四维 span、需三次 `poly_nonneg` 判据），均未进 `EXACT_TYPES`。
+> **落地状态（2026-09-16）**：已落地（`kernels/sicin.py`）——`si_q` 与 `cin_q` 各成一型注册进 `EXACT_TYPES`（四维 span、三次 `poly_nonneg` 判据）；实现笔记见 `docs/2026-09-16-sicin-impl-notes.md`。
 
-日期：2026-09-16。范围：只做调研，不改实现。调研对象为有理参数型常数 $\mathrm{Si}(q)=\int_0^q \frac{\sin t}{t}dt$ 与 $\mathrm{Cin}(q)=\int_0^q \frac{1-\cos t}{t}\,dt$（后者即 $\gamma+\ln q-\mathrm{Ci}(q)$，定义见 DLMF §6.2[^dlmf-sici]）。所有数值断言均用 `.venv/bin/python` 在 `mp.dps = 150` 下复核，参考值取自收敛幂级数而非 `mp.quad`（quad 只有 ~1e-16）。注意 mpmath 的坑：`mp.workdps = N` 是无效赋值——`workdps` 是方法不是属性，静默不改精度；正确写法是 `mp.dps = 150`。
+日期：2026-09-16。范围：只做调研，不改实现。调研对象为有理参数型常数 $\mathrm{Si}(q)=\int_0^q \frac{\sin t}{t}dt$ 与 $\mathrm{Cin}(q)=\int_0^q \frac{1-\cos t}{t}\,dt$（后者即 $\gamma+\ln q-\mathrm{Ci}(q)$，定义见 DLMF §6.2[^dlmf-sici]）。所有数值断言均用 `.venv/bin/python` 在 `mp.dps = 150` 下复核，参考值取自收敛幂级数而非 `mp.quad`（quad 只有 ~1e-16）。注意 mpmath 的坑：`mp.workdps = N` 是无效赋值——`workdps` 是方法不是属性，静默不改精度；正确写法是 `mp.dps = 150`（限 `from mpmath import mp` 拿到 context 对象的形态——`import mpmath as mp` 拿到模块时此句同样静默无效，须 `mpmath.mp.dps = 150`）。
 
 ## 结论
 

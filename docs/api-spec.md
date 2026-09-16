@@ -62,6 +62,8 @@
 
 以上全是站端实测协议。本实现另加以下扩展，站端不存在：
 
-- `POST /calculate` 表单加 `mode=exact`：走数学正确性路径（`solve.prove_exact`）。语义差异：方向判定经 `certified_cmp` 递增精度认证（不做 float64 预检/兜底）；接受 `EXACT_TYPES` 里的 exact-only 类型（site 模式按站端口径 400）；响应附 `certificate` 字段（机器可检证书，格式 `docs/2026-09-16-certificate-spec.md`，离线复核 `tools/verify_cert.py`）；假恒等式/失真簇不发——发不出就 `未找到解`。缺省或 `mode` 为其他值时行为与站端逐字节一致。
-- exact 模式下 ln_q/arctan_q 在 (m,n) 搜索耗尽后回落 Padé 第二证法（`pade.py`）：此时响应为 `{"success","type","prover":"pade","certificate"}`——无 `parameters`/`equations`，证书是 Padé schema（`serr` 键标记）。
-- exact-only 类型的 equation 渲染不经 `/get_integral_image`（该端点仍只认站端 29 型），由核的 `render_equation` 程序化产出。
+- `POST /calculate` 表单加 `mode=exact`：走数学正确性路径（HTTP 入口 `solve.prove(exact=True)`；`prove_exact` 是其下的 `(module,kind,q,comp,r)` 内部函数）。语义差异：方向判定经 `certified_cmp` 递增精度认证（不做 float64 预检/兜底）；接受 `EXACT_TYPES` 里的 exact-only 类型（site 模式按站端口径 400）；响应附 `certificate` 字段（机器可检证书，格式 `docs/2026-09-16-certificate-spec.md`，离线复核 `tools/verify_cert.py`）；假恒等式/失真簇不发——发不出就 `未找到解`。缺省或 `mode` 为其他值时行为与站端逐字节一致。
+- exact 模式下 (m,n) 搜索耗尽有四种第二证法兜底，响应统一为 `{"success","type","prover","certificate"}` 包络——无 `parameters`/`equations`，证书即证明：`prover:"pade"`（ln_q/arctan_q 回落 Padé 插值，schema 见证书规格 §Padé）、`"agm"`（gauss 的 AGM 区间包络）、`"euler_gamma"`（gamma 的 Euler–Maclaurin 包络，子证为 ln2 的 pade 证）、`"composite"`（varpi 的 pi+AGM 复合，以及 gamma14/34/12 的 Γ-型子证明 DAG）。
+- `POST /decompose_inequality` 同样认 `mode=exact`：走 `decompose_exact` 的可证界分配，响应形状与站端不同（`steps`/`term_bounds`/`all_proved`/`certifies`/`failures`/`slack` 等字段）；分解器非 ValueError 异常报 500 `组合证明生成失败，请稍后再试`（站端无此错误形状）。
+- `GET /demo`：本地演示页——与 `/` 同页，但把 MathJax/KaTeX/html2canvas 三个 CDN URL 改写为 `/static/vendor/` 本地副本（vendor 资产由 `scripts/fetch-vendor-assets.sh` 拉取）；`/`、`/en` 保持站端逐字节不动。
+- exact-only 类型的 equation 渲染不经 `/get_integral_image`（该端点仍只认站端 29 型），由核的 `render_equation` 程序化产出；gamma14/34/12 的 composite 证书无 parameters，不产渲染式。

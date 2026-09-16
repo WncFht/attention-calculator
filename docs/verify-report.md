@@ -1,5 +1,7 @@
 # golden.jsonl 全量数值验证报告
 
+日期：2026-09-15（golden 2969 条口径的全量验证，2026-09-16 补记重建伪影重归因；后续 golden 扩容至 3454 见 harvest-notes.md）。
+
 对 `bench/data/golden.jsonl` 全部 2969 条站点响应逐条复核：1391 条 success 重建声称恒等式做 50dps 数值积分比对，1578 条 fail 核对报错方向自洽性。工具为 `bench/verify.py`（输出 `bench/out/verify-full.jsonl`），方法学见 [[verify-notes]]。
 
 ## 验证口径

@@ -6,21 +6,21 @@ benchmark 是本项目一切结论的依据。**任何实现决策（核族参�
 
 ## 数据集 ↔ 判官对照表
 
-| 数据文件                            | 条数 | 采集/生成                       | 判官                                 | 口径                                                 |
-| ----------------------------------- | ---- | ------------------------------- | ------------------------------------ | ---------------------------------------------------- |
-| `golden.jsonl`                      | 3454 | `harvest.py`（`cases.py` 例表） | `parity.py`                          | /calculate + /get_integral_image 状态 + 响应体逐字节 |
-| `golden.jsonl`                      | 同上 | 同上                            | `verify.py`                          | 恒等式数学真值（mpmath 50dps），站点 bug 复现计入假  |
-| `combo.jsonl`                       | 87   | `probe_decompose.py`            | `parity_decompose.py`                | /decompose_inequality 完整响应逐字节                 |
-| `decompose.jsonl`                   | 182  | 同上                            | 同上                                 | 逐题 JSON 级（transport_error 只需 400+error 键）    |
-| `edge-probes.jsonl`                 | 376  | `edge_probe{,2,3,3b}.py`        | `replay_edge.py`                     | 边缘探针离线重放（不经网络）                         |
-| `fuzz-probes.jsonl`                 | 922  | `fuzz.py --seed 1`              | `replay_fuzz.py`                     | 随机差分探针离线重放                                 |
-| `fidelity-probes.jsonl`             | 228  | `fidelity_probe{,2,3,4}.py`     | `replay_capture.py`                  | float 保真边界探针重放                               |
-| `probes.jsonl`                      | 167  | `probe_api.py` 等散采           | `replay_capture.py`                  | 160 吻合 + 7 站端瞬态 500 按 SKIP-TRANSIENT 跳过     |
-| `health-probes.jsonl`               | 420  | `probe_health.py`               | `parity_health.py`                   | /health/calculate 逐字节                             |
-| `convex-probes.jsonl`               | 333  | `probe_convex.py`               | `parity_convex.py`                   | /convex/prove 逐字节                                 |
-| `convex-golden.jsonl`               | 323  | convex 采集                     | —（孤儿）                            | convex-behavior.md 建模用子集，无判官消费            |
-| `site-*.html`                       | 8 页 | curl 抓取                       | tests/test_convex.py + test_pages.py | 页面逐字节 parity（缺席即 skip）                     |
-| `decompose/`、`*.log`、`summary.md` | —    | 采集副产物                      | —                                    | 溯源档案                                             |
+| 数据文件                            | 条数                                                            | 采集/生成                                       | 判官                                 | 口径                                                 |
+| ----------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
+| `golden.jsonl`                      | 3454                                                            | `harvest.py`（`cases.py` 例表）                 | `parity.py`                          | /calculate + /get_integral_image 状态 + 响应体逐字节 |
+| `golden.jsonl`                      | 同上                                                            | 同上                                            | `verify.py`                          | 恒等式数学真值（mpmath 50dps），站点 bug 复现计入假  |
+| `combo.jsonl`                       | 87                                                              | `probe_decompose.py`                            | `parity_decompose.py`                | /decompose_inequality 完整响应逐字节                 |
+| `decompose.jsonl`                   | 182                                                             | 同上                                            | 同上                                 | 逐题 JSON 级（transport_error 只需 400+error 键）    |
+| `edge-probes.jsonl`                 | 376                                                             | `edge_probe{,2,3,3b}.py`                        | `replay_edge.py`                     | 边缘探针离线重放（不经网络）                         |
+| `fuzz-probes.jsonl`                 | 922                                                             | `fuzz.py --seed 1`                              | `replay_fuzz.py`                     | 随机差分探针离线重放                                 |
+| `fidelity-probes.jsonl`             | 228                                                             | `fidelity_probe{,2,3,4}.py`                     | `replay_capture.py`                  | float 保真边界探针重放                               |
+| `probes.jsonl`                      | 167                                                             | `probe_api.py` 等散采                           | `replay_capture.py`                  | 160 吻合 + 7 站端瞬态 500 按 SKIP-TRANSIENT 跳过     |
+| `health-probes.jsonl`               | 567（判官按 tag 去重后 420）                                    | `probe_health.py`                               | `parity_health.py`                   | /health/calculate 逐字节                             |
+| `convex-probes.jsonl`               | 333                                                             | `probe_convex.py`                               | `parity_convex.py`                   | /convex/prove 逐字节                                 |
+| `convex-golden.jsonl`               | 323                                                             | `probe_convex.py`（convex-probes 的 POST 子集） | —（孤儿）                            | convex-behavior.md 建模用子集，无判官消费            |
+| `site-*.html`                       | 7 文件（test_pages.py PAGES 8 路由去重为 6 + test_convex.py 1） | curl 抓取                                       | tests/test_convex.py + test_pages.py | 页面逐字节 parity（缺席即 skip）                     |
+| `decompose/`、`*.log`、`summary.md` | —                                                               | 采集副产物                                      | —                                    | 溯源档案                                             |
 
 全部判官当前**零分歧**。一键全量：`bench/run_all.sh`。
 
@@ -28,13 +28,13 @@ benchmark 是本项目一切结论的依据。**任何实现决策（核族参�
 
 与站点 parity 套件并列的第二套判官——不打站端、不信仰站端标签（golden 的 success/error 字段只当输入，不当结论）：
 
-| 资产                      | 角色                                                                                                                                                                                                                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `judge_correct.py`        | exact 正确性判官：每条输入独立裁决 ground truth（`cases.true_value` 区间比较，80→2400 dps 递增 + 护栏带）、exact 路径输出（emitted proof 必须过 `exact_check.verify`，零容忍假恒等式）、site 路径对照（`--no-site` 可关；分歧按已知失真簇归因，`unattributed:*` 是要追的）。`-o` 出 jsonl 明细，`--limit` 截断 |
-| `cases_correct.py`        | 对抗语料生成器：`--adversarial` 时被 judge 调用——power∈{1,2,3,1/2,0,−1} 网格 × 1e-1…1e-12 距离夹逼界 × 连分数收敛子多深度 + 等值点（Niven/power=0）/域边界/零负界探针                                                                                                                                          |
-| `decompose_math_probe.py` | 量各 (kind,power,comp) 的 (m,n) 搜索可证前沿（界距 vs 所需最小深度），产 markdown 表供 `docs/2026-09-16-decompose-math.md`                                                                                                                                                                                     |
-| `tools/verify_cert.py`    | exact 证明证书的离线独立复核（证书格式见 `docs/2026-09-16-certificate-spec.md`）                                                                                                                                                                                                                               |
-| `exact_sweep.py`          | 在 golden 风格语料上批量跑 `exact_check.verify` 并计数（`--types` 过滤、`--include-fail` 含失败记录、`--exact-mode` 改为重证发射参数、`--list-fail` 列明细）；identity-false/nondefinite/校验崩溃时非零退出，可当 gate 用                                                                                      |
+| 资产                      | 角色                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `judge_correct.py`        | exact 正确性判官：每条输入独立裁决 ground truth（`cases.true_value` 区间比较，80→2400 dps 递增 + 护栏带）、exact 路径输出（emitted proof 必须过 `exact_check.verify`，零容忍假恒等式）、site 路径对照（`--no-site` 可关；分歧按已知失真簇归因，`unattributed:*` 是要追的）。`-o` 出 jsonl 明细，`--limit` 截断，`--kind` 只跑指定 type |
+| `cases_correct.py`        | 对抗语料生成器：`--adversarial` 时被 judge 调用——power∈{1,2,3,1/2,0,−1} 网格 × 1e-1…1e-12 距离夹逼界 × 连分数收敛子多深度 + 等值点（Niven/power=0）/域边界/零负界探针                                                                                                                                                                  |
+| `decompose_math_probe.py` | 量各 (kind,power,comp) 的 (m,n) 搜索可证前沿（界距 vs 所需最小深度），产 markdown 表供 `docs/2026-09-16-decompose-math.md`                                                                                                                                                                                                             |
+| `tools/verify_cert.py`    | exact 证明证书的离线独立复核（证书格式见 `docs/2026-09-16-certificate-spec.md`）                                                                                                                                                                                                                                                       |
+| `exact_sweep.py`          | 在 golden 风格语料上批量跑 `exact_check.verify` 并计数（`--types` 过滤、`--include-fail` 含失败记录、`--exact-mode` 改为重证发射参数、`--list-fail` 列明细）；identity-false/nondefinite/校验崩溃时非零退出，可当 gate 用                                                                                                              |
 
 `verify.py` 的角色变化：恒等式正确性裁决已由 `exact_check`（ℚ 字典相等，全称证明）取代；verify.py 保留为 site 输出的 50dps 数值审计工具，其 146 条 flag 中约 100 条是重建伪影（权威失真面数字见 `docs/2026-09-16-site-parity-status.md`）。
 

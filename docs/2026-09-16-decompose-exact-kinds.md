@@ -2,6 +2,8 @@
 
 `decompose_exact.py` now accepts every kind that `solve.prove(..., exact=True)` can certify — all of `kernels.EXACT_TYPES` plus the site-registered function kinds the site parser never spelled out (`cot_q`, `cosh_q`, `coth_q`, `arccot_q`, `artanh_q`, `arcoth_q`, `sin_pi_q`, `cos_pi_q`, `sin_q_degree`, `cos_q_degree`, `ln_q_square`). `decompose.py` is byte-frozen site parity and is untouched: the extended kind sets, the parser, and the domain gate all live in `decompose_exact.py` alone. The site path still rejects every new spelling (`tests/test_decompose_exact.py::test_site_path_still_rejects_exact_spellings`).
 
+Related docs: `docs/decompose-notes.md` (frozen site behavior spec) and `docs/2026-09-16-decompose-math.md` (bound allocation).
+
 ## Atom semantics
 
 The unit model is unchanged — every sub-claim certifies `U ⋚ β` with `U = constant_mpf(kind, power)`:

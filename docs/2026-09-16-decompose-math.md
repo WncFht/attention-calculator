@@ -2,6 +2,8 @@
 
 The site allocator (`decompose.py`) splits a composite inequality `Σ c_i·Π atoms ⋚ R` into per-term rational bounds chosen for byte parity with zhuyidao.net — record-chain-style approximants with no provability argument. This note documents the exact-mode allocator in `src/attention_calculator/decompose_exact.py`, which instead allocates bounds so that every emitted sub-claim is *provable by construction* inside the (m,n) search budget, then verifies that claim by actually running `solve.prove(..., exact=True)` on each step.
 
+Related docs: `docs/decompose-notes.md` (frozen site behavior spec) and `docs/2026-09-16-decompose-exact-kinds.md` (atom kind coverage).
+
 ## The provability frontier
 
 Each kernel proves `C ⋚ β` by scanning `(m,n)` in depth-major order (`engine.mn_order`); a bound is reachable iff the moment system has a non-negative solution at some `(m,n)` within the per-type limit. Empirically (and verified exactly for quadlog by solving the affine-in-`r` system at `r∈{0,1}`), the reachable set per `(kind,power,comp)` is a **one-sided interval** `(-∞, r_max]` — or `[r_min, ∞)` for `'>'` — with no gaps below the frontier. So a bound proves iff its margin `|U − β|` clears a per-unit **frontier floor** `ε(kind,power,comp)`.

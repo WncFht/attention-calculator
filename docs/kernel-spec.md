@@ -17,7 +17,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 ```
 
 - `B_{m,n}` 是族基函数（如 `x^m(1-x)^n`、`x^{2m}(1-x^2)^n`、`sin^m x (1-sin x)^n`），在域上恒非负；
-- `P` 是带 2~4 个待定系数的小多项式 `a+bx` 或 `a+bx+cx^2`（偶核用 `a+bx^2`；lemniscate 两型用 `a+bx^4`；[0,π] 与 [0,π/2] 域用 `a+b·sin x`；exact-only 的 `ln_q_cube` 升到三次 `a+bx+cx^2+dx^3` 配 4 维矩空间）；
+- `P` 是带 2~5 个待定系数的小多项式，次数随矩空间维数走：二维 span 配 `a+bx`、三维配 `a+bx+cx^2`（偶核用 `a+bx^2`；lemniscate 两型用 `a+bx^4`；[0,π] 与 [0,π/2] 域用 `a+b·sin x`）；exact-only 的 `ln_q_cube`/`si_q`/`cin_q` 用三次 4 系数、`ln_q_quad` 到四次 5 系数；
 - `K` 是核函数，使所有"矩" `∫ B·x^k·K dx` 落在 `span_Q{1, C, D_1, ...}` 有限维空间里。
 
 求解：矩对 (a,b,c) 线性 → 在 Q 上解小线性方程组（engine.gauss_solve，要求唯一解）
@@ -36,7 +36,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 方向反判定分三层：
 
-- **float64 预检**（仅核会崩的类型需要）：e_q（math.exp）、sinh/cosh/tanh/coth（math.*，coth 内部另有 1/tanh(0)）、arctan_q/arccot_q（除以 q）、pi_n（表外指数 KeyError）、gamma（coef·γ）、ln_q_square q∈{5,7}（站点自身崩溃）、trig_pi 四型（mpmath 50dps）。严格为假的断言在此直接 方向反了；真/等值继续——等值多由输入检查先报 `二者相等`（Niven 点）或随核内崩溃变 500。zeta3 '>' 与负界不进预检（zeta3 阈值在 float c 上方 1 ulp 外，留给下方兜底覆盖）。
+- **float64 预检**（solve.direction_f 全集：29 型中 23 型给出常数 c——pi/e/catalan/gamma/golden/varpi/gauss/e_pi/e_q/pi_n/arctan_q/arccot_q、hyperbolic 四型、trig_q 四型、ln_q/ln_q_square、zeta3；trig_q 四型域外、ln_q 系 q≤1、ln_q_square q∈{5,7} 返回 None 交核内域校验/特判，artanh/arcoth 与 trig_pi 四型不映射）。动机是核会崩的型（math.exp 域、coth 内 1/tanh(0)、arctan/arccot 除 q、pi_n 表外指数 KeyError、ln_q_square q∈{5,7} 站点自身崩溃），但映射不限于会崩的型；trig_pi 四型另有核内 mpmath 50dps 数值预检（见该型专节）。严格为假的断言在此直接 方向反了；真/等值继续——等值多由输入检查先报 `二者相等`（Niven 点）或随核内崩溃变 500。zeta3 '>' 与负界不进预检（zeta3 阈值在 float c 上方 1 ulp 外，留给下方兜底覆盖）。c 非 None 的映射集同时是 '<' 扫描中 WrongDirection→NoSolution 重映射的开关（见下条与 solve.prove）。
 - **扫描中**：`engine.search` 命中"被积函数恒≤0"的候选抛 WrongDirection 作**原语**，`solve.prove` 拦截后按方向分流：'<' 且预检已映射（c 非 None）→ 改报"未找到解"（站端 '<' 的方向判定只在预检发生，扫描里的非正 P 直接耗尽）；'>' 不判反，落入下方统一兜底（bound==c 的 cos/golden/sin_q 与 bound<C 的 sin_pi_q 实测均报"未找到>方向的解"）；未映射的型（artanh/arcoth/trig_pi）核内自带方向判定，WD 原样上报。**trig_pi 例外**：该四型恒≤0 解跳过继续找（engine.search defer），搜完仍无非负解才抛。
 - **耗尽兜底**（solve.prove）：搜索耗尽（含 '>' 途中非正被吞的 WD）后统一用 float64 比较常数与界，命题为假 → 报"方向反了"（实测 arctan 3>5/4）；为真 → 维持"未找到解"。float 差恰为 0 的边界（zeta3/gamma 精度持平的假命题）按不 falsify 处理，与站点一致。详见 fidelity-notes.md。
 
@@ -92,7 +92,7 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 - **N=0** 当且仅当剩余已是非负常数：'<' 时 r ≥ s₀ = 3/4（常数尾 r−3/4）、'>' 时 r ≤ r₀ = 1/2。参数形 m=n=au=bu=cu=u=0，a_val = 该常数文本，c_val 是方向标志（'<'→"2"、'>'→"1"，非多项式系数）。
 - 否则取**最小 N ≥ 1** 使子积分 ≥ 主积分：'<' 判 `s_N − ln(N+1) ≤ (r+γ)/2`，'>' 判 `r_N − ln(N+1) ≥ (r+γ)/2`，全部 **float64** 比较；s_N = H_N + 1/(N+1) − 1/(2(N+2))，r_N = H_N + 1/(2(N+1))。实现侧 N 上限取 600（保证 H_N 分母可算；站点真实上限未探明，golden 内最大 N=17）。
 - 子证明委托 ln_q 核（q = N+1）：'<' 需 `ln(N+1) > s_N − r`，'>' 需 `ln(N+1) < r_N − r`。回报的 m, n, au_val, bu_val, u_val 全是子证明参数；N 塞在 cu_val，c_val="0"。
-- 边界：power=0 先过 float64 预检（假命题 方向反了，真/等值进 `bound/|power|` 除零 → 500）；power<0 交换方向后证 `|power|·γ ⋚ bound`。
+- 边界：power=0 先过 float64 预检（假命题 方向反了，真/等值进 `bound/|power|` 除零 → 500）；power<0 交换方向后证 `|power|·γ ⋚ bound`。mode=exact 下 power≤0 一律 NoSolution——印刷复合式每项乘 power，非正系数只能产出非正被积函数，站端形式表达不了这类证明（power=0 实际先被统一 q=0 退化闸门拦为 400，见 mode=exact 节）。
 
 渲染怪癖（/get_integral_image）：
 
@@ -141,10 +141,11 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 `solve.prove(..., exact=True)` / `POST /calculate mode=exact` 走正确性路径，与站点行为解耦（site 路径冻结，见 `docs/2026-09-16-math-correctness-plan.md`）：
 
 - **方向判定**：`solve.certified_cmp` 递增精度（80→2400 dps）数值+护栏带认证 `sign(C−r)`；假命题预检即 `方向反了`、等值 `二者相等`、常数不可实值求值（域外输入）→ None 交给核内域校验。扫描中命中非正 P（真矩下即对偶不等式认证）→ 直接 WrongDirection 上报，不做 '<'→未找到 的站点映射。耗尽 → NoSolution（真命题预算内证不出的诚实回答）。
+- **q=0 统一退化闸门**：`prove_exact` 在 certified_cmp 之后、核内域校验之前对全部 55 型统一 `raise ValueError("q=0 时命题退化为有理数比较")` → 400 rejected-input（commit 7d240c9）。等值/假命题仍由认证层先拦；各核自带的 q=0 域拒文案在 exact 路径被该闸门遮蔽、永不可达；site 模式不动。
 - **核内真系统**：`module.prove(..., exact=True)` 要求核用真矩求解——trig_pi 走 `basis_moment`（非 site_bias）、beta '<' 不走转置档、ln_q_square q∈{5,7} 正常求解、power≠1 令发射参数满足印刷 LHS（∫印刷被积函数 == `power·C − bound` 的符号向量）。
 - **ln_q_square 崩溃机理**（行列式级解释，exact 侧推导）：(m,n)=(1,0) 档 det `∝ −(c−4)(c+1)/(72c⁶)`、(1,1) 档 `∝ −(c−6)(c+1)³/(576c⁸)`、(2,1) 档 `∝ (c−12)`，c=q−1——q=5,7 恰好把浅档行列式清零（站端 500 的根因），q=13 可预言同型崩溃（未探测核实）；det(2,0)/det(3,0) 的根非有理。推论警示：q=5 '>' 且界 ≲0.64 时站端走的不是 500 而是会发证明——崩溃清单别过度概括。
 - **发射自检**：`exact_check.verify(kind, power, comp, bound, params)` 对每条发射证明做 ℚ 字典相等复核（`combine(coeffs, true_basis) == target` 且 `poly_nonneg`）；失败是自家 bug → InternalError。exact_check 与模式无关：对 site 模式参数跑它即可复核站点输出的真伪（verify.py 的 ℚ 精确版）。
-- **exact-only 类型**：`kernels.EXACT_TYPES` 注册无站端对应的新类型（当前 26 型：zeta5/7/9/11、beta4/6/8/10、ln_q_cube、ln_q_quad、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q、pi_sqrt2、pi3、pi3_u、pi3_a、li2_q、psi1_q、si_q、cin_q 共 23 个矩核型 + gamma14、gamma34、gamma12 三个复合命题型，逐型规格见下「exact-only 型清单」）。/calculate 仅在 mode=exact 下接受（site 模式仍按站端口径 400）；solve.prove 对不带 exact 的调用报 ValueError；certified_cmp 常数走 `integrand.constant_mpf` 表。/get_integral_image 仍只认站端 29 型——exact 类型的渲染经 kernel 的 render_equation 程序化调用。
+- **exact-only 类型**：`kernels.EXACT_TYPES` 注册无站端对应的新类型（当前 26 型：zeta5/7/9/11、beta4/6/8/10、ln_q_cube、ln_q_quad、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q、pi_sqrt2、pi3、pi3_u、pi3_a、li2_q、psi1_q、si_q、cin_q 共 23 个矩核型 + gamma14、gamma34、gamma12 三个复合命题型，逐型规格见下「exact-only 型清单」）。/calculate 仅在 mode=exact 下接受（site 模式仍按站端口径 400）；solve.prove 对不带 exact 的调用报 ValueError；certified_cmp 常数走 `integrand.constant_mpf` 表。/get_integral_image 仍只认站端 29 型——exact 类型的渲染经 kernel 的 render_equation 程序化调用（gamma14/34/12 三型例外：composite 证书无 parameters 可渲染，不产渲染式）。
 
 ### exact-only 型清单
 
@@ -167,15 +168,17 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 - **搜索上限**：各核 `LIMIT` 默认 10（EXPONENT_LIMIT 例外表：pi/e=30 同站端，arcsin_q=30 因 q→1 需 m~1/(1−q)，pi_sqrt2=256，pi3 三型=512，li2_q=16 为 n 轴上限，psi1_q=256）；beta 族 '<' 在 exact 下不再走转置档、上限放宽为 `EXACT_LT_LIMIT=256`（beta_family.py），更深的真证明仍诚实 NoSolution。
 - **pi_n exact 域**（quadlog.py）：`power.numerator < 1 or power.denominator > 64` → ValueError 域拒；分子不设上界——exact 侧新增 beta_pi/eta_pi 生成器（Euler/Bernoulli 系）支持表外指数，site 侧仍限查表。
 - **arctan_q / arccot_q exact**：power=0 → ValueError 域拒（矩基例带 1/q；arctan 0=0 有理、arccot 0=π/2 不在 span）。
-- **hyperbolic exact**（hyperbolic.py）：q<0 先按奇偶归约到 |q| 再解（cosh 偶、sinh/tanh/coth 奇——site 路径同型直接 WrongDirection，exact 修掉对真命题撒谎）；q=0 退化输入域拒。
+- **gamma exact**：power<0 → NoSolution（印刷复合式每项乘 power，非正系数给不出非负被积函数；site 路径的方向交换规则不适用）。power=0 同各型走统一退化闸门。
+- **hyperbolic exact**（hyperbolic.py）：q<0 先按奇偶归约到 |q| 再解（cosh 偶、sinh/tanh 奇——site 路径同型直接 WrongDirection，exact 修掉对真命题撒谎）。**coth_q 例外**：exact 下 q<0 不归约，直接域拒 `请在coth后输入一个大于0的数`——印刷式 `1/sinh(q)` 前置因子翻号会让渲染式撒谎（核内门槛写作 power≤0，q=0 已被统一退化闸门先拦）。
 - **方向判定**：`solve.certified_cmp` 用 mpmath 80→240→800→2400 dps 递增 + 护栏带 `2^(30−dps)·max(1,|c|)` 认证 sign(C−r)，返回 +1/−1/0/None；None（不可实值求值）交给核内域校验。
 
 ### exact_check 复核器契约（checker 作者必读，4 个 agent 独立踩过的坑）
 
-`exact_check.<family>.check(kind, power, comp, bound, params) -> {"identity_ok","nonneg","integrand","target"}`。两条硬性规则：
+`exact_check.<family>.check(kind, power, comp, bound, params) -> {"identity_ok","nonneg","integrand","target"}`。三条硬性规则：
 
 1. **Moment dict 必须滤零值键**：`combine/add/scale` 产出的 dict 省略零系数；手搭 target 字面量若保留 `"1": Fraction(0)` 会造成字典相等误判——构造后过 `{k: v for k, v in t.items() if v}`。
 2. **nonneg 必须含非恒零守卫**：`identity_ok=True` 挡不住 `0 = ∫0 dx > 0` 式空洞"证明"（站端 golden/power=0 记录里真有这样的成功记录——等式成立但命题为假）。nonneg 判定要并入 `bool(integrand)`（或等价的非零被积函数检查）。
+3. **params 是不可信输入，域与派生字段都要复核**：`verify()` 在分发前先过 `params_domain`——`m,n ≥ 0`、分母字段 `u_val > 0`（gamma 的 N=0 退化打印允许 0）、`power` 落在该 kind 的核内合法域。checker 内凡能由 kind/power 重算的字段一律重算比对、不采用证书值（artanh/arcoth 的 `c_val` 必须等于 `qtilde(kind,power)`，trig_pi 的 `c_val` 必须等于精确 α）。审计 M1 实测三条由此放行的伪造：`u_val=-1` 翻转 gamma 子项真号、`m=-1` 给发散被积函数配形式矩、artanh 篡改 `c_val` 在错误基上凑出逐字成立的矩等式——见 `tests/test_cert_forgery.py`。
 
 另：trig_pi 复核时若记录的 `c_val`（α）与精确 α 不一致，不要强行重映射 `"C"` 键——让恒等式诚实失败，而不是凑出匹配。
 

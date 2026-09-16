@@ -34,7 +34,7 @@
 
 ## 数学/工具坑位
 
-- `mp.workdps = N` 是无效赋值（workdps 是方法不是属性，静默不改精度）——写 `mp.dps = N`。
+- `mp.workdps = N` 是无效赋值（workdps 是方法不是属性，静默不改精度）——写 `mp.dps = N`（限 `from mpmath import mp` 拿到 context 对象的形态；`import mpmath as mp` 拿到模块时此句同样静默无效，须 `mpmath.mp.dps = N` 或 `mpmath.workdps(N)`）。
 - `mp.quad` 精度上限 ~1e-16；要高精度参考值用收敛幂级数算，别用 quad 对 quad。
 - Moment dict 省略零系数键——手搭 target 字面量要 `{k:v for k,v in t.items() if v}`，否则字典相等误判。
 - golden 记录的 `parameters` 是站端参数编码，`raw_calculate` 才是逐字响应体——两个 schema 别混用。

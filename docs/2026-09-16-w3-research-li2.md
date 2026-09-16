@@ -1,6 +1,6 @@
 # W3 调研：li2_q（Li₂(q)，q 有理）的矩空间推导与可行性（2026-09-16）
 
-> **落地状态（2026-09-16）**：可行、未注册——建议型 `li2_q`（q∈ℚ，q<1，q≠0）尚未进 `EXACT_TYPES`。
+> **落地状态（2026-09-16）**：已落地（`kernels/li2.py`）——`li2_q`（q∈ℚ，q<1，q≠0）已注册进 `EXACT_TYPES`；实现偏离与参数编码见 `docs/2026-09-16-li2-impl-notes.md`。
 
 结论：可行，建议注册为 exact-only 型 `li2_q`，目标常数 $\mathrm{Li}_2(q)=\sum_{i\ge1}q^i/i^2$，合法域 $q\in\mathbb Q$、$q<1$、$q\neq0$。核取 $\varphi(x)=-\ln(1-qx)/x$，质量矩 $\int_0^1\varphi=\mathrm{Li}_2(q)$；矩恰闭于三符号 $\mathrm{span}\{\mathrm{Li}_2(q),\,\ln(1-q),\,1\}$，与 ln 族同构地要求 $P=a+bx+cx^2$ 三系数。本型区别于已有类型的结构性约束是：$\mathrm{Li}_2$ 只出现在零阶矩中，因此基被强制为 $(1-x)^n$（$m\equiv0$）、$P$ 的常数项恒被钉死为 $+1$，剩余 $(b,c)$ 由 $\{\ln,1\}$ 二阶方程组解出。证明方向不靠翻转 $P$ 而由核的符号因子吸收：'>' 用劣超子核 $\varphi-L$，'<' 用优超子核 $L-\varphi$；按 $\varphi$ 的凸性（$q>0$ 严格凸、$q<0$ 凹）四象限各有一族系数落在 $\mathbb Q+\mathbb Q\ln(1-q)$ 的多项式 $L$。$q>0$ 时截断次数 $d$ 是第二条搜索轴，间隙随 $d$ 几何衰减。全部矩公式经 mpmath dps=100 对照 `mp.polylog(2,·)` 与 `mp.quad` 核验（误差 $\sim10^{-98}$），端到端恒等式核验至 $\sim10^{-102}$。注册侧与 `docs/kernel-spec.md` 的 mode=exact 清单、`docs/2026-09-16-math-correctness-plan.md` 的 W3 条目对应。
 

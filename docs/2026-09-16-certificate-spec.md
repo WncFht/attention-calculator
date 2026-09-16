@@ -28,7 +28,7 @@ mode=exact 每条 emitted proof 附一份机器可检证书：`src/attention_cal
 
 ## 验证语义
 
-`verify_cert(cert)` 为真当且仅当三件事同时成立：证书通过 schema 校验（字段齐全、类型正确、有理数可解析、`kind` 已注册）；用证书内 `parameters` 重跑 `exact_check.verify` 得到的 `identity_ok`、`nonneg` 皆为真；且重算结果与记录的 `check` 块逐字一致。第三条是关键——记录的矩与判定不是证据而是声称，篡改 `bound`、系数、记录矩或判定位都会造成声称与重算不符。重算不依赖证书里任何数学断言，basis 矩完全从核内生成器重建。
+`verify_cert(cert)` 为真当且仅当三件事同时成立：证书通过 schema 校验（字段齐全、类型正确、有理数可解析、`kind` 已注册）；用证书内 `parameters` 重跑 `exact_check.verify` 得到的 `identity_ok`、`nonneg` 皆为真；且重算结果与记录的 `check` 块逐字一致。第三条是关键——记录的矩与判定不是证据而是声称，篡改 `bound`、系数、记录矩或判定位都会造成声称与重算不符。重算不依赖证书里任何数学断言，basis 矩完全从核内生成器重建，且 `verify` 先做参数域校验（`m,n ≥ 0`、`u_val > 0`、`power` 在 kind 域内）并把可由 kind/power 派生的字段（`c_val` 等）重算比对——不是只查格式。
 
 因此证书证明的是：`integrand == target` 是 ℚ 上的全称恒等式（不是数值采样），且 `nonneg` 给出被积函数在积分域上定号的精确证书；两者合起来蕴含 `power·C ⋚ bound` 为真。
 

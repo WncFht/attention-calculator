@@ -41,7 +41,7 @@
 - exact_check 无需改：`check` 已按 kind 分派，verify 经 FAMILY 自动路由到 `exact_check/ln_pow.py`；
 - `EXPONENT_LIMIT` 无需条目（默认 10 即本核 LIMIT）。
 
-kernel-spec 草稿条目：
+kernel-spec 草稿条目（已并入 `docs/kernel-spec.md` exact-only 型清单；条末"推导见"在 spec 页内回指本文件）：
 
 > `ln_q_quad`（kernels/ln_pow.py）：`(ln q)⁴ ⋚ bound`，q>1 由 power 槽携带。核 `ln³(1+cx)/(1+cx)^s`（s=max(m,n,1)，c=q−1），矩空间 5 维 span{ln⁴q,…,1}——ln 族"核低一次"升幂的第二节。P 升四次 a+bx+cx²+dx³+ex⁴（5 符号 5 系数），参数再扩 `e_val`/`eu_val`；非负判据为 Sturm 奇根计数：最低次非零系数 >0 且开区间 (0,1) 无奇数重根（剥端点因子后奇次 sqf 因子之积的 count_roots），充要。推导见 docs/2026-09-16-ln-quad-impl-notes.md。
 

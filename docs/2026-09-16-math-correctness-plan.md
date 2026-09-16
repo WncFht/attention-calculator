@@ -2,7 +2,7 @@
 
 基线：tag `v1.0.0-site-parity`（f64c230），站点字节级复刻全绿。新目标：**产出数学上为真的恒等式证明**——恒等式等号在 ℚ 上精确成立、被积函数定号有精确证书、方向判定有认证依据；并在此基础上大规模扩展类型与命题覆盖。站点复刻行为整体冻结为 compat 层。
 
-> **进展速记（2026-09-16 当日）**：W0 exact_check 复核层、W1 四个失真簇修复、W2 对抗判官（judge_correct + cases_correct）、W4 Padé 在线兜底证明器、W5 证书字段全部当日落地（比原定顺序大幅提前）；W3 已注册 8 个 exact-only 矩核型（zeta5、zeta7、ln_q_cube、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q），另有复合命题型 gamma14/gamma34/gamma12 在途（`kernels/gamma_special.py`）；其余调研结论见各 `2026-09-16-w3-research-*.md` 头部状态行。当前状态汇总见 `docs/2026-09-16-exact-status.md`。
+> **进展速记（2026-09-16 当日快照，W3 现状以 `docs/2026-09-16-exact-status.md` 为准：26 型全注册）**：W0 exact_check 复核层、W1 四个失真簇修复、W2 对抗判官（judge_correct + cases_correct）、W4 Padé 在线兜底证明器、W5 证书字段全部当日落地（比原定顺序大幅提前）；W3 已注册 8 个 exact-only 矩核型（zeta5、zeta7、ln_q_cube、arcsin_q、arsinh_q、gaussint_q、dawson_q、erfiint_q），另有复合命题型 gamma14/gamma34/gamma12 在途（`kernels/gamma_special.py`）；其余调研结论见各 `2026-09-16-w3-research-*.md` 头部状态行。当前状态汇总见 `docs/2026-09-16-exact-status.md`。
 
 ## 总体判断
 
@@ -38,7 +38,7 @@ def check(kind, power, comp, bound, params) -> bool
 
 `bench/judge_correct.py`：语料 = 全 golden 输入（ground truth 用区间比较认证，不信仰站端标签）+ 随机/对抗生成（紧界 1e-30、巨大分子分母、power∈{0,±1/2,±2,…}、边界等值点）。指标：每条 emitted proof 过 W0（**零容忍假恒等式**）、真命题证明覆盖率、方向判定正确率、与 site 模式的输出分歧清单（分歧应恰好落在失真簇上）。运行仍全本地，不打站端。
 
-### W3 类型扩展（主体扩展面，下一阶段并行铺开）——部分落地（8 型已注册）
+### W3 类型扩展（主体扩展面，下一阶段并行铺开）——已落地（26 型全注册，清单见 `docs/kernel-spec.md` exact-only 节）
 
 作者文章目录 ~45 型，站端活 29。每型 = 推导矩空间 + 一个核文件 + 进注册表 + benchmark 用例，天然一型一 agent。按可达性排序：
 
