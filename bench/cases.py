@@ -190,7 +190,7 @@ def true_value(typ, q):
     if typ == "gaussint_q":
         return mp.sqrt(mp.pi) / 2 * mp.erf(x)
     if typ == "dawson_q":
-        return mp.dawson(x)
+        return mp.sqrt(mp.pi) / 2 * mp.exp(-(x**2)) * mp.erfi(x)
     if typ == "erfiint_q":
         return mp.sqrt(mp.pi) / 2 * mp.erfi(x)
     if typ == "sin_q":

@@ -32,6 +32,7 @@ import argparse
 import json
 import sys
 from collections import Counter
+from contextlib import nullcontext
 from fractions import Fraction
 from pathlib import Path
 
@@ -387,10 +388,17 @@ def main():
     )
 
     recs = []
-    for case in cases:
-        rec = judge_case(case, site=not args.no_site)
-        recs.append(rec)
-        print(fmt_line(rec))
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    # 边跑边写：中途崩溃不丢已完成条目
+    with open(args.out, "w") if args.out else nullcontext() as out_fh:
+        for case in cases:
+            rec = judge_case(case, site=not args.no_site)
+            recs.append(rec)
+            print(fmt_line(rec))
+            if out_fh:
+                out_fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+                out_fh.flush()
     stats = summarize(recs)
     bad = [
         r
@@ -405,11 +413,6 @@ def main():
             | ({"truth_mismatch": r["truth_mismatch"]} if "truth_mismatch" in r else {})
             for r in bad
         ]
-    if args.out:
-        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        with open(args.out, "w") as fh:
-            for r in recs:
-                fh.write(json.dumps(r, ensure_ascii=False, default=str) + "\n")
     print("\n== summary ==", json.dumps(stats, ensure_ascii=False, indent=1))
 
 
