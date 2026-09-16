@@ -41,13 +41,30 @@ def verify(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict)
 def verify_response(kind: str, power: Fraction, comp: str, bound: Fraction, resp: dict) -> dict:
     """verify() on a /calculate response body.
 
-    Padé-fallback responses carry no parameters — the certificate IS the
-    proof; identity_ok reports pade.verify_cert on it (the cert bundles
-    sign and identity in one check, so nonneg reports the same bit).
+    Padé-fallback and composite (proof-DAG) responses carry no
+    parameters — the certificate IS the proof; identity_ok reports the
+    certificate verifier's verdict (those certs bundle sign and identity
+    in one check, so nonneg reports the same bit).
     """
     if resp.get("prover") == "pade":
         from .. import pade
+        from ..kernels import gamma_special
 
-        ok = pade.verify_cert(pade.cert_parse(resp["certificate"]))
+        cert = resp["certificate"]
+        try:
+            match = gamma_special.child_claim(cert) == (kind, power, comp, bound)
+        except (KeyError, TypeError, ValueError):
+            match = False
+        ok = match and pade.verify_cert(pade.cert_parse(cert))
+        return {"identity_ok": ok, "nonneg": ok, "integrand": {}, "target": {}}
+    if resp.get("prover") == "composite":
+        from ..kernels import gamma_special
+
+        cert = resp["certificate"]
+        try:
+            match = gamma_special.child_claim(cert) == (kind, power, comp, bound)
+        except (KeyError, TypeError, ValueError):
+            match = False
+        ok = match and gamma_special.verify_cert(cert)
         return {"identity_ok": ok, "nonneg": ok, "integrand": {}, "target": {}}
     return verify(kind, power, comp, bound, resp["parameters"])
