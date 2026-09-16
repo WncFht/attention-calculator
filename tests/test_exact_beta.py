@@ -122,12 +122,15 @@ def test_exact_proofs_verify(kind, power, comp, bound):
 
 def test_gauss_window_never_emits_transposed():
     """The (G, ~0.855] window: exact mode either finds a true proof at
-    deeper m or reports NoSolution — never the transposed params."""
-    # the two tightest claims need m ~ 10^6 (the d_m/q_m feasibility ratio
-    # converges to G^-1 like 1 - c/m) — honest NoSolution within budget
+    deeper m or falls to the AGM second prover — never transposed params."""
+    # the two tightest claims need m ~ 10^6 for the kernel (the d_m/q_m
+    # feasibility ratio converges to G^-1 like 1 - c/m) — the AGM interval
+    # prover proves them directly now; certs verify and carry no params
     for bound in ("1398/1675", "167/200"):
-        with pytest.raises(NoSolution):
-            solve.prove("gauss", "1", "<", bound, exact=True)
+        resp = solve.prove("gauss", "1", "<", bound, exact=True)
+        assert resp["prover"] == "agm"
+        res = verify_response("gauss", Fraction(1), "<", Fraction(bound), resp)
+        assert res["identity_ok"] and res["nonneg"]
     # the rest of the window resolves at deeper m with real proofs
     for bound, m in (("21/25", 18),):
         resp = solve.prove("gauss", "1", "<", bound, exact=True)
