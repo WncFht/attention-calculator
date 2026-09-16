@@ -47,7 +47,7 @@ verify.py 曾另报 ~113 条「系数缩放」假恒等式，其中 13 条为真
 ## 覆盖边界与已知缺口
 
 - 29 型全部覆盖；文章目录另有 ~16 种休眠类型（arcsin/arccos、ln π、Γ(1/3)、Γ(1/4)、ψ'、erf、ζ 一般、Glaisher、Li₂、Si/Cin、Ein/Ei、arsinh/arcosh、(ln q)ⁿ 等），站端同样 400 拒收，复刻侧未实现——kernel-spec.md 已载其中多型的核与矩公式。
-- 方向判定依赖 float64 预检/兜底：极端接近边界的命题（|C−r| 小于 float 分辨力）方向判定无认证保障，golden 内未遇到反例但理论上存在。
+- 方向判定依赖 float64 预检/兜底：极端接近边界的命题（|C−r| 小于 float 分辨力）方向判定无认证保障。**已实测成窗**（2026-09-16，attention-calculator-7e 在 :8081 实例上探得）：'>' 命题当有理界落在 (fl(C), C) 内时被预检一律误拒「方向反了」——窗口宽 C−fl(C) ~ 1e-16 相对量级；'<' 方向无此窗（fl(C) < C，真上界必大于 fl(C) 不误伤）。实测四例：`pi > 21053343141/6701487259`（界在 π 下方 2.6e-22）、`pi > 6167950454/1963319607`（7.6e-20）、`e > 848456353/312129649`（6.0e-19）、`e > 2124008553358849/781379079653017`（6.5e-32），全部真命题被误拒；mode=exact 的 certified_cmp 全部证出。双模式分裂已钉测试：`tests/test_quadlog.py::test_float_precheck_window_split`。golden.jsonl 内无窗内探针（'>' 记录分母均 ≤15 位）。
 - verify 4 条 harness-error：varpi/gauss power=None 记录的重建缺口（verify 侧，非复现侧）。
 - decompose 选界策略由 benchmark 反推钉死，机制上不能保证拆出的子界都可证。
 - bench/data 为 gitignored 语料（rsync 同步），CI 上判官测试 skip。

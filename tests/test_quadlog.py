@@ -668,6 +668,33 @@ def test_wrong_direction(kind, power, comp, bound):
 
 
 @pytest.mark.parametrize(
+    "kind,bound",
+    [
+        ("pi", "21053343141/6701487259"),  # bound sits 2.6e-22 below pi
+        ("pi", "6167950454/1963319607"),  # 7.6e-20 below
+        ("e", "848456353/312129649"),  # 6.0e-19 below
+        ("e", "2124008553358849/781379079653017"),  # 6.5e-32 below
+    ],
+)
+def test_float_precheck_window_split(kind, bound):
+    """The (fl(C), C) window: the site's float64 direction precheck compares
+    the rational bound against fl(C), so a true '>' claim with bound in
+    (fl(C), C) is refused as 方向反了 before the search starts — '>' has a
+    window of width C - fl(C) ~ 1e-16-relative, while '<' has none (every
+    true upper bound exceeds fl(C)).  mode=exact's certified_cmp proves all
+    of them.  Pins the site/exact split so nobody "fixes" the precheck and
+    loses parity.  Window cases measured by attention-calculator-7e."""
+    with pytest.raises(WrongDirection):
+        solve.prove(kind, "1", ">", bound)
+    from attention_calculator.exact_check import verify_response
+
+    resp = solve.prove(kind, "1", ">", bound, exact=True)
+    res = verify_response(kind, Fraction(1), ">", Fraction(bound), resp)
+    assert res["identity_ok"]
+    assert res["nonneg"]
+
+
+@pytest.mark.parametrize(
     "kind,power,comp,bound",
     [
         ("arctan_q", "3", "<", "5/4"),  # true but needs exponents > 10
