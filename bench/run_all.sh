@@ -1,36 +1,36 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2029  # $DIR/$PY intentionally expand client-side into the ssh command string
-# 全量评测：同步代码到 devbox → parity + verify → 聚合报告。
-# 用法: bench/run_all.sh [devbox]
+# 全量评测（本地跑；本机即 devbox，旧的 rsync→ssh 远端流程已废）。
+# 用法: bench/run_all.sh
 # golden 数据由 harvest.py 采集；本脚本不重复采，缺数据时先跑 harvest。
 
 set -eo pipefail
-REMOTE=${1:-devbox}
-DIR=~/src/attention-calculator
+cd "$(git rev-parse --show-toplevel)"
 PY=.venv/bin/python
-
-rsync -az --exclude .venv --exclude __pycache__ --exclude .git ./ "$REMOTE:$DIR/"
-ssh "$REMOTE" "cd $DIR && $PY -m pip list >/dev/null 2>&1 || true"
+mkdir -p bench/out
 
 echo "=== parity ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/parity.py bench/data/golden.jsonl --out bench/out/parity.jsonl" | tee bench/out/parity_summary.txt
+$PY bench/parity.py bench/data/golden.jsonl --out bench/out/parity.jsonl | tee bench/out/parity_summary.txt
 
 echo "=== decompose parity ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/parity_decompose.py --out bench/out/parity_decompose.jsonl" | tee bench/out/parity_decompose_summary.txt
+$PY bench/parity_decompose.py --out bench/out/parity_decompose.jsonl | tee bench/out/parity_decompose_summary.txt
 
 echo "=== edge/fuzz replay ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/replay_edge.py && $PY bench/replay_fuzz.py" | tee bench/out/replay_summary.txt
+$PY bench/replay_edge.py
+$PY bench/replay_fuzz.py
 
 echo "=== capture replay (fidelity + probes) ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/replay_capture.py" | tee bench/out/replay_capture_summary.txt
+$PY bench/replay_capture.py
 
 echo "=== sibling parity (health + convex) ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/parity_health.py && $PY bench/parity_convex.py" | tee bench/out/sibling_summary.txt
+$PY bench/parity_health.py
+$PY bench/parity_convex.py
 
-echo "=== verify ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/verify.py bench/data/golden.jsonl --out bench/out/verify.jsonl" | tee bench/out/verify_summary.txt
+echo "=== verify (site 模式恒等式数值审计) ==="
+$PY bench/verify.py bench/data/golden.jsonl --out bench/out/verify.jsonl | tee bench/out/verify_summary.txt
+
+echo "=== judge_correct (mode=exact 正确性判官) ==="
+$PY bench/judge_correct.py bench/data/golden.jsonl --adversarial -o bench/out/judge_correct.jsonl | tee bench/out/judge_correct_summary.txt
 
 echo "=== report ==="
-ssh "$REMOTE" "cd $DIR && $PY bench/report.py --parity bench/out/parity.jsonl --verify bench/out/verify.jsonl --out bench/out/report.md"
-rsync -az "$REMOTE:$DIR/bench/out/" bench/out/
+$PY bench/report.py --parity bench/out/parity.jsonl --verify bench/out/verify.jsonl --out bench/out/report.md
 echo "done: bench/out/report.md"
