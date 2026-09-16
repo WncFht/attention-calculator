@@ -47,6 +47,12 @@ LIMIT = 10
 # would be m=11.
 LT_M_LIMIT = {"gauss": 4, "varpi": 10}
 
+# mode=exact '<' budget: the true system stays solvable for all m (the
+# lemniscate d_m/q_m ratio climbs to the constant from below), so the site's
+# cap is lifted to a larger but still cheap bound; claims needing deeper m
+# report honest NoSolution instead of the transposed fake.
+EXACT_LT_LIMIT = 256
+
 
 # --------------------------------------------------------------------- golden
 
@@ -127,9 +133,13 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     else:
         # n is a direction flag here: 0 proves '>', 1 proves '<'
         flag = 0 if comp == ">" else 1
+        if comp == "<" and not exact:
+            top = LT_M_LIMIT[kind]
+        else:
+            top = EXACT_LT_LIMIT if comp == "<" else LIMIT
         plans = (
             (m, flag, [lemniscate_basis(kind, comp, m, 0), lemniscate_basis(kind, comp, m, 1)])
-            for m in range(LT_M_LIMIT[kind] + 1 if comp == "<" else LIMIT + 1)
+            for m in range(top + 1)
         )
         target = lemniscate_target(kind, comp, power, bound)
         try:
@@ -143,6 +153,10 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
                 return lt_bound_proof(kind, target)
             except NoSolution:
                 pass
+            if exact:
+                # the transposed shot solves the wrong system — the identity
+                # it emits is false; exact mode reports honest failure
+                raise
             solved = transposed_lt_proof(kind, power, bound, target)
 
     return emit(solved.m, solved.n, solved.coeffs)

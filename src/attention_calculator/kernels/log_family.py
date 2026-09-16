@@ -107,9 +107,12 @@ def check_input(power: Fraction, bound: Fraction, kind: str) -> None:
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     check_input(power, bound, kind)
-    if kind == "ln_q_square" and power in (Fraction(5), Fraction(7)):
-        # 站端 bug：q=5/7 的求解过程必崩（500），但命题为假时仍先走常规
-        # 的"方向反了"——golden 16/16 按命题真假分列。方向判定按站端 float64。
+    if not exact and kind == "ln_q_square" and power in (Fraction(5), Fraction(7)):
+        # 站端 bug：q=5/7 时求解必崩（500）。根因：ln²q 的 3x3 矩方程组在
+        # (m,n)=(1,0) 的行列式 ∝ c-4、(1,1) ∝ c-6——c=4/6 恰为 q=5/7，奇异
+        # 系统未被站端捕获。命题为假仍先报"方向反了"（golden 16/16 按真假
+        # 分列），方向判定按站端 float64。exact 路径方向已由 certified_cmp
+        # 裁定，奇异 (m,n) 由 engine.search 按 ValueError 跳过正常求解。
         diff = float(constant_mpf(kind, power)) - float(bound)
         if (diff < 0) if comp == ">" else (diff > 0):
             raise WrongDirection

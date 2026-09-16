@@ -141,7 +141,7 @@ PRE_F = {
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """Search (m, n) in the author's order; return the site's parameter dict."""
-    if kind in PRE_F:
+    if kind in PRE_F and not exact:  # exact mode: direction already certified
         c = PRE_F[kind](float(power))
         if (float(bound) > c) if comp == ">" else (float(bound) < c):
             raise WrongDirection

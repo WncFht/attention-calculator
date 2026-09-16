@@ -156,8 +156,15 @@ def check_input(q: Fraction, bound: Fraction, kind: str) -> tuple[Fraction, str]
     return alpha, "sin_pi_q" if is_sin else "cos_pi_q"
 
 
-def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
-    """Find (m, n, a, b) whose integrand proves the requested inequality."""
+def solve(kind: str, q: Fraction, comp: str, bound: Fraction, exact: bool = False):
+    """Find (m, n, a, b) whose integrand proves the requested inequality.
+
+    ``exact`` solves against the true moments; the site's corrupted stored
+    (1, 8) formula (site_basis) is confined to site mode. defer stays on:
+    under true moments a sign-definite solution proving the opposite
+    inequality cannot appear for a direction-certified claim, so the flag
+    only matters for site mode's biased basis.
+    """
     alpha, _ = check_input(q, bound, kind)
     s = Fraction(1 if comp == ">" else -1)
     target = {"C": s, "1": -s * bound}
@@ -172,14 +179,17 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
     if (comp == "<") == (gap <= 0):
         raise WrongDirection
     t = [angle_moment(j, alpha) for j in range(2 * LIMIT + 2)]
-    bias = bias_18(alpha)
-    plans = ((m, n, site_basis(t, m, n, bias)) for m, n in mn_order(LIMIT))
+    if exact:
+        plans = ((m, n, [basis_moment(t, m, n, j) for j in range(2)]) for m, n in mn_order(LIMIT))
+    else:
+        bias = bias_18(alpha)
+        plans = ((m, n, site_basis(t, m, n, bias)) for m, n in mn_order(LIMIT))
     return search(plans, target, True, defer=True), alpha
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """Run the proof search for one trig_pi-family request."""
-    solved, alpha = solve(kind, power, comp, bound)
+    solved, alpha = solve(kind, power, comp, bound, exact=exact)
     result = emit(solved.m, solved.n, solved.coeffs, c_val=str(alpha))
     result["type"] = "sin_pi_q" if kind.startswith("sin") else "cos_pi_q"
     return result

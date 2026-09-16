@@ -48,10 +48,18 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     """prove(kind, power, comp, bound) -> site /calculate shape."""
     # the site's float64 direction pre-check runs before the kernel — a false
     # claim is 方向反了 (gamma 0>1), a true/equal one proceeds into the
-    # bound/|power| division which crashes for power=0 (-> 500, gamma 0<1)
-    c = float(power) * EULER_F
-    if (float(bound) > c) if comp == ">" else (float(bound) < c):
-        raise WrongDirection
+    # bound/|power| division which crashes for power=0 (-> 500, gamma 0<1).
+    # mode=exact skips it (certified_cmp already decided direction) and
+    # rejects power <= 0: the printed composite multiplies every term by
+    # power, so a non-positive coefficient forces a non-positive integrand —
+    # the site form cannot express such a proof, honest failure.
+    if exact:
+        if power <= 0:
+            raise NoSolution
+    else:
+        c = float(power) * EULER_F
+        if (float(bound) > c) if comp == ">" else (float(bound) < c):
+            raise WrongDirection
     # power*gamma ⋚ bound  ≡  gamma ⋚ bound/power (direction flips if power < 0)
     if power < 0:
         comp = ">" if comp == "<" else "<"
