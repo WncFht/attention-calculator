@@ -36,9 +36,9 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 
 方向反判定分三层：
 
-- **float64 预检**（仅核会崩的类型需要）：e_q（math.exp）、sinh/cosh/tanh/coth（math.*，coth 内部另有 1/tanh(0)）、arctan_q/arccot_q（除以 q）、pi_n（表外指数 KeyError）、gamma（coef·γ）、ln_q_square q∈{5,7}（站点自身崩溃）、trig_pi 四型（mpmath 50dps）。严格为假的断言在此直接 方向反了；真/等值继续——等值多由输入检查先报 `二者相等`（Niven 点）或随核内崩溃变 500。
-- **扫描中**：命中"被积函数恒≤0"的候选**立即**抛 WrongDirection（抢在 NoSolution 之前）；恒变号则继续。**例外见下节 trig_pi**：该四型恒≤0 解跳过继续找（engine.search defer），搜完仍无非负解才报方向反。
-- **耗尽兜底**（solve.prove）：NoSolution 后再用 float64 比较常数与界，命题为假 → 改报"方向反了"（实测 arctan 3>5/4）；为真 → 维持"未找到解"。float 差恰为 0 的边界（zeta3/gamma 精度持平的假命题）按不 falsify 处理，与站点一致。
+- **float64 预检**（仅核会崩的类型需要）：e_q（math.exp）、sinh/cosh/tanh/coth（math.*，coth 内部另有 1/tanh(0)）、arctan_q/arccot_q（除以 q）、pi_n（表外指数 KeyError）、gamma（coef·γ）、ln_q_square q∈{5,7}（站点自身崩溃）、trig_pi 四型（mpmath 50dps）。严格为假的断言在此直接 方向反了；真/等值继续——等值多由输入检查先报 `二者相等`（Niven 点）或随核内崩溃变 500。zeta3 '>' 与负界不进预检（zeta3 阈值在 float c 上方 1 ulp 外，留给下方兜底覆盖）。
+- **扫描中**：`engine.search` 命中"被积函数恒≤0"的候选抛 WrongDirection 作**原语**，`solve.prove` 拦截后按方向分流：'<' 且预检已映射（c 非 None）→ 改报"未找到解"（站端 '<' 的方向判定只在预检发生，扫描里的非正 P 直接耗尽）；'>' 不判反，落入下方统一兜底（bound==c 的 cos/golden/sin_q 与 bound<C 的 sin_pi_q 实测均报"未找到>方向的解"）；未映射的型（artanh/arcoth/trig_pi）核内自带方向判定，WD 原样上报。**trig_pi 例外**：该四型恒≤0 解跳过继续找（engine.search defer），搜完仍无非负解才抛。
+- **耗尽兜底**（solve.prove）：搜索耗尽（含 '>' 途中非正被吞的 WD）后统一用 float64 比较常数与界，命题为假 → 报"方向反了"（实测 arctan 3>5/4）；为真 → 维持"未找到解"。float 差恰为 0 的边界（zeta3/gamma 精度持平的假命题）按不 falsify 处理，与站点一致。详见 fidelity-notes.md。
 
 ## 非负性判据（作者亲述，只需判断 P）
 
