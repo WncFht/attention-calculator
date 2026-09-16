@@ -19,7 +19,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     m, n = int(params["m"]), int(params["n"])
     u = Fraction(str(params["u_val"]))
     coeffs = [Fraction(str(params["au_val"])) / u, Fraction(str(params["bu_val"])) / u]
-    cfg = spec(kind, power)
+    cfg = spec(kind, power, exact=True)  # exact emits may exceed the site's k<=10 table
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 
     if sym == "arctan":

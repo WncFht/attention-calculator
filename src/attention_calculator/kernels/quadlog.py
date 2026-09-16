@@ -26,6 +26,7 @@ from fractions import Fraction
 from functools import cache
 from math import comb, factorial, gcd
 
+import mpmath as mp
 import sympy as sp
 
 from ..engine import WrongDirection, mn_order, search
@@ -48,6 +49,19 @@ ETA_PI = {
     8: Fraction(127, 1209600),
     10: Fraction(73, 6842880),
 }
+
+
+def beta_pi(k: int) -> Fraction:
+    """β(k)/π^k for odd k beyond the site table via Euler numbers."""
+    j = (k - 1) // 2
+    return Fraction((-1) ** j * int(mp.eulernum(2 * j)), 4 ** (j + 1) * factorial(2 * j))
+
+
+def eta_pi(k: int) -> Fraction:
+    """η(k)/π^k for even k beyond the site table via Bernoulli numbers."""
+    j = k // 2
+    zeta = Fraction(*mp.bernfrac(k)) * Fraction((-1) ** (j + 1) * 2**k, 2 * factorial(k))
+    return (1 - Fraction(2) ** (1 - k)) * zeta
 
 
 @cache
@@ -95,7 +109,7 @@ def basis_moments(m: int, n: int, odd: bool, sym: str, term) -> list[Moment]:
     return out
 
 
-def spec(kind: str, power: Fraction) -> dict:
+def spec(kind: str, power: Fraction, exact: bool = False) -> dict:
     """Per-type kernel configuration shared by prove() and render_equation()."""
     if kind == "pi":
         return dict(
@@ -103,15 +117,21 @@ def spec(kind: str, power: Fraction) -> dict:
         )
     if kind == "pi_n":
         # power p/q is reduced to pi^p vs bound^q; the kernel uses ln^{p-1}.
-        # no range guard — the site lets the table lookup crash (KeyError ->
-        # 500) for exponents outside [1, 10]
+        # Site path keeps the table lookup crash (KeyError -> 500) outside
+        # [1,10]; exact mode generates the β/η constants for any numerator.
         k, pd = power.numerator, power.denominator
+        try:
+            factor = BETA_PI[k] if k % 2 else ETA_PI[k]
+        except KeyError:
+            if not exact:
+                raise
+            factor = beta_pi(k) if k % 2 else eta_pi(k)
         return dict(
             r=k - 1,
             odd=k % 2 == 0,
             sym="pi",
             coef=Fraction(1),
-            factor=BETA_PI[k] if k % 2 else ETA_PI[k],
+            factor=factor,
             q=Fraction(1),
             limit=10,
             pd=pd,
@@ -145,10 +165,11 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
         c = PRE_F[kind](float(power))
         if (float(bound) > c) if comp == ">" else (float(bound) < c):
             raise WrongDirection
-    if kind == "pi_n" and exact and not 1 <= power.numerator <= 10:
-        # table lookup covers exponents 1..10; the site lets it crash (500)
-        raise ValueError(f"pi_n exponent {power.numerator} outside [1, 10]")
-    cfg = spec(kind, power)
+    if kind == "pi_n" and exact and (power.numerator < 1 or power.denominator > 64):
+        # numerator <= 0 is outside the type's domain (pi^0 is rational);
+        # denominator > 64 would explode the bound**pd solve integers
+        raise ValueError(f"pi_n exponent {power} outside domain")
+    cfg = spec(kind, power, exact)
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 
     if sym == "arctan":
