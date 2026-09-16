@@ -357,7 +357,7 @@ def convex_static(name: str):
 
 @app.post("/convex/prove")
 def convex_prove():
-    """凹凸不等式证明端点；convex 模块惰性导入（scipy 重）。"""
+    """凹凸不等式证明端点；convex 模块惰性导入（仅在命中路由时加载）。"""
     from . import convex
 
     # 前置校验按 strip 后文本：空 -> 400；strip 后 >500 -> 输入过长（恰好 500 通过）。
