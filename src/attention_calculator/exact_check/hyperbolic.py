@@ -28,7 +28,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     target = {k: c for k, c in target_for(kind, comp, bound).items() if c != 0}
     return {
         "identity_ok": integrand == target,
-        "nonneg": poly_nonneg(coeffs),
+        "nonneg": poly_nonneg(coeffs) and bool(integrand),
         "integrand": integrand,
         "target": target,
     }

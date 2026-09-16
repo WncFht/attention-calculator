@@ -120,12 +120,15 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     e_q reaches the natural 1/q division (site answers 500 there).
     """
     if kind == "e_q":
-        # float64 direction pre-check before the kernel: false claims are
-        # 方向反了 (e^0 > 2 -> 404), true/equal ones proceed into the 1/q
-        # moments which crash for q=0 (-> 500); math.exp overflow -> 500
-        c = math.exp(float(power))
-        if (float(bound) > c) if comp == ">" else (float(bound) < c):
-            raise WrongDirection
+        if not exact:
+            # float64 direction pre-check before the kernel: false claims are
+            # 方向反了 (e^0 > 2 -> 404), true/equal ones proceed into the 1/q
+            # moments which crash for q=0 (-> 500); math.exp overflow -> 500.
+            # Exact mode: certified_cmp decided direction; q=0's 1/q division
+            # surfaces as a domain rejection instead of the site's 500.
+            c = math.exp(float(power))
+            if (float(bound) > c) if comp == ">" else (float(bound) < c):
+                raise WrongDirection
         sym, coef, q, limit = "e_q", Fraction(1), power, LIMIT_OTHER
         plans = (
             (m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)]) for m, n in mn_order(limit)

@@ -39,7 +39,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     target: Moment = {k: v for k, v in {sym: sign * cfg["coef"], "1": -sign * bound}.items() if v}
     return {
         "identity_ok": integrand == target,
-        "nonneg": poly_nonneg(coeffs),
+        "nonneg": poly_nonneg(coeffs) and bool(integrand),
         "integrand": integrand,
         "target": target,
     }

@@ -145,6 +145,9 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
         c = PRE_F[kind](float(power))
         if (float(bound) > c) if comp == ">" else (float(bound) < c):
             raise WrongDirection
+    if kind == "pi_n" and exact and not 1 <= power.numerator <= 10:
+        # table lookup covers exponents 1..10; the site lets it crash (500)
+        raise ValueError(f"pi_n exponent {power.numerator} outside [1, 10]")
     cfg = spec(kind, power)
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 

@@ -42,7 +42,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     integrand = {(const_key if k == "C" else k): v for k, v in raw.items()}
     return {
         "identity_ok": integrand == target,
-        "nonneg": poly_nonneg(coeffs),
+        "nonneg": poly_nonneg(coeffs) and bool(integrand),
         "integrand": integrand,
         "target": target,
     }

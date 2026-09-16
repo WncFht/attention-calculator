@@ -82,9 +82,10 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
     (sinh 0>9, cosh 0<1/2), true/equal ones reach the kernel's 1/q crash
     (sinh 0<0, cosh 0>1/2 -> 500); coth crashes inside the check itself.
     """
-    c = CONST_F[kind](float(power))
-    if (float(bound) > c) if comp == ">" else (float(bound) < c):
-        raise WrongDirection
+    if not exact:  # exact mode: direction already certified upstream
+        c = CONST_F[kind](float(power))
+        if (float(bound) > c) if comp == ">" else (float(bound) < c):
+            raise WrongDirection
     plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)]) for m, n in mn_order(LIMIT))
     solved = search(plans, target_for(kind, comp, bound), True)
     return emit(kind, solved.m, solved.n, solved.coeffs)

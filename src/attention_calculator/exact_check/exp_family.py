@@ -28,10 +28,10 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
         sym, coef, q = "e", power, Fraction(1)
         basis = [basis_x_moment(m, n, j, q, sym) for j in (0, 1)]
     integrand = combine(coeffs, basis)
-    target = {sym: sign * coef, "1": -sign * bound}
+    target = {k: v for k, v in {sym: sign * coef, "1": -sign * bound}.items() if v}
     return {
         "identity_ok": integrand == target,
-        "nonneg": poly_nonneg(coeffs),
+        "nonneg": poly_nonneg(coeffs) and bool(integrand),
         "integrand": integrand,
         "target": target,
     }

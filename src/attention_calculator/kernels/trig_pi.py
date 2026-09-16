@@ -173,11 +173,14 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction, exact: bool = Fals
     # before searching: a wrong-direction request never reaches the scan, so
     # even a corrupted-formula hit cannot emit when bound ~ C fails. Exact
     # equality is impossible here -- Niven cases were caught by check_input.
-    with mp.workdps(50):
-        const = mp.cos(mp.pi * mp.mpf(alpha.numerator) / mp.mpf(alpha.denominator) / 2)
-        gap = mp.mpf(bound.numerator) / mp.mpf(bound.denominator) - const
-    if (comp == "<") == (gap <= 0):
-        raise WrongDirection
+    if not exact:
+        # certified_cmp already decided direction upstream in exact mode —
+        # a 50dps gap check would misjudge bounds closer than 1e-50.
+        with mp.workdps(50):
+            const = mp.cos(mp.pi * mp.mpf(alpha.numerator) / mp.mpf(alpha.denominator) / 2)
+            gap = mp.mpf(bound.numerator) / mp.mpf(bound.denominator) - const
+        if (comp == "<") == (gap <= 0):
+            raise WrongDirection
     t = [angle_moment(j, alpha) for j in range(2 * LIMIT + 2)]
     if exact:
         plans = ((m, n, [basis_moment(t, m, n, j) for j in range(2)]) for m, n in mn_order(LIMIT))

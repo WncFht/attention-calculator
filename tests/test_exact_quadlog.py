@@ -136,7 +136,16 @@ def test_zero_power_emitted_identity_is_true():
 
 @pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 def test_golden_corpus_sweep():
-    """Every golden success record in the six types must verify exactly."""
+    """Every golden success record in the six types must verify exactly —
+    except the four vacuous-equality emissions (0⋚0 claims answered with
+    `0 = ∫0 dx > 0`): their identity holds but the integrand is identically
+    zero, so nonneg must flag them."""
+    vacuous = {
+        ("catalan", "0", "<", "0"),
+        ("catalan", "0", ">", "0"),
+        ("zeta3", "0", "<", "0"),
+        ("zeta3", "0", ">", "0"),
+    }
     failures = []
     total = 0
     for line in GOLDEN.open():
@@ -152,6 +161,10 @@ def test_golden_corpus_sweep():
             Fraction(rec["rational"]),
             params,
         )
+        key = (rec["type"], rec["power"], rec["comparison"], rec["rational"])
+        if key in vacuous:
+            assert res["identity_ok"] and not res["nonneg"], f"vacuous record changed: {key}"
+            continue
         if not (res["identity_ok"] and res["nonneg"]):
-            failures.append((rec["type"], rec["power"], rec["comparison"], rec["rational"]))
+            failures.append(key)
     assert not failures, f"{len(failures)}/{total} records failed: {failures[:10]}"
