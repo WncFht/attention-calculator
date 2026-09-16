@@ -3,9 +3,10 @@
 站端机制（探测钉死，详见 docs/fidelity-notes.md）：进核前用 float64 求值
 命题常数 c，把有理界与 c 做 **精确** 比较（Fraction vs float 的 Python 语义，
 bound 侧不舍入）——'>' 命题 bound>c、'<' 命题 bound<c 即报"方向反了"。
-float 等值但严格偏离 c 的界照样判反；'<' 命题 bound==c 越过预检进扫描，
-非正解耗尽后报"未找到解"。唯一例外是 zeta3 '>'，站端用 float(bound)>c。
-下述有理界全部取自 bench/data/{edge,fidelity}-probes.jsonl 的实测记录。
+float 等值但严格偏离 c 的界照样判反；bound==c（或 bound<C 真命题）越过预检
+进扫描后，两方向的非正解耗尽都报"未找到解"，由 float64 真假兜底决定是否
+改报"方向反了"。唯一例外是 zeta3 '>'，站端用 float(bound)>c。
+下述有理界全部取自 bench/data/{edge,fidelity,probes}.jsonl 的实测记录。
 """
 
 import math
@@ -71,6 +72,14 @@ def test_direction_precheck_wrong_direction(kind, power, comp, bound):
         # zeta3 '>' 是 float 判定：bound_f==Cf 的紧界与 Cf+0ulp 都放行耗尽
         ("zeta3", "1", ">", "5413583021147681/4503599627370496"),  # == Cf
         ("zeta3", "1", ">", "461424925/383862797"),  # Cf+4.3e-17
+        # '>' 界恰等于 c（bound==Cf 的 dyadic）：预检不触发，扫描非正耗尽
+        # 后 float 兜底 diff==0 → 站端"未找到>方向的解"而非"方向反了"
+        ("cos_q", "1", ">", "1216652631687587/2251799813685248"),  # == fl(cos1)
+        ("golden", "1", ">", "910872158600853/562949953421312"),  # == fl(φ)
+        ("sin_q", "1/2", ">", "539785169252447/1125899906842624"),  # == fl(sin½)
+        # trig_pi 无外层预检：bound<C 真命题、bound_f<Cf——defer 扫描只见
+        # 伪非正计划（BIAS18 (1,8)），耗尽后按 float 兜底报"未找到"
+        ("sin_pi_q", "1/5", ">", "587785252292473/1000000000000000"),
     ],
 )
 def test_direction_precheck_no_solution(kind, power, comp, bound):

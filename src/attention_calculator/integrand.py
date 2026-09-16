@@ -246,8 +246,11 @@ def constant_mpf(kind: str, power: Fraction):
         "arcoth_q": lambda: mp.atanh(1 / q),
         "gamma": lambda: q * mp.euler,
         "golden": lambda: q * (1 + mp.sqrt(5)) / 2,
-        "catalan": lambda: mp.catalan,
-        "zeta3": lambda: mp.zeta(3),
+        # catalan/zeta3 的 power 同样是系数（kernel-spec: "coef of C"——
+        # 站端 zeta3 0 > 1 判方向反了即 0·ζ(3)>1 为假），漏乘会让 q=0 的
+        # 方向兜底把假命题放行为未找到。
+        "catalan": lambda: q * mp.catalan,
+        "zeta3": lambda: q * mp.zeta(3),
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。

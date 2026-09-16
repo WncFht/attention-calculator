@@ -6,10 +6,13 @@
 
 - `'>'` 命题：`bound > c` → 404 `要证明的式子不等号方向反了`，不进搜索。
 - `'<'` 命题：`bound < c` → 同上；`bound == c` 越过预检进扫描。
-- 扫描途中命中非正解：`'>'` 仍报方向反了；`'<'` 报 `未找到<方向的解`
-  （站端 '<' 的方向判定只在预检发生，非正 P 在扫描里等同搜不到）。
+- 扫描途中命中非正解：**两个方向都不报方向反了**——站端把非正 P 等同
+  "搜不到"，耗尽后统一按 float64 真假复核：`float(C)−float(bound)` 严格
+  判号，命题为假报"方向反了"，为真或 float 等值（差为 0）报
+  `未找到{方向}方向的解`。实现上 `'<'` 已映射型直接报未找到（bound≥c
+  时 bound_f≥Cf，复核结果恒为未找到），未映射型与 `'>'` 全型都过兜底。
 
-这统一解释了两类保真分歧：
+这统一解释了三类保真分歧：
 
 1. **超紧真命题误判方向**（cap:*-tight 系列）：c 低于真值的型
    （pi/e/sin_q/ln_q/e_q/ln_q_square——`fl(C)<C`），真命题界 `bound<C` 但
@@ -17,6 +20,11 @@
    与 c 等值，故只有精确比较能解释。
 2. **float 等值界的 '<' 假命题**（equal:pi-float-lt、e-float-lt）：
    `bound == c` 不触发 `<` 预检，扫描途中非正解按站端语义报未找到。
+3. **float 等值界的 '>' 假命题**（fid:cos-gt-cf、fid3:gol-gt-+0、
+   fid3:sin2-gt-+0——`bound == c == Cf`）：预检不触发，扫描非正耗尽后
+   float 复核差为 0 → 未找到而非方向反了。cap:sin_pi_q:tight 是同机制的
+   真命题版本：`bound<C` 且 `bound_f<Cf`，trig_pi 无外层预检、defer 扫描
+   只见 (1,8) 伪非正计划，耗尽后同样报未找到。
 
 ## 各型常数 c
 
@@ -42,19 +50,23 @@
 
 - **zeta3 `'>'` 是唯一不走精确预检的方向**：站端实为 `float(bound) > c`。
   证据：fid4:zeta-gt-fe* 系列界在 `(Cf, Cf+1ulp)` 内站端报未找到；
-  `Cf+1ulp` 起报方向反了。由 NoSolution 后的 float 差兜底覆盖。
+  `Cf+1ulp` 起报方向反了。由耗尽后的 float 差兜底覆盖。
+- artanh_q/arcoth_q/trig_pi 四型无外层预检：`'<'` 核内判反原样上报，
+  `'>'` 的非正耗尽统一过 float 兜底（`bound_f>Cf` 才判反）。sin_pi_q
+  等值界实测为 `未找到>方向的解`（cap:sin_pi_q:tight），与兜底语义一致。
 - `power=0` 系数型：`c=0`，`'>'` 仅 `bound>0` 触发（0>1 → 方向反了），
   `0>0`/`0<0` 进核给退化 ∫0dx 证明（200）。
 - 负界、格式非法、分子分母 ≥10^16 在 server 表层就被 400 挡掉，到不了预检；
   prove() 内部对 `bound<0` 也不做预检，交给核内 check_input 报右侧格式错。
-- artanh_q/arcoth_q/trig_pi 四型的方向判定路径未探测区分，保持核内现状。
 
-## 证据锚点（bench/data/{edge,fidelity}-probes.jsonl）
+## 证据锚点（bench/data/{edge,fidelity,probes}.jsonl）
 
 - `'>'` 预检判反：cap:pi-gt-tight、cap:e-gt-tight、cap:e_q-tight、
   cap:sin_q-tight、cap:ln_q-tight、cap:ln_qsq-tight（站端全报方向反了）。
 - `'>'` 反向对照（c 上溢，真紧界放行）：cap:cos_q-tight、cap:atan3-tight
   （站端报未找到>方向的解）。
+- `'>'` 等值/真命题耗尽：fid:cos-gt-cf、fid3:gol-gt-+0、fid3:sin2-gt-+0
+  （`bound==c==Cf`，站端未找到）、cap:sin_pi_q:tight（`bound<C`，站端未找到）。
 - `'<'` 等值放行：equal:pi-float-lt、equal:e-float-lt、fid3:cat-lt-+0、
   fid3:zeta-lt-+0/+1/+2（站端全报未找到）；fid4:*-<-1 系列（Cf−1ulp）判反。
 - zeta3 `'>'` float 判定：fid3:zeta-gt-+0（Cf，未找到）vs fid3:zeta-gt-+1/+2

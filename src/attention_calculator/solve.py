@@ -148,24 +148,30 @@ def prove(kind: str, power: str, comp: str, rational: str) -> dict:
     try:
         return module.prove(kind, q, comp, r)
     except WrongDirection:
-        # '<' 扫描途中的非正解在站端是"未找到解"而非"方向反了"——
-        # 站端 '<' 的方向判定只在 bound<c 预检发生，扫描里的非正 P 直接耗尽
-        if comp == "<" and c is not None:
-            raise NoSolution from None
-        raise
-    except NoSolution:
-        if c is not None:
+        if comp == "<":
+            # '<' 扫描途中的非正解在站端是"未找到解"而非"方向反了"——
+            # 站端 '<' 的方向判定只在 bound<c 预检发生，扫描里的非正 P 直接耗尽；
+            # 未映射的型核内自带方向判定（trig_pi defer 等），WD 原样上报
+            if c is not None:
+                raise NoSolution from None
             raise
-        # 无精确预检的型在搜索耗尽后仍按数值真假区分报错：命题为假时报
-        # "方向反了"而非"未找到解"（实测 arctan 3 > 5/4 → 方向反了；真命题
-        # < 5/4 → 未找到解）。恒等式 ∫f = ±(C−r) 精确成立，真命题不可能搜出
-        # 恒≤0 的 P，故仅在 NoSolution 后补判不会误伤已验证路径。
-        # 判定精度是 float64：zeta3 '>' 对 float 相等但方向为假的界仍报
-        # "未找到解"（float 差为 0 → 放行进入搜索 → 耗尽），故用 float 比较差。
-        from .integrand import constant_mpf
+        # '>' 命中的非正 P 在站端同样只是"搜不到"：bound==c 的 cos/golden/sin_q
+        # 与 bound<C 的 sin_pi_q 实测均报"未找到>方向的解"而非"方向反了"——
+        # 不直接判反，落入下方统一的 float64 真假兜底
+    except NoSolution:
+        # 已映射 '<' 的"未找到"直接上报；'>' 全型与未映射 '<' 进下方兜底
+        if comp == "<" and c is not None:
+            raise
+    # 搜索耗尽（含 '>' 途中非正）后按 float64 真假区分报错：命题为假报
+    # "方向反了"而非"未找到解"（实测 arctan 3 > 5/4 → 方向反了；真命题
+    # < 5/4 → 未找到解）。恒等式 ∫f = ±(C−r) 精确成立，真命题不可能搜出
+    # 恒≤0 的 P，故仅在耗尽后补判不会误伤已验证路径。
+    # 判定精度是 float64：zeta3 '>' 对 float 相等但方向为假的界仍报
+    # "未找到解"（float 差为 0 → 放行进入搜索 → 耗尽），故用 float 比较差。
+    from .integrand import constant_mpf
 
-        diff = float(constant_mpf(kind, q)) - float(r)
-        claim_false = (diff < 0) if comp == ">" else (diff > 0)
-        if claim_false:
-            raise WrongDirection from None
-        raise
+    diff = float(constant_mpf(kind, q)) - float(r)
+    claim_false = (diff < 0) if comp == ">" else (diff > 0)
+    if claim_false:
+        raise WrongDirection from None
+    raise NoSolution from None
