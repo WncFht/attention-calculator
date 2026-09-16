@@ -30,6 +30,18 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"verify_cert: cannot read certificate: {e}", file=sys.stderr)
         return 2
+    if isinstance(cert, dict) and "serr" in cert:
+        # Padé second-prover certificate: pade.verify_cert IS the recheck —
+        # it re-derives the approximants and error data over QQ
+        ok = verify_cert(cert)
+        print(f"identity_ok: {ok}")
+        print(f"nonneg:      {ok}")
+        print(f"statement:   pade {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
+        if ok:
+            print("VERIFIED")
+            return 0
+        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
+        return 1
     try:
         res = recheck(cert)
     except Exception as e:  # untrusted input: any checker/parse failure = malformed cert
