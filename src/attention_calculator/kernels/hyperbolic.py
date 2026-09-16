@@ -78,17 +78,38 @@ CONST_F = {
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = False) -> dict:
     """prove(kind, power, comp, bound) -> site /calculate shape.
 
-    power==0: the float64 pre-check decides first — false claims get 方向反了
-    (sinh 0>9, cosh 0<1/2), true/equal ones reach the kernel's 1/q crash
-    (sinh 0<0, cosh 0>1/2 -> 500); coth crashes inside the check itself.
+    power==0: site mode keeps the probed float64-then-1/q-crash behavior;
+    exact mode rejects it as a domain error — the kernel collapses there
+    (IBP base terms carry 1/q) and the constants are rational (sinh 0 =
+    tanh 0 = 0, cosh 0 = 1) or singular (coth 0).
+
+    q<0 (exact only): kernel sinh(qx) is non-positive on [0,1], so a
+    non-negative P can only certify the flipped inequality — the site
+    path misreports true claims as 方向反了. Reduce by parity instead:
+    sinh/tanh are odd so the (|q|, flipped comp, -bound) problem is
+    equivalent; cosh is even so only the argument changes. The emitted
+    P is negated: (-P)·sinh(qx) >= 0 on [0,1] and its integral is the
+    original s·(C - bound) vector. coth_q stays rejected for q<0 — its
+    printed 1/sinh(q) prefactor flips the certified sign and would make
+    the rendered equation lie.
     """
     if not exact:  # exact mode: direction already certified upstream
         c = CONST_F[kind](float(power))
         if (float(bound) > c) if comp == ">" else (float(bound) < c):
             raise WrongDirection
-    plans = ((m, n, [basis_moment(m, n, j, power) for j in (0, 1, 2)]) for m, n in mn_order(LIMIT))
-    solved = search(plans, target_for(kind, comp, bound), True)
-    return emit(kind, solved.m, solved.n, solved.coeffs)
+    q, comp_s, bound_s, negate = power, comp, bound, False
+    if exact and power <= 0:
+        if kind == "coth_q":  # coth 0 singular; q<0 breaks the 1/sinh q print sign
+            raise ValueError("请在coth后输入一个大于0的数")
+        if power == 0:
+            raise ValueError(f"请在{kind.split('_')[0]}后输入一个非0的数")
+        odd = kind in ("sinh_q", "tanh_q")
+        q, comp_s = -power, ("<" if comp == ">" else ">") if odd else comp
+        bound_s, negate = (-bound if odd else bound), True
+    plans = ((m, n, [basis_moment(m, n, j, q) for j in (0, 1, 2)]) for m, n in mn_order(LIMIT))
+    solved = search(plans, target_for(kind, comp_s, bound_s), True)
+    coeffs = [-v for v in solved.coeffs] if negate else solved.coeffs
+    return emit(kind, solved.m, solved.n, coeffs)
 
 
 def render_equation(

@@ -79,14 +79,29 @@ def test_equal_claim_at_rational_point():
         solve.prove("cosh_q", "0", "<", "1", exact=True)
 
 
-def test_zero_argument_still_hits_the_moment_wall():
+def test_zero_argument_is_a_domain_rejection():
     # certified direction passes (sinh 0 < 1/10 is true) but the 1/q IBP
-    # cannot start at q=0 — the same crash the site surfaces as 500;
-    # coth crashes one step earlier inside 1/tanh(0) of certified_cmp
-    with pytest.raises(ZeroDivisionError):
+    # cannot start at q=0 — exact mode answers a domain ValueError (site
+    # parity keeps the 500 crash); coth's 0 is singular -> same channel
+    with pytest.raises(ValueError):
         solve.prove("sinh_q", "0", "<", "1/10", exact=True)
-    with pytest.raises(ZeroDivisionError):
+    with pytest.raises(ValueError):
         solve.prove("coth_q", "0", "<", "2", exact=True)
+
+
+def test_negative_q_parity_reduction():
+    # sinh(qx) <= 0 on [0,1] for q<0: solve the |q| problem with flipped
+    # comparison and emit -P' — the certified integrand stays nonneg
+    resp = solve.prove("sinh_q", "-1", "<", "-1", exact=True)
+    res = verify("sinh_q", Fraction(-1), "<", Fraction(-1), resp["parameters"])
+    assert res["identity_ok"] and res["nonneg"]
+    # even function: same comparison direction after folding |q|
+    resp = solve.prove("cosh_q", "-1", ">", "3/2", exact=True)
+    res = verify("cosh_q", Fraction(-1), ">", Fraction("3/2"), resp["parameters"])
+    assert res["identity_ok"] and res["nonneg"]
+    # coth's printed 1/sinh(q) prefactor is sign-broken for q<0: domain reject
+    with pytest.raises(ValueError):
+        solve.prove("coth_q", "-1", "<", "-1", exact=True)
 
 
 def test_checker_rejects_tampered_params():

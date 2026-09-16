@@ -169,6 +169,10 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
         # numerator <= 0 is outside the type's domain (pi^0 is rational);
         # denominator > 64 would explode the bound**pd solve integers
         raise ValueError(f"pi_n exponent {power} outside domain")
+    if kind in ("arctan_q", "arccot_q") and exact and power == 0:
+        # atan_moment 基例带 1/q：arctan 0 = 0 是有理数、arccot 0 = π/2 不在
+        # 本核矩空间（q→0 核退化为 1，span 只剩 {1}）——诚实域拒，非崩溃
+        raise ValueError(f"请在{kind.split('_')[0]}后输入一个非0的数")
     cfg = spec(kind, power, exact)
     q, r, odd, sym = cfg["q"], cfg["r"], cfg["odd"], cfg["sym"]
 

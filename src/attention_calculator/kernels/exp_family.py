@@ -129,6 +129,10 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction, exact: bool = 
             c = math.exp(float(power))
             if (float(bound) > c) if comp == ">" else (float(bound) < c):
                 raise WrongDirection
+        elif power == 0:
+            # e^0 = 1 是有理数：核塌缩后矩空间无 e_q 符号方向，诚实域拒
+            # （certified_cmp 已先给出方向；走到这里说明命题为真但不可证）
+            raise ValueError("请在e^后输入一个非0的数")
         sym, coef, q, limit = "e_q", Fraction(1), power, LIMIT_OTHER
         plans = (
             (m, n, [basis_x_moment(m, n, j, q, sym) for j in (0, 1)]) for m, n in mn_order(limit)

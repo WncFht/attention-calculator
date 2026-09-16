@@ -28,7 +28,9 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     target = {k: c for k, c in target_for(kind, comp, bound).items() if c != 0}
     return {
         "identity_ok": integrand == target,
-        "nonneg": poly_nonneg(coeffs) and bool(integrand),
+        # q<0 时核 sinh(qx) 恒非正，合法证明的 P 恒非正（parity 归约发射 -P'）
+        "nonneg": (poly_nonneg(coeffs) if power > 0 else poly_nonneg([-c for c in coeffs]))
+        and bool(integrand),
         "integrand": integrand,
         "target": target,
     }
