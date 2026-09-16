@@ -21,9 +21,15 @@ SRC="${CROSSNOTE_SRC:-$HOME/.agents/skills/setup-toolchain/assets/.crossnote}"
   echo "error: crossnote 事实源不存在: $SRC（可用 CROSSNOTE_SRC= 改指）" >&2
   exit 1
 }
-for f in parser.js style.less config.js head.html pseudocode-runtime.js; do
+for f in parser.js style.less config.js head.html README.md pseudocode-runtime.js; do
   [[ -f $SRC/$f ]] || {
     echo "error: 事实源缺文件: $SRC/$f" >&2
+    exit 1
+  }
+done
+for d in scripts tests vendor; do
+  [[ -d $SRC/$d ]] || {
+    echo "error: 事实源缺目录: $SRC/$d" >&2
     exit 1
   }
 done

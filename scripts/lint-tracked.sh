@@ -10,18 +10,17 @@
 # tracked files — peers' modified-but-uncommitted tracked files are still
 # their business, coordinate before --fix on an active tree).
 #
-#   bash scripts/lint-tracked.sh          # check everything tracked
-#   bash scripts/lint-tracked.sh --fix    # apply formatters
-#   bash scripts/lint-tracked.sh py md    # restrict to some extensions
+#   bash scripts/lint-tracked.sh            # check everything tracked
+#   bash scripts/lint-tracked.sh --fix      # apply formatters
+#   bash scripts/lint-tracked.sh py md      # restrict to some extensions
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
 FIX=0
-[ "${1:-}" = "--fix" ] && {
-  FIX=1
-  shift
-}
-EXTS=("$@")
+EXTS=()
+for a in "$@"; do
+  if [ "$a" = "--fix" ]; then FIX=1; else EXTS+=("$a"); fi
+done
 want() { [ ${#EXTS[@]} -eq 0 ] || printf '%s\n' "${EXTS[@]}" | grep -qx "$1"; }
 
 PRETTIER=./node_modules/.bin/prettier
@@ -30,18 +29,19 @@ rc=0
 run() { "$@" || rc=1; }
 
 if want py; then
-  files=$(git ls-files '*.py')
-  if [ -n "$files" ]; then
-    if [ $FIX -eq 1 ]; then run xargs ruff format <<<"$files"; else run xargs ruff format --check <<<"$files"; fi
-    run xargs ruff check <<<"$files"
-  fi
+  # repo-root invocation = CI python job parity: ruff format also sees
+  # python blocks fenced inside tracked .md, which a '*.py' listing misses
+  if [ $FIX -eq 1 ]; then run ruff format .; else run ruff format --check .; fi
+  run ruff check .
 fi
 
 if want sh; then
   files=$(git ls-files '*.sh')
   if [ -n "$files" ]; then
     if [ $FIX -eq 1 ]; then run xargs shfmt -i 2 -w <<<"$files"; else run xargs shfmt -i 2 -d <<<"$files"; fi
-    for f in $files; do head -1 "$f" | grep -q zsh || shellcheck -S warning "$f" || rc=1; done
+    while IFS= read -r f; do
+      head -1 "$f" | grep -q zsh || shellcheck -S warning "$f" || rc=1
+    done <<<"$files"
   fi
 fi
 
@@ -50,6 +50,8 @@ if want md; then
   files=$(git ls-files '*.md' | grep -v '^docs/' || true)
   if [ -n "$files" ]; then
     if [ $FIX -eq 1 ]; then run "$MDLINT" --fix $files; else run "$MDLINT" $files; fi
+    # hook order: autocorrect then prettier (the gfs chain pipes one into the other)
+    if [ $FIX -eq 1 ]; then run xargs autocorrect --fix <<<"$files"; else run xargs autocorrect --lint <<<"$files"; fi
     if [ $FIX -eq 1 ]; then run xargs "$PRETTIER" --write <<<"$files"; else run xargs "$PRETTIER" --check <<<"$files"; fi
   fi
 fi
@@ -62,10 +64,15 @@ if want yaml; then
 fi
 
 if want toml; then
-  files=$(git ls-files '*.toml' | grep -v '^uv\.lock$' || true)
+  files=$(git ls-files '*.toml')
   if [ -n "$files" ]; then
     if [ $FIX -eq 1 ]; then run xargs taplo fmt <<<"$files"; else run xargs taplo fmt --check <<<"$files"; fi
   fi
+fi
+
+if want actionlint; then
+  files=$(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml')
+  if [ -n "$files" ]; then run xargs actionlint <<<"$files"; fi
 fi
 
 exit $rc

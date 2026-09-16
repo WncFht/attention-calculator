@@ -7,9 +7,11 @@
 # (the `serve[r]` bracket trick is fragile). Kill by listening port via ss
 # instead.
 #
-#   bash scripts/dev-server.sh restart [PORT]   # kill :PORT listener, nohup restart, smoke /
+#   bash scripts/dev-server.sh restart          # kill :8080 listener, nohup restart, smoke /
 #   bash scripts/dev-server.sh smoke  [PORT]    # curl / and POST /calculate sanity
-#   bash scripts/dev-server.sh stop   [PORT]
+#   bash scripts/dev-server.sh stop   [PORT]    # [PORT] targets instances started by hand
+#                                               # on other ports; the server itself always
+#                                               # binds 0.0.0.0:8080 (server.py)
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -36,6 +38,11 @@ smoke() {
 
 case "$CMD" in
 restart)
+  if [ "$PORT" != 8080 ]; then
+    echo "error: the server always binds :8080 — restart takes no PORT (got $PORT);" >&2
+    echo "       stop/smoke accept a PORT for instances started by hand" >&2
+    exit 2
+  fi
   kill_port
   nohup "$PY" -m attention_calculator.server >"$LOG" 2>&1 &
   echo "pid $! -> $LOG"

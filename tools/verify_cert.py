@@ -12,11 +12,50 @@
 import argparse
 import json
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from attention_calculator.certificate import cert_tex, recheck, verify_cert
+
+# decode failures that mean "malformed" — the same except lists the family
+# cert_parse calls sit under inside certificate.verify_cert
+PARSE_ERRORS = (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError)
+
+
+def second_prover_parse(cert: dict) -> dict:
+    """Decode a second-prover cert's wire fields; raises on malformed input.
+
+    Dispatch order mirrors certificate.verify_cert. composite has no
+    cert_parse — its schema is the field extraction at the top of
+    gamma_special.verify_cert, mirrored here.
+    """
+    if "serr" in cert:
+        from attention_calculator import pade
+
+        return pade.cert_parse(cert)
+    if "agm_iter" in cert:
+        from attention_calculator import agm
+
+        return agm.cert_parse(cert)
+    if cert.get("prover") == "euler_gamma":
+        from attention_calculator import euler_gamma
+
+        return euler_gamma.cert_parse(cert)
+    return {
+        "kind": cert["kind"],
+        "comp": cert["comp"],
+        "q": Fraction(cert["q"]),
+        "p": Fraction(cert["p"]),
+        "rule": cert["rule"],
+        "witness": {k: Fraction(v) for k, v in cert["witness"].items()},
+        "expect": [
+            (e["kind"], Fraction(e["power"]), e["comp"], Fraction(e["bound"]))
+            for e in cert["expect"]
+        ],
+        "children": cert["children"],
+    }
 
 
 def main() -> int:
@@ -30,53 +69,21 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"verify_cert: cannot read certificate: {e}", file=sys.stderr)
         return 2
-    if isinstance(cert, dict) and "serr" in cert:
-        # Padé second-prover certificate: pade.verify_cert IS the recheck —
-        # it re-derives the approximants and error data over QQ
-        ok = verify_cert(cert)
-        print(f"identity_ok: {ok}")
-        print(f"nonneg:      {ok}")
-        print(f"statement:   pade {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
-        if ok:
-            print("VERIFIED")
-            return 0
-        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
-        return 1
-    if isinstance(cert, dict) and "agm_iter" in cert:
-        # AGM interval certificate: agm.verify_cert replays the enclosure
-        # and demands verbatim endpoint equality
-        ok = verify_cert(cert)
-        print(f"identity_ok: {ok}")
-        print(f"nonneg:      {ok}")
-        print(
-            f"statement:   agm {cert.get('kind')} {cert.get('power')}"
-            f" {cert.get('comparison')} {cert.get('bound')}"
-        )
-        if ok:
-            print("VERIFIED")
-            return 0
-        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
-        return 1
-    if isinstance(cert, dict) and cert.get("prover") == "euler_gamma":
-        # Euler--Maclaurin gamma certificate: euler_gamma.verify_cert replays
-        # H_N, Bernoulli numbers, the tail bound and both ln-2 child certs
-        ok = verify_cert(cert)
-        print(f"identity_ok: {ok}")
-        print(f"nonneg:      {ok}")
-        print(f"statement:   euler_gamma {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
-        if ok:
-            print("VERIFIED")
-            return 0
-        print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
-        return 1
-    if isinstance(cert, dict) and cert.get("prover") == "composite":
-        # Composite proof DAG: children verified recursively inside
-        # gamma_special.verify_cert; the transfer arithmetic is all-QQ
-        ok = verify_cert(cert)
-        print(f"identity_ok: {ok}")
-        print(f"nonneg:      {ok}")
-        print(f"statement:   composite {cert.get('kind')} {cert.get('comp')} {cert.get('p')}")
-        if ok:
+    if isinstance(cert, dict) and (
+        "serr" in cert or "agm_iter" in cert or cert.get("prover") in ("euler_gamma", "composite")
+    ):
+        # second-prover schemas (Padé/AGM/Euler–Maclaurin/composite):
+        # certificate.verify_cert swallows parse failures into False, so the
+        # family parse plus claim render run first — a decode failure is a
+        # malformed cert (exit 2), not a disproven one
+        try:
+            second_prover_parse(cert)
+            statement = cert_tex(cert)
+        except PARSE_ERRORS as e:
+            print(f"verify_cert: malformed certificate: {e}", file=sys.stderr)
+            return 2
+        print(f"statement:   {statement}")
+        if verify_cert(cert):
             print("VERIFIED")
             return 0
         print("FAILED: certificate does not certify a valid proof", file=sys.stderr)
