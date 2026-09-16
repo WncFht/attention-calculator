@@ -97,3 +97,15 @@ G⁻¹ 的系数真值 ~1026 对声称 ~0.83，常数项也不符；转置解出
 
 - `bench/out/verify-full.jsonl`：2969 行逐条结论，含 type/power/comparison/rational/parameters、claimed_lhs、actual_integral、margin（有符号差）、identity_ok、sign 三层、verdict；fail 记录含 error_consistent。
 - 复核脚本片段（精确矩比对）见本报告方法描述；`bench/verify.py` 输出字段本次补了 `parameters` 与 `margin`。
+
+## 2026-09-16 复跑补记（数据集 2969→3454）
+
+`bench/out/verify.jsonl`（3454 条新版输出）：1438 valid、**146 false-identity**、
+4 harness-error、1866 fail 记录方向自洽。146 = 上文 33 条两个已知簇 + **~113 条
+新簇「系数缩放」**：gamma/catalan/zeta3/varpi/gauss 在 power≠1（含 0、1/2）时，
+站端印刷式把 power 乘进被积函数、LHS 声称 power·C−bound——真值核验
+claimed = power×actual（已精确成立 19/116，其余疑似同族不同子机制）。
+例：`gamma 2>1` 站端 raw_image 字面印刷 `2γ−1 = ∫2·kernel dx > 0`，而真积分
+是 γ−1/2。**已抽查站端原文确证是站端发出的假恒等式，非我方渲染分歧**——
+复现侧不受影响（逐字节照发）。4 条 harness-error 为 varpi/gauss power=None
+记录的 verify 侧重建缺口（次要）。

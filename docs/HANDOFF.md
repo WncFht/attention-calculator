@@ -34,6 +34,7 @@ bug 也要原样复现（见下「站点 bug 清单」）。作者源码不公�
 | verify（恒等式数学真值，50dps） | 1438 成功记录中 1438 真/假随数据集增长——verify 把复现的站点 bug 也计入假（30 trig-bias + 3 gauss-window 等） | `bench/verify.py` |
 | edge 重放（376 条边缘探针离线重放） | **376/376 全绿** | `bench/replay_edge.py` |
 | fuzz 重放（922 条随机探针离线重放） | **922/922 全绿** | `bench/replay_fuzz.py` |
+| fidelity+probes 重放（395 条孤儿采集） | 384 吻合 / 4 真实分歧（float64 等值界 '>' 预检，见 §3）/ 7 站端瞬态噪音 | `bench/replay_capture.py` |
 | health parity（姊妹应用） | **420/420 字节级全绿** | `bench/parity_health.py` |
 | convex parity（姊妹应用，333 tags） | **333/333 字节级全绿** | `bench/parity_convex.py` |
 | decompose parity | **全绿：combo 87/87 字节级 + decompose 182/182 JSON 级**（wip `6e9b850`） | `bench/parity_decompose.py` |
@@ -128,12 +129,19 @@ golden/zeta3 0-vs-0 sympy Mul 坍缩；选择序 `>`→sqrt_bound→`<`→plain�
 文件：`engine.py`、`solve.py`、`integrand.py`、`tests/test_fidelity.py`、
 `docs/fidelity-notes.md`。
 - 假说：站端 P 定号/方向判定在 float64 下进行（我们是精确有理）。
-- 已知分裂：假命题+float 等值界（`pi < float64(π)`）→站 `未找到`（float 判不了
-  1e-16 的非正 P）我 `方向反了`；~1e-32 超紧真命题→站误报 `方向反了` 我 `未找到`/200。
-- 停前进展：zeta3 打破了单阈值模型——`>` 阈值 ≥1.46e-31 而 `<` 在 ζ3_f 即 NS，
-  两个方向边界不同；正在区分「扫描中途 float 误判非正 P」vs「预检」两种机制。
-- 工具：`bench/fidelity_probe*.py`（三波探针脚本）、`bench/sim_*.py`（5 种机制仿真）、
-  `bench/data/fidelity-probes.jsonl`（已采集数据）。
+- **2026-09-16 进展**：新判官 `bench/replay_capture.py` 把 fidelity-probes.jsonl
+  （228 条）+ probes.jsonl（167 条）全量重放——384/395 吻合、7 条站端瞬时 500
+  噪音、**4 条真实分歧同一机制**：`fid:cos-gt-cf`、`fid3:gol-gt-+0`、
+  `fid3:sin2-gt-+0`、`cap:sin_pi_q:tight` 全是 r==float64(C) 等值界 '>' 探测，
+  站端 `未找到>方向的解`（float64 vs float64 相等→预检放行→扫描耗尽），我方
+  `方向反了`（`solve.py:145-146` 外层预检 `r > c` 用精确比较，Cf>c_exact 时误发
+  WrongDirection）。修向=外层预检改 float64 两两比较，已交 fidelity agent。
+- 已知分裂（历史记录）：假命题+float 等值界（`pi < float64(π)`）→站 `未找到`
+  （float 判不了 1e-16 的非正 P）我 `方向反了`；~1e-32 超紧真命题→站误报
+  `方向反了` 我 `未找到`/200。
+- 仍未探测：artanh_q/arcoth_q/trig_pi 的 float 方向预检（sin_pi_q 已有首个实测点）、
+  e/pi/e_q/sin_q 搜索上限（输入上限 10^16 够不到）、gamma N-cap（现取 600）、
+  ln_q s 搜索序与下界、(m,n) 同分 tie-break——均待探测钉死。
 - 注意 `solve.py` 已有 NoSolution 后的 float64 兜底（`float(C)−float(r)` 严格判号）——
   要改的是**扫描途中**的 P 定号路径。
 
