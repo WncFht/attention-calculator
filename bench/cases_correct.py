@@ -54,8 +54,15 @@ EQUAL_PROBES = [
             "e",
             "zeta5",
             "zeta7",
+            "zeta9",
+            "zeta11",
+            "beta4",
+            "beta6",
+            "beta8",
+            "beta10",
         )
     ],
+    # si_q/cin_q 的 q=0 是域外拒证（Si(0)=Cin(0)=0 退化有理），不进等值探针
 ]
 
 # exact-only 型（EXACT_TYPES：无站端对照，site 路径 400）：zeta5/7 是
@@ -112,6 +119,17 @@ EXACT_ONLY = {
         Fraction(0),
         Fraction(-1),
     ],
+    # zeta 更高奇阶与 Dirichlet β 偶阶：同为系数型、无域检（zeta_odd/
+    # beta_even 两文件均无 check_input）
+    "zeta9": POWERS,
+    "zeta11": POWERS,
+    "beta4": POWERS,
+    "beta6": POWERS,
+    "beta8": POWERS,
+    "beta10": POWERS,
+    # si/cin 参数型：唯一域检 q≠0，q<0 走奇偶归约
+    "si_q": POWERS,
+    "cin_q": POWERS,
 }
 
 # pi_n 新域探针（bb6e35a β/η 生成器）：表外整数、分子 >10 的分数幂、

@@ -44,7 +44,6 @@ from cases import true_value
 from cases_correct import generate_cases
 
 from attention_calculator import solve
-from attention_calculator.certificate import verify_cert
 from attention_calculator.engine import (
     EqualClaim,
     InternalError,
@@ -131,6 +130,9 @@ def in_domain(kind: str, q: Fraction) -> bool:
         return q != 0 and q < 1
     if kind == "psi1_q":
         return q > 0
+    # si_q/cin_q 唯一域检是 q≠0（q<0 走奇偶归约）；zeta/beta 系数型全域
+    if kind in ("si_q", "cin_q"):
+        return q != 0
     if kind == "artanh_q":
         return 0 < q < 1 and q.denominator != 1
     if kind == "arcoth_q":
@@ -169,17 +171,12 @@ def run_outcome(kind: str, q: Fraction, comp: str, r: Fraction, exact: bool) -> 
     except Exception as e:
         return {"outcome": "crash", "detail": repr(e)}
     out = {"outcome": "emitted", "parameters": resp.get("parameters")}
-    prover = resp.get("prover")
-    if prover:
-        out["prover"] = prover  # pade/composite 响应无 parameters，证书即证明
+    if resp.get("prover"):
+        out["prover"] = resp["prover"]  # pade/composite 响应无 parameters，证书即证明
     try:
-        if prover == "composite":
-            # 复合证书 DAG（gamma14/34/12）：整 cert dict 递归核验
-            ok = verify_cert(resp["certificate"])
-            out["identity_ok"] = out["nonneg"] = ok
-        else:
-            chk = verify_response(kind, q, comp, r, resp)
-            out["identity_ok"], out["nonneg"] = chk["identity_ok"], chk["nonneg"]
+        # verify_response 内部分派 classic/pade/composite 并比对证书所证命题
+        chk = verify_response(kind, q, comp, r, resp)
+        out["identity_ok"], out["nonneg"] = chk["identity_ok"], chk["nonneg"]
     except Exception as e:
         out["verify_error"] = repr(e)
     return out

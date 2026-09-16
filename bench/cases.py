@@ -255,6 +255,22 @@ def true_value(typ, q):
         return x * mp.zeta(5)
     if typ == "zeta7":
         return x * mp.zeta(7)
+    if typ == "zeta9":
+        return x * mp.zeta(9)
+    if typ == "zeta11":
+        return x * mp.zeta(11)
+    if typ == "beta4":
+        return x * mp.dirichlet(4, [0, 1, 0, -1])
+    if typ == "beta6":
+        return x * mp.dirichlet(6, [0, 1, 0, -1])
+    if typ == "beta8":
+        return x * mp.dirichlet(8, [0, 1, 0, -1])
+    if typ == "beta10":
+        return x * mp.dirichlet(10, [0, 1, 0, -1])
+    if typ == "si_q":
+        return mp.si(x)
+    if typ == "cin_q":
+        return mp.euler + mp.log(mp.fabs(x)) - mp.ci(mp.fabs(x))
     if typ == "e_pi":
         return x * mp.exp(mp.pi)
     if typ == "varpi":
