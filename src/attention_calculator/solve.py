@@ -50,6 +50,7 @@ FAMILY = {
     "beta8": "beta_even",
     "beta10": "beta_even",
     "ln_q_cube": "ln_pow",
+    "ln_q_quad": "ln_pow",
     "arcsin_q": "arcsin",
     "arsinh_q": "invhyp",
     "gaussint_q": "gauss_erf",

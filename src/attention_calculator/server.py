@@ -107,7 +107,7 @@ def split_num(text: str) -> tuple[int, int] | None:
 
 def domain_error(kind: str, power: Fraction) -> str | None:
     """Site's 404-level domain prechecks, with probed messages verbatim."""
-    if kind in ("ln_q", "ln_q_square", "ln_q_cube") and power <= 1:
+    if kind in ("ln_q", "ln_q_square", "ln_q_cube", "ln_q_quad") and power <= 1:
         return "请在ln后输入一个大于1的数"
     if kind == "arcsin_q" and not 0 < power < 1:
         return "arcsin后的值只能在(0,1)内，请输入一个在(0,1)内的分数"

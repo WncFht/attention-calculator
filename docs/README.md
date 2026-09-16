@@ -23,6 +23,7 @@
 - `2026-09-16-certificate-spec.md` — 证书 schema（含 Padé 变体）
 - `2026-09-16-pade-notes.md` — Padé 第二证明器推导与覆盖
 - `2026-09-16-ln-cube-derivation.md` — ln_q_cube 矩空间推导
+- `2026-09-16-ln-quad-impl-notes.md` — ln_q_quad 落地：ln³ 核矩空间、四次 P 的 Sturm 非负判据、实测深度
 - `2026-09-16-decompose-math.md` — exact 模式 decompose（可证构造的界分配）
 - `2026-09-16-w3-research-*.md` — 七篇新型可行性调研（erf、Γ(1/4)、Γ(1/3)、Glaisher、Li₂、Si/Cin、trigamma）；**各篇头部有落地状态行**，可行未注册与已否决一眼可查
 

@@ -203,6 +203,7 @@ _SYMBOL_TEX = {
     "ln": "\\ln",
     "ln2": "\\ln^{2}",
     "ln3": "\\ln^{3}",
+    "ln4": "\\ln^{4}",
     "catalan": "C",
     "zeta3": "\\zeta(3)",
     "zeta5": "\\zeta(5)",

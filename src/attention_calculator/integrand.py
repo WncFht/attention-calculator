@@ -256,8 +256,9 @@ def constant_mpf(kind: str, power: Fraction):
         "beta6": lambda: q * mp.dirichlet(6, [0, 1, 0, -1]),
         "beta8": lambda: q * mp.dirichlet(8, [0, 1, 0, -1]),
         "beta10": lambda: q * mp.dirichlet(10, [0, 1, 0, -1]),
-        # ln_q_cube 的 power 槽携带 q 本身（与 ln_q 同），常数是 (ln q)^3
+        # ln_q_cube/ln_q_quad 的 power 槽携带 q 本身（与 ln_q 同）
         "ln_q_cube": lambda: mp.log(q) ** 3,
+        "ln_q_quad": lambda: mp.log(q) ** 4,
         "arcsin_q": lambda: mp.asin(q),
         "arsinh_q": lambda: mp.asinh(q),
         # gauss-erf 族：缩放常数（erf/erfi 本身因 √π 障碍不可达，见

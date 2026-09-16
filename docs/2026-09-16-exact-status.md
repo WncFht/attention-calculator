@@ -10,13 +10,14 @@
 - **W4 Padé 第二证明器**：`pade.py` 作 ln_q/arctan_q 的在线兜底（(m,n) 搜索耗尽后，预算 MAX_N=50，commits 3fbd546/371f087）。响应形 `{"success","type","prover":"pade","certificate"}`——**无 parameters**，证书即证明；渲染与判官不得假设 parameters 存在。
 - **W5 证书**：`certificate.py` + `tools/verify_cert.py`（schema：`docs/2026-09-16-certificate-spec.md`，含 Padé 变体与 gamma_special 的 proof-DAG 变体）。
 
-## exact-only 型清单（EXACT_TYPES 现 25 型）
+## exact-only 型清单（EXACT_TYPES 现 26 型）
 
 | 型 | 落地 | 出处 |
 |---|---|---|
 | zeta5 / zeta7 / zeta9 / zeta11 | 矩核（quadlog η 支路 + 1−2^{1−s} 换算） | kernels/zeta_odd.py |
 | beta4 / beta6 / beta8 / beta10 | 矩核（ln_moment 偶支路，β 直入无换算） | kernels/beta_even.py |
 | ln_q_cube | 矩核（4 维 span，三次 P + QQ(√D) 判据） | kernels/ln_pow.py，推导 `2026-09-16-ln-cube-derivation.md` |
+| ln_q_quad | 矩核（5 维 span，四次 P + Sturm 奇根计数判据） | kernels/ln_pow.py，推导 `2026-09-16-ln-quad-impl-notes.md` |
 | arcsin_q / arsinh_q | 矩核（根号核 + 寄生常数） | kernels/arcsin.py / invhyp.py |
 | gaussint_q / dawson_q / erfiint_q | 矩核（erf 缩放常数三连，commit 80e6b74） | kernels/gauss_erf.py |
 | pi_sqrt2 | 矩核（lemniscate 余元常数 π√2，两核两基） | kernels/pi_sqrt2.py |
@@ -39,7 +40,7 @@
 
 ## 在途项
 
-- W7 第二证明器波（进行中）：`w7-agm`（AGM 区间证法，补 gauss/varpi 覆盖率地板）、`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）、`w7-ln4`（(ln q)⁴ 核 + Sturm 四次非负判据）、`w7-decomp-ext`（decompose_exact 原子表覆盖全部 EXACT_TYPES）。
+- W7 第二证明器波（进行中）：`w7-euler`（Euler–Maclaurin γ 第二证法 + ln_n 子证书）、`w7-decomp-ext`（decompose_exact 原子表覆盖全部 EXACT_TYPES）。已落地：`w7-agm`（AGM 区间证法 commit d5e3000——gauss 双向 ~1e-2000 间隙、varpi ~1e-16 受 pi oracle 地板限）、`w7-ln4`（ln_q_quad，见上表）。
 - `decompose_exact.py`（commit 4856f27）：可证构造的界分配；**已接线**——`/decompose_inequality` 的 `mode=exact` 走 decompose_exact（commit a492d0d），site 路径不变。
 - 已修复的精度陷阱：`decompose_exact` 的 slack 曾在 `workdps` 外与 mpf 字面量相乘塌缩成 float64（commit e00e5cd 改 Fraction 侧乘）；`import mpmath as mp` 下 `mp.dps = N` 是模块属性静默无操作（真精度留在 15），须用 `mp.mp.dps` 或 workdps——测试文件已清查。
 - 未探明：ln_q_square q=13 的预言崩溃；varpi/gauss 深 '<' 证明的预算墙（EXACT_LT_LIMIT=256 之上的诚实 NoSolution 比例，待 w7-agm 第二证法接管）。
