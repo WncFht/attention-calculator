@@ -49,6 +49,15 @@ FAMILY = {
     "gaussint_q": "gauss_erf",
     "dawson_q": "gauss_erf",
     "erfiint_q": "gauss_erf",
+    "pi_sqrt2": "pi_sqrt2",
+    "pi3": "dixon",
+    "pi3_u": "dixon",
+    "pi3_a": "dixon",
+    "li2_q": "li2",
+    "psi1_q": "trigamma",
+    "gamma14": "gamma_special",
+    "gamma34": "gamma_special",
+    "gamma12": "gamma_special",
 }
 
 # 站端在进核前用 float64 求值命题常数 c，再把有理界与 c 做 *精确* 比较
@@ -266,6 +275,9 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
             if cert is not None:
                 return {"type": kind, "prover": "pade", "certificate": cert}
         raise
+    if resp.get("prover") == "composite":
+        # W6 Γ-型复合证明：证书是子证明 DAG，children 已在构造时逐个验证
+        return resp
     # certificate.build internally runs exact_check.verify — its embedded
     # check block IS the emit self-check, so a failure stays InternalError
     cert = build_cert(kind, q, comp, r, resp["parameters"])

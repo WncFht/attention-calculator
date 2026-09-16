@@ -88,6 +88,13 @@ def verify_cert(cert: dict) -> bool:
             return pade.verify_cert(pade.cert_parse(cert))
         except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
             return False
+    if isinstance(cert, dict) and cert.get("prover") == "composite":
+        from .kernels import gamma_special
+
+        try:
+            return gamma_special.verify_cert(cert)
+        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+            return False
     try:
         kind, power, comp, bound, params, recorded = _parse(cert)
         res = exact_check.verify(kind, power, comp, bound, params)
@@ -109,7 +116,14 @@ def cert_tex(cert: dict) -> str:
     The target vector already carries the comparison sign (it is
     s·(power·C − bound)), so the integrand's certified inequality is
     always '> 0' — the same shape the site's proof image prints.
+    Composite and Padé certs have no check block; print the claim itself.
     """
+    if cert.get("prover") == "composite":
+        return (
+            f"{cert['kind']}({cert['q']}) {cert['comp']} {cert['p']} \\quad (\\mathrm{{composite}})"
+        )
+    if "serr" in cert:
+        return f"{cert['kind']} {cert['comp']} {cert['p']} \\quad (\\mathrm{{Pad\\acute{{e}}}})"
     return f"{_moment_tex(_moment_in(cert['check']['target']))} = \\int f\\,\\mathrm{{d}}x > 0"
 
 
@@ -194,6 +208,15 @@ _SYMBOL_TEX = {
     "varpi_inv": "\\varpi^{-1}",
     "gauss": "G",
     "gauss_inv": "G^{-1}",
+    "pi_sqrt2": "\\pi\\sqrt{2}",
+    "pi3": "\\pi_{3}",
+    "pi3_inv": "\\pi_{3}^{-1}",
+    "U": "U",
+    "G3": "G_{3}",
+    "A": "A",
+    "li2_q": "\\mathrm{Li}_{2}(q)",
+    "ln_1mq": "\\ln(1-q)",
+    "psi1_q": "\\psi'(q)",
     "C": "C",
 }
 

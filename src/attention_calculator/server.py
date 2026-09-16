@@ -115,6 +115,15 @@ def domain_error(kind: str, power: Fraction) -> str | None:
         return "请在arsinh后输入一个非0的数"
     if kind in ("gaussint_q", "dawson_q", "erfiint_q") and power == 0:
         return "q不能为0：q=0 时该积分常数退化"
+    if kind in ("gamma14", "gamma34", "gamma12", "pi3", "pi3_u", "pi3_a") and power == 0:
+        return "系数不能为0：q=0 时命题退化为有理数比较"
+    if kind == "li2_q":
+        if power == 0:
+            return "q不能为0：q=0 时核 -ln(1-qx)/x 恒为0"
+        if power >= 1:
+            return "Li2的自变量必须小于1"
+    if kind == "psi1_q" and power <= 0:
+        return "psi1_q 仅接受 q>0：q<=0 是 ψ′ 的极点或域外参数"
     if kind == "sin_q" and not 0 < float(power) < math.pi:
         return "请在sin后输入一个在(0,π)内的数"
     if kind in ("cos_q", "tan_q", "cot_q") and not 0 < float(power) < math.pi / 2:
@@ -256,6 +265,16 @@ def calculate():
                 "type": result.get("type", kind),
                 "prover": "pade",
                 "certificate": pade.cert_jsonable(result["certificate"]),
+            }
+        )
+    if result.get("prover") == "composite":
+        # W6 Γ-型复合证法：证书是子证明 DAG（全字符串，JSON 安全）
+        return respond(
+            {
+                "success": True,
+                "type": result.get("type", kind),
+                "prover": "composite",
+                "certificate": result["certificate"],
             }
         )
 

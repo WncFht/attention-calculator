@@ -65,4 +65,13 @@ EXACT_TYPES = [
     "gaussint_q",
     "dawson_q",
     "erfiint_q",
+    "pi_sqrt2",
+    "pi3",
+    "pi3_u",
+    "pi3_a",
+    "li2_q",
+    "psi1_q",
+    "gamma14",
+    "gamma34",
+    "gamma12",
 ]

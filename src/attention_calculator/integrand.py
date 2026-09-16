@@ -259,6 +259,21 @@ def constant_mpf(kind: str, power: Fraction):
         # 本环境 mpmath 无 mp.dawson：F(q) = √π/2 · e^{−q²}·erfi(q)
         "dawson_q": lambda: mp.sqrt(mp.pi) * mp.exp(-(q * q)) * mp.erfi(q) / 2,
         "erfiint_q": lambda: mp.sqrt(mp.pi) * mp.erfi(q) / 2,
+        # lemniscate 余元常数 S = π√2 = Γ(1/4)Γ(3/4)；power 是系数
+        "pi_sqrt2": lambda: q * mp.pi * mp.sqrt(2),
+        # Dixon/Γ(1/3) 格点族（kernels/dixon）：power 均是系数 q·C
+        # π₃ = B(1/3,1/3) = √3·Γ(1/3)³/(2π)；U = Γ(2/3)²/Γ(1/3)；A = 2π/√3
+        "pi3": lambda: q * mp.sqrt(3) * mp.gamma(mp.mpf(1) / 3) ** 3 / (2 * mp.pi),
+        "pi3_u": lambda: q * mp.gamma(mp.mpf(2) / 3) ** 2 / mp.gamma(mp.mpf(1) / 3),
+        "pi3_a": lambda: q * 2 * mp.pi / mp.sqrt(3),
+        # li2_q 的 power 槽携带 q 本身（与 ln_q 同），常数是 Li_2(q)
+        "li2_q": lambda: mp.polylog(2, q),
+        # psi1_q 同理：power 即参数 q，常数是 ψ′(q)，不乘系数
+        "psi1_q": lambda: mp.psi(1, q),
+        # Γ 特殊值复合型（kernels/gamma_special）：power 是系数 q·C
+        "gamma14": lambda: q * mp.gamma(mp.mpf(1) / 4),
+        "gamma34": lambda: q * mp.gamma(mp.mpf(3) / 4),
+        "gamma12": lambda: q * mp.sqrt(mp.pi),
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。
