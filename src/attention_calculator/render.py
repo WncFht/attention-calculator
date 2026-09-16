@@ -3,6 +3,8 @@
 import importlib
 import re
 from fractions import Fraction
+from itertools import pairwise
+from math import lcm
 
 from .solve import FAMILY
 
@@ -95,6 +97,35 @@ def coef_tex(v: Fraction | str) -> str:
     return "" if v == "1" or v == Fraction(1) else rat_tex(v)
 
 
+def join_cdot(tex: list[str]) -> str:
+    """Join factor texts the way the site's sympy does: `` \\cdot `` iff the
+    left piece ends in '}' and the right is a ``\\left(<digit>...\\right)``
+    group — a parenthesized Add carrying no outer exponent."""
+    out = tex[0]
+    for prev, cur in pairwise(tex):
+        cdot = (
+            prev.endswith("}")
+            and cur.startswith("\\left(")
+            and cur[6].isdigit()
+            and cur.endswith("\\right)")
+        )
+        out += " \\cdot " if cdot else " "
+        out += cur
+    return out
+
+
+def cdot_tex(tex: str) -> str:
+    r"""The site's cdot-spacing fixup on an already-latexed product string:
+    `` \\cdot `` before a digit-leading ``\left(`` group when the previous
+    token ends in a digit or '}' (trig_pi integrand, beta last-resort block)."""
+    return re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ", tex)
+
+
+def lhs_tex(const_tex: str, bound_tex: str, comp: str) -> str:
+    """The equation's left-hand side: ``C - r`` for '>', ``r - C`` for '<'."""
+    return f"{const_tex} - {bound_tex}" if comp == ">" else f"{bound_tex} - {const_tex}"
+
+
 def coerce_params(query: dict) -> dict:
     """Turn the nine site query fields into the typed params kernels expect.
 
@@ -105,6 +136,33 @@ def coerce_params(query: dict) -> dict:
     params = {k: int(query[k]) for k in INT_KEYS}
     params.update({k: Fraction(query[k]) for k in FRAC_KEYS})
     return params
+
+
+def emit(m: int, n: int, coeffs: list[Fraction], c_val: str | None = None) -> dict:
+    """Assemble the site's /calculate payload: the ``parameters`` dict plus the
+    ``equations.solution`` string — the inverse direction of coerce_params.
+
+    ``c_val`` overrides the reported c_val where the field is repurposed
+    (trig_pi's alpha, artanh/arcoth's reduced q~); ``cu_val`` always carries
+    the solved c coefficient.
+    """
+    a, b = coeffs[0], coeffs[1]
+    c = coeffs[2] if len(coeffs) > 2 else Fraction(0)
+    u = lcm(a.denominator, b.denominator, c.denominator)
+    params = {
+        "m": m,
+        "n": n,
+        "a_val": str(a),
+        "b_val": str(b),
+        "c_val": str(c) if c_val is None else c_val,
+        "au_val": str(a * u),
+        "bu_val": str(b * u),
+        "cu_val": str(c * u),
+        "u_val": str(u),
+        "unified_form": {},
+    }
+    solution = f"a = {a}, b = {b}" + ("" if len(coeffs) <= 2 else f", c= {c}")
+    return {"parameters": params, "solution": solution}
 
 
 def render_equation(

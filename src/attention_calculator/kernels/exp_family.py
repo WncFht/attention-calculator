@@ -7,13 +7,14 @@ a+b*sin(x). All moments live in span{const, 1} (kernel-spec.md).
 
 import math
 from fractions import Fraction
-from math import comb, lcm
+from math import comb
 
 import sympy as sp
 
+from .. import render
 from ..engine import WrongDirection, mn_order, search
 from ..moment import Moment, add, combine, scale
-from ..render import coef_tex, rat_tex, wire_pair
+from ..render import coef_tex, lhs_tex, rat_tex, wire_pair
 
 LIMIT_E = 30  # e、pi 两类型指数上限 30
 LIMIT_OTHER = 10
@@ -88,7 +89,7 @@ def mul_latex(numer: sp.Expr, u: int) -> str:
     return rf"\frac{{{''.join(parts)}}}{{{u}}}"
 
 
-def const_latex(kind: str, power: Fraction | str) -> str:
+def const_tex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: e.g. e, 2e, \\dfrac{1}{2}e, e^2, e^\\dfrac{1}{2}, e^{\\pi}."""
     if kind == "e":
         return coef_tex(power) + "e"
@@ -98,23 +99,18 @@ def const_latex(kind: str, power: Fraction | str) -> str:
 
 
 def emit(kind: str, m: int, n: int, coeffs: list[Fraction]) -> dict:
-    """Assemble the site's parameters dict and equations.solution string."""
-    a, b = coeffs[0], coeffs[1]
-    c = coeffs[2] if len(coeffs) > 2 else Fraction(0)
-    u = lcm(a.denominator, b.denominator, c.denominator)
-    params = {
-        "m": m,
-        "n": n,
-        "a_val": str(a),
-        "b_val": str(b),
-        "c_val": str(c),
-        "au_val": int(a * u),
-        "bu_val": int(b * u),
-        "cu_val": int(c * u),
-        "u_val": int(u),
-    }
-    solution = f"a = {a}, b = {b}" + ("" if len(coeffs) <= 2 else f", c= {c}")
-    return {"parameters": params, "solution": solution}
+    """Assemble the site's parameters dict and equations.solution string.
+
+    Same assembly as render.emit but with the field shape tests/test_exp.py
+    pins for this family: au/bu/cu/u_val stay ints and no unified_form key
+    (server.calculate's setdefault restores it on the wire).
+    """
+    res = render.emit(m, n, coeffs)
+    params = res["parameters"]
+    del params["unified_form"]
+    for k in ("au_val", "bu_val", "cu_val", "u_val"):
+        params[k] = int(params[k])
+    return res
 
 
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
@@ -163,8 +159,6 @@ def render_equation(
         # unsigned digit groups ('\dfrac{6}{-4}' -> e^{3x/2}, sign dropped)
         q = Fraction(*wire_pair(power)) if kind == "e_q" else sp.Integer(1)
         integrand = x**m * (1 - x) ** n * (au + bu * x) * sp.exp(q * x)
-    const = const_latex(kind, power)
-    r = rat_tex(bound)
-    lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
+    lhs = lhs_tex(const_tex(kind, power), rat_tex(bound), comp)
     upper = "{\\pi}" if kind == "e_pi" else "1"
     return f"{lhs} = \\int_0^{upper} {mul_latex(integrand, u)} \\mathrm{{d}} x > 0"

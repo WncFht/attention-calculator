@@ -21,16 +21,15 @@ This is engine.mn_order's site-wide rule — required e.g. for
 ``ln^2(3/2) < 17/100`` where the site picks (2,0) over the also-feasible (0,2).
 """
 
-import itertools
 from fractions import Fraction
-from math import comb, gcd, lcm
+from math import comb, gcd
 
 import sympy as sp
 
 from ..engine import InternalError, WrongDirection, mn_order, search
 from ..integrand import constant_mpf
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_pair
+from ..render import emit, join_cdot, lhs_tex, rat_tex, wire_pair
 
 LIMIT = 10
 
@@ -131,24 +130,9 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
         target = {"ln": sign * coef, "1": -sign * bound}
     solved = search(plans, target, True)
 
-    a, b = solved.coeffs[0], solved.coeffs[1]
-    cc = solved.coeffs[2] if square else Fraction(0)
-    u = lcm(a.denominator, b.denominator, cc.denominator)
-    params = {
-        "m": solved.m,
-        "n": solved.n,
-        "a_val": str(a),
-        "b_val": str(b),
-        # c_val doubles as the reduced q~ for artanh/arcoth (renderer needs it)
-        "c_val": str(cc) if square else ("0" if kind == "ln_q" else str(qt)),
-        "au_val": str(a * u),
-        "bu_val": str(b * u),
-        "cu_val": str(cc * u),
-        "u_val": str(u),
-        "unified_form": {},
-    }
-    solution = f"a = {a}, b = {b}" + (f", c= {cc}" if square else "")
-    return {"parameters": params, "solution": solution}
+    # c_val doubles as the reduced q~ for artanh/arcoth (renderer needs it)
+    c_val = None if square or kind == "ln_q" else str(qt)
+    return emit(solved.m, solved.n, solved.coeffs, c_val=c_val)
 
 
 def ln_bound_proof(q: Fraction, comp: str, bound: Fraction) -> dict:
@@ -159,7 +143,7 @@ def ln_bound_proof(q: Fraction, comp: str, bound: Fraction) -> dict:
 # ------------------------------------------------------------------- rendering
 
 
-def const_latex(kind: str, power: Fraction | str) -> str:
+def const_tex(kind: str, power: Fraction | str) -> str:
     """Left-side constant text: ``\\ln2``, ``\\ln^2\\dfrac{3}{2}``,
     ``\\mathrm{artanh}\\dfrac{1}{2}``, ``\\mathrm{arcoth}2``."""
     body = rat_tex(power)
@@ -221,17 +205,7 @@ def numerator_latex(
 
     wrap = len(pieces) > 1
     tex = [f"\\left({s}\\right)" if is_add and wrap else s for s, is_add in pieces]
-    out = tex[0]
-    for prev, cur in itertools.pairwise(tex):
-        cdot = (
-            prev.endswith("}")
-            and cur.startswith("\\left(")
-            and cur[6].isdigit()
-            and cur.endswith("\\right)")
-        )
-        out += " \\cdot " if cdot else " "
-        out += cur
-    return out
+    return join_cdot(tex)
 
 
 def render_equation(
@@ -269,7 +243,5 @@ def render_equation(
 
     num = numerator_latex(m, n, au, bu, cu, t, c, kind == "ln_q_square")
 
-    const = const_latex(kind, power)
-    r = rat_tex(bound)
-    lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
+    lhs = lhs_tex(const_tex(kind, power), rat_tex(bound), comp)
     return f"{lhs} = \\int_0^1 \\frac{{{num}}}{{{den}}} \\mathrm{{d}} x > 0"

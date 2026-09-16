@@ -29,16 +29,15 @@ cos(pi/3) = 1/2 (Niven); hitting them exactly yields "二者相等".
 
 from __future__ import annotations
 
-import re
 from fractions import Fraction
-from math import comb, lcm
+from math import comb
 
 import sympy as sp
 from mpmath import mp
 
 from ..engine import EqualClaim, WrongDirection, mn_order, search
 from ..moment import Moment, combine
-from ..render import rat_tex
+from ..render import cdot_tex, emit, lhs_tex, rat_tex
 
 LIMIT = 10
 
@@ -181,26 +180,9 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """Run the proof search for one trig_pi-family request."""
     solved, alpha = solve(kind, power, comp, bound)
-    a, b = solved.coeffs
-    u = lcm(a.denominator, b.denominator)
-    params = {
-        "m": solved.m,
-        "n": solved.n,
-        "a_val": str(a),
-        "b_val": str(b),
-        "c_val": str(alpha),
-        "au_val": str(a * u),
-        "bu_val": str(b * u),
-        "cu_val": "0",
-        "u_val": str(u),
-        "unified_form": {},
-    }
-    is_sin = kind.startswith("sin")
-    return {
-        "type": "sin_pi_q" if is_sin else "cos_pi_q",
-        "parameters": params,
-        "solution": f"a = {a}, b = {b}",
-    }
+    result = emit(solved.m, solved.n, solved.coeffs, c_val=str(alpha))
+    result["type"] = "sin_pi_q" if kind.startswith("sin") else "cos_pi_q"
+    return result
 
 
 def render_equation(
@@ -219,12 +201,12 @@ def render_equation(
     arg = rat_tex(power) + ("^\\circ" if kind.endswith("_degree") else r"\pi")
     name = "sin" if kind.startswith("sin") else "cos"
     const = rf"\{name}\left({arg}\right)"
-    lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
+    lhs = lhs_tex(const, rat_tex(bound), comp)
 
     # The site latexes the whole product; its printer puts " \cdot " before a
     # digit-leading parenthesized factor following a number or a power
     # (\d or }), a space elsewhere -- e.g. "(1-s)^8 \cdot (a+b s)" but
     # "... ^{3} \left(-1465926 ..." (a negative group gets no cdot).
     integrand = (au + bu * s) * (1 - s) ** n * sp.sin(alpha * x) * s**m / u
-    body = re.sub(r"(?<=[0-9}]) (?=\\left\(\d)", r" \\cdot ", sp.latex(integrand))
+    body = cdot_tex(sp.latex(integrand))
     return lhs + rf" = \int_0^{{\pi/2}} {body} \mathrm{{d}} x > 0"

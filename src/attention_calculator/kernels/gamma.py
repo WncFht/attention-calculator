@@ -36,11 +36,10 @@ from math import gcd, log
 import sympy as sp
 
 from ..engine import NoSolution, WrongDirection
-from ..render import coef_tex, rat_tex, wire_fraction
+from ..render import coef_tex, lhs_tex, rat_tex, wire_fraction
+from ..solve import EULER_F  # site compares in float64
 from .log_family import ln_bound_proof, numerator_latex
 from .quadlog import factors_tex
-
-EULER_F = 0.5772156649015329  # site compares in float64
 
 N_LIMIT = 600  # H_N denominators stay tractable well past this
 
@@ -126,7 +125,7 @@ def render_equation(
     cf = wire_fraction(power)
     ctex = coef_tex(power) + "\\gamma"
     btex = rat_tex(bound)
-    lhs = f"{btex} - {ctex}" if comp == "<" else f"{ctex} - {btex}"
+    lhs = lhs_tex(ctex, btex, comp)
 
     kern = (
         "\\dfrac{2-x}{2}-\\dfrac{1}{1-x}-\\dfrac{1}{\\ln(x)}"

@@ -14,7 +14,7 @@ import sympy as sp
 
 from ..engine import WrongDirection, mn_order, search
 from ..moment import Moment, add, combine, scale
-from ..render import rat_tex, wire_fraction
+from ..render import lhs_tex, rat_tex, wire_fraction
 from .exp_family import emit, mul_latex
 
 LIMIT = 10
@@ -40,7 +40,7 @@ def basis_moment(m: int, n: int, j: int, q: Fraction) -> Moment:
     return combine(coeffs, J[m + j : m + j + n + 1])
 
 
-def const_latex(kind: str, power: Fraction | str) -> str:
+def const_tex(kind: str, power: Fraction | str) -> str:
     """\\sinh1 / \\sinh\\dfrac{2}{3} etc."""
     name = {"sinh_q": "sinh", "cosh_q": "cosh", "tanh_q": "tanh", "coth_q": "coth"}[kind]
     return f"\\{name}" + rat_tex(power)
@@ -105,7 +105,5 @@ def render_equation(
         inner = f"\\dfrac{{1}}{{\\sinh({power})}} " + body
     else:
         inner = body
-    const = const_latex(kind, power)
-    r = rat_tex(bound)
-    lhs = f"{const} - {r}" if comp == ">" else f"{r} - {const}"
+    lhs = lhs_tex(const_tex(kind, power), rat_tex(bound), comp)
     return f"{lhs} = \\int_0^1 {inner} \\mathrm{{d}} x > 0"

@@ -29,17 +29,15 @@ For golden, S_k = int_0^1 x^k sqrt(x+4) dx = A_k + B_k sqrt(5) with
 mapped to the phi-basis via sqrt(5) = 2 phi - 1.
 """
 
-import re
 from fractions import Fraction
-from itertools import pairwise
-from math import comb, lcm
+from math import comb
 
 import sympy as sp
 
 from ..engine import NoSolution, Solved, gauss_solve, mn_order, poly_nonneg, search
 from ..integrand import lhs_mpf
 from ..moment import Moment, combine
-from ..render import coef_tex, rat_tex, wire_or
+from ..render import cdot_tex, coef_tex, emit, join_cdot, lhs_tex, rat_tex, wire_or
 
 LIMIT = 10
 
@@ -147,23 +145,7 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
                 pass
             solved = transposed_lt_proof(kind, power, bound, target)
 
-    a, b = solved.coeffs
-    u = lcm(a.denominator, b.denominator)
-    return {
-        "parameters": {
-            "m": solved.m,
-            "n": solved.n,
-            "a_val": str(a),
-            "b_val": str(b),
-            "c_val": "0",
-            "au_val": str(a * u),
-            "bu_val": str(b * u),
-            "cu_val": "0",
-            "u_val": str(u),
-            "unified_form": {},
-        },
-        "solution": f"a = {a}, b = {b}",
-    }
+    return emit(solved.m, solved.n, solved.coeffs)
 
 
 def transposed_lt_proof(kind: str, power: Fraction, bound: Fraction, target: Moment) -> Solved:
@@ -187,7 +169,7 @@ def transposed_lt_proof(kind: str, power: Fraction, bound: Fraction, target: Mom
     coeffs = gauss_solve(rows, [target[sym], target["1"]])
     if not poly_nonneg(coeffs):
         raise NoSolution
-    return Solved(m, 1, coeffs, +1)
+    return Solved(m, 1, coeffs)
 
 
 # '>' last-resort kernel moments: t * poly(x) * sqrt(1-x^4) / pi integrates to
@@ -271,22 +253,6 @@ def lt_bound_proof(kind: str, target: Moment) -> dict:
 # ------------------------------------------------------------------- rendering
 
 
-def join_cdot(pieces: list[str]) -> str:
-    """Join factors the way the site's sympy does: ' \\cdot ' iff the left piece
-    ends in '}' and the right is a '\\left(<digit>...\\right)' group."""
-    out = pieces[0]
-    for prev, cur in pairwise(pieces):
-        cdot = (
-            prev.endswith("}")
-            and cur.startswith("\\left(")
-            and cur[6].isdigit()
-            and cur.endswith("\\right)")
-        )
-        out += " \\cdot " if cdot else " "
-        out += cur
-    return out
-
-
 def poly1_tex(au: int, bu: int) -> str:
     """sympy-order text of au + bu*x (positive term first)."""
     return sp.latex(au + bu * sp.symbols("x"))
@@ -339,11 +305,7 @@ def render_equation(
     bound_v = wire_or(bound)
 
     if kind == "golden":
-        lhs = (
-            f"{const_tex(kind, power)} - {btex}"
-            if comp == ">"
-            else f"{btex} - {const_tex(kind, power)}"
-        )
+        lhs = lhs_tex(const_tex(kind, power), btex, comp)
         if au == 0 and bu == 0:
             # the a+bx factor is literally 0: sympy reduces the whole
             # numerator/u to the bare '0' the site prints (golden 0-vs-0)
@@ -369,11 +331,7 @@ def render_equation(
         # in \left(\right), varpi leaves it bare; the space after \int_0^1 is
         # reversed between the two kinds across directions (probed bytes).
         x = sp.symbols("x")
-        inner = re.sub(
-            r"(?<=[0-9}]) (?=\\left\(\d)",
-            r" \\cdot ",
-            sp.latex(sp.Rational(au, u) * x**res * (1 - x)),
-        )
+        inner = cdot_tex(sp.latex(sp.Rational(au, u) * x**res * (1 - x)))
         if kind == "gauss":
             inner = f"\\left({inner}\\right)"
         gap, tail = (

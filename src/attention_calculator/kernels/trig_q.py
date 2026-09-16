@@ -29,13 +29,13 @@ from __future__ import annotations
 
 import re
 from fractions import Fraction
-from math import comb, lcm
+from math import comb
 
 import sympy as sp
 
 from ..engine import mn_order, search
 from ..moment import Moment, combine
-from ..render import rat_tex, wire_pair
+from ..render import emit, lhs_tex, rat_tex, wire_pair
 
 LIMIT = 10
 
@@ -108,25 +108,9 @@ def solve(kind: str, q: Fraction, comp: str, bound: Fraction):
 def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     """Run the proof search for one trig_q-family request."""
     solved = solve(kind, power, comp, bound)
-    a, b, c = solved.coeffs
-    u = lcm(a.denominator, b.denominator, c.denominator)
-    params = {
-        "m": solved.m,
-        "n": solved.n,
-        "a_val": str(a),
-        "b_val": str(b),
-        "c_val": str(c),
-        "au_val": str(a * u),
-        "bu_val": str(b * u),
-        "cu_val": str(c * u),
-        "u_val": str(u),
-        "unified_form": {},
-    }
-    return {
-        "type": kind,
-        "parameters": params,
-        "solution": f"a = {a}, b = {b}, c= {c}",
-    }
+    result = emit(solved.m, solved.n, solved.coeffs)
+    result["type"] = kind
+    return result
 
 
 def raw_ratio(v: Fraction | str) -> str:
@@ -200,7 +184,7 @@ def render_equation(
     name = kind.removesuffix("_q")
 
     const = rf"\{name}{rat_tex(power)}"
-    lhs = f"{const} - {rat_tex(bound)}" if comp == ">" else f"{rat_tex(bound)} - {const}"
+    lhs = lhs_tex(const, rat_tex(bound), comp)
 
     terms = []
     poly = au + bu * x + cu * x**2

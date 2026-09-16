@@ -24,14 +24,13 @@ even k needs odd powers (η(k) ~ pi^k) and odd k needs even powers (β(k) ~ pi^k
 import math
 from fractions import Fraction
 from functools import cache
-from itertools import pairwise
-from math import comb, factorial, gcd, lcm
+from math import comb, factorial, gcd
 
 import sympy as sp
 
 from ..engine import WrongDirection, mn_order, search
 from ..moment import Moment
-from ..render import coef_tex, rat_tex, wire_or, wire_pair
+from ..render import coef_tex, emit, join_cdot, lhs_tex, rat_tex, wire_or, wire_pair
 
 # β(k)/pi^k for odd k (Euler numbers: β(2j+1) = (-1)^j E_{2j} pi^{2j+1}/(4^{j+1}(2j)!))
 BETA_PI = {
@@ -165,24 +164,7 @@ def prove(kind: str, power: Fraction, comp: str, bound: Fraction) -> dict:
     bound = bound ** cfg.get("pd", 1)  # pi_n p/q: solve pi^p vs bound^q
     target = {sym: sign * cfg["coef"], "1": -sign * bound}
     solved = search(plans, target, nonneg=True)
-
-    a, b = solved.coeffs
-    u = lcm(a.denominator, b.denominator)
-    return {
-        "parameters": {
-            "m": solved.m,
-            "n": solved.n,
-            "a_val": str(a),
-            "b_val": str(b),
-            "c_val": "0",
-            "au_val": str(a * u),
-            "bu_val": str(b * u),
-            "cu_val": "0",
-            "u_val": str(u),
-            "unified_form": {},
-        },
-        "solution": f"a = {a}, b = {b}",
-    }
+    return emit(solved.m, solved.n, solved.coeffs)
 
 
 # ---------------------------------------------------------------- LaTeX render
@@ -233,26 +215,11 @@ def numerator(m: int, n: int, odd: bool, au: int, bu: int, t: int) -> sp.Expr:
 
 
 def factors_tex(num: sp.Expr) -> str:
-    """Per-factor sympy latex joined by the site cdot rule.
-
-    `` \\cdot `` iff the left piece ends in '}' and the right is a
-    ``\\left(<digit>...\\right)`` group — a parenthesized Add carrying no
-    outer exponent (same rule as beta_family.join_cdot).
-    """
+    """Per-factor sympy latex joined by the site cdot rule (render.join_cdot)."""
     args = num.as_ordered_factors()
     wrap = len(args) > 1
     tex = [f"\\left({sp.latex(a)}\\right)" if a.is_Add and wrap else sp.latex(a) for a in args]
-    out = tex[0]
-    for prev, cur in pairwise(tex):
-        cdot = (
-            prev.endswith("}")
-            and cur.startswith("\\left(")
-            and cur[6].isdigit()
-            and cur.endswith("\\right)")
-        )
-        out += " \\cdot " if cdot else " "
-        out += cur
-    return out
+    return join_cdot(tex)
 
 
 def render_equation(
@@ -273,11 +240,7 @@ def render_equation(
     au, bu, u = int(params["au_val"]), int(params["bu_val"]), int(params["u_val"])
 
     btex = rat_tex(bound)  # raw 字符串原样回显数位（不约分）
-    lhs = (
-        f"{const_tex(kind, power)} - {btex}"
-        if comp == ">"
-        else f"{btex} - {const_tex(kind, power)}"
-    )
+    lhs = lhs_tex(const_tex(kind, power), btex, comp)
     eq_sep = " = "
     if kind == "pi_n" and pden != 1:
         # fractional power p/q: LHS shows (pi^{p/q})^q - (bound)^q literally;
