@@ -24,7 +24,11 @@
 - `2026-09-16-pade-notes.md` — Padé 第二证明器推导与覆盖
 - `2026-09-16-ln-cube-derivation.md` — ln_q_cube 矩空间推导
 - `2026-09-16-ln-quad-impl-notes.md` — ln_q_quad 落地：ln³ 核矩空间、四次 P 的 Sturm 非负判据、实测深度
+- `2026-09-16-agm-impl-notes.md` — AGM 区间第二证明器（gauss/varpi）：isqrt 包络、cert schema、实测地板
+- `2026-09-16-euler-gamma-impl-notes.md` — Euler–Maclaurin γ 第二证明器：EM 界证明、ln2 子证 DAG、Bernstein 符号引理重证
+- `2026-09-16-decompose-exact-kinds.md` — decompose_exact 原子表全型覆盖 + arg<0 预存 bug 修复记录
 - `2026-09-16-decompose-math.md` — exact 模式 decompose（可证构造的界分配）
+- `2026-09-16-lean4-integration.md` — Lean4 接入调研：verified-checker 路线选型、逐族矩引理工作量、W8 分阶段建议
 - `2026-09-16-w3-research-*.md` — 七篇新型可行性调研（erf、Γ(1/4)、Γ(1/3)、Glaisher、Li₂、Si/Cin、trigamma）；**各篇头部有落地状态行**，可行未注册与已否决一眼可查
 
 ## 里程碑与过程记录
