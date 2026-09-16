@@ -12,7 +12,7 @@ reduction factor — the printed claim s*(artanh q - bound) is exactly the
 from fractions import Fraction
 
 from ..engine import poly_nonneg
-from ..kernels.log_family import basis_moment
+from ..kernels.log_family import basis_moment, qtilde
 from ..moment import combine
 
 
@@ -24,7 +24,15 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     coeffs = [Fraction(params["au_val"]) / u, Fraction(params["bu_val"]) / u]
     if square:
         coeffs.append(Fraction(params["cu_val"]) / u)
-    qt = Fraction(params["c_val"]) if kind in ("artanh_q", "arcoth_q") else power
+    if kind in ("artanh_q", "arcoth_q"):
+        # c_val only carries q~ to the renderer — recompute it from (kind,
+        # power); a forged value prints a different denominator, so the
+        # encoded integrand is not the claimed one and the identity fails
+        qt = qtilde(kind, power)
+        if Fraction(params["c_val"]) != qt:
+            return {"identity_ok": False, "nonneg": False, "integrand": {}, "target": {}}
+    else:
+        qt = power
     s = max(m, n, 1)
     basis = [basis_moment(qt - 1, s, m, n, j, square) for j in range(3 if square else 2)]
     sign = Fraction(1 if comp == ">" else -1)

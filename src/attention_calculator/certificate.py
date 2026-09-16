@@ -41,6 +41,19 @@ from .solve import FAMILY
 
 __all__ = ["build", "cert_tex", "recheck", "verify_cert"]
 
+# Malformed/unverifiable inputs verify_cert maps to "not a proof".
+# RecursionError covers forged composite DAGs — gamma_special.verify_cert
+# recurses into children, so depth ~1000 exhausts the interpreter stack.
+CERT_ERRORS = (
+    KeyError,
+    TypeError,
+    ValueError,
+    ZeroDivisionError,
+    AttributeError,
+    ImportError,
+    RecursionError,
+)
+
 
 def build(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) -> dict:
     """Assemble the certificate for an emitted proof; runs exact_check.verify."""
@@ -52,8 +65,8 @@ def build(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
         "bound": str(bound),
         "parameters": dict(params),
         "check": {
-            "integrand": _moment_out(res["integrand"]),
-            "target": _moment_out(res["target"]),
+            "integrand": moment_out(res["integrand"]),
+            "target": moment_out(res["target"]),
             "identity_ok": res["identity_ok"],
             "nonneg": res["nonneg"],
         },
@@ -67,7 +80,7 @@ def recheck(cert: dict) -> dict:
     dicts). Raises ValueError on schema violations; checker exceptions
     from semantically broken parameters propagate.
     """
-    kind, power, comp, bound, params, _recorded = _parse(cert)
+    kind, power, comp, bound, params, _ = parse(cert)
     return exact_check.verify(kind, power, comp, bound, params)
 
 
@@ -86,33 +99,33 @@ def verify_cert(cert: dict) -> bool:
 
         try:
             return pade.verify_cert(pade.cert_parse(cert))
-        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+        except CERT_ERRORS:
             return False
     if isinstance(cert, dict) and "agm_iter" in cert:
         from . import agm
 
         try:
             return agm.verify_cert(agm.cert_parse(cert))
-        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+        except CERT_ERRORS:
             return False
     if isinstance(cert, dict) and cert.get("prover") == "euler_gamma":
         from . import euler_gamma
 
         try:
             return euler_gamma.verify_cert(euler_gamma.cert_parse(cert))
-        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+        except CERT_ERRORS:
             return False
     if isinstance(cert, dict) and cert.get("prover") == "composite":
         from .kernels import gamma_special
 
         try:
             return gamma_special.verify_cert(cert)
-        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+        except CERT_ERRORS:
             return False
     try:
-        kind, power, comp, bound, params, recorded = _parse(cert)
+        kind, power, comp, bound, params, recorded = parse(cert)
         res = exact_check.verify(kind, power, comp, bound, params)
-    except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError, ImportError):
+    except CERT_ERRORS:
         return False  # schema-shaped but unverifiable: not a proof
     return (
         res["identity_ok"]
@@ -148,10 +161,10 @@ def cert_tex(cert: dict) -> str:
             f"{cert['kind']}({cert['q']}) {cert['comp']} {cert['p']}"
             " \\quad (\\mathrm{Euler--Maclaurin})"
         )
-    return f"{_moment_tex(_moment_in(cert['check']['target']))} = \\int f\\,\\mathrm{{d}}x > 0"
+    return f"{moment_tex(moment_in(cert['check']['target']))} = \\int f\\,\\mathrm{{d}}x > 0"
 
 
-def _parse(cert: dict) -> tuple[str, Fraction, str, Fraction, dict, dict]:
+def parse(cert: dict) -> tuple[str, Fraction, str, Fraction, dict, dict]:
     """Schema-validate and decode a certificate; ValueError on any violation."""
     if not isinstance(cert, dict):
         raise ValueError("certificate must be a JSON object")
@@ -161,7 +174,7 @@ def _parse(cert: dict) -> tuple[str, Fraction, str, Fraction, dict, dict]:
     comp = cert.get("comparison")
     if comp not in (">", "<"):
         raise ValueError(f"bad comparison {comp!r}")
-    power, bound = _frac(cert.get("power"), "power"), _frac(cert.get("bound"), "bound")
+    power, bound = frac(cert.get("power"), "power"), frac(cert.get("bound"), "bound")
     params = cert.get("parameters")
     if not isinstance(params, dict):
         raise ValueError("parameters must be an object")
@@ -169,15 +182,15 @@ def _parse(cert: dict) -> tuple[str, Fraction, str, Fraction, dict, dict]:
     if not isinstance(check, dict):
         raise ValueError("check must be an object")
     recorded = {
-        "integrand": _moment_in(check.get("integrand")),
-        "target": _moment_in(check.get("target")),
-        "identity_ok": _flag(check.get("identity_ok"), "identity_ok"),
-        "nonneg": _flag(check.get("nonneg"), "nonneg"),
+        "integrand": moment_in(check.get("integrand")),
+        "target": moment_in(check.get("target")),
+        "identity_ok": flag(check.get("identity_ok"), "identity_ok"),
+        "nonneg": flag(check.get("nonneg"), "nonneg"),
     }
     return kind, power, comp, bound, params, recorded
 
 
-def _frac(v: object, field: str) -> Fraction:
+def frac(v: object, field: str) -> Fraction:
     """Decode a serialized rational; floats and bools are not exact rationals."""
     if isinstance(v, bool) or not isinstance(v, int | str):
         raise ValueError(f"{field} must be a rational string, got {v!r}")
@@ -187,27 +200,27 @@ def _frac(v: object, field: str) -> Fraction:
         raise ValueError(f"{field} is not a rational: {v!r}") from None
 
 
-def _flag(v: object, field: str) -> bool:
+def flag(v: object, field: str) -> bool:
     """Decode a recorded verdict bit; must be a JSON boolean."""
     if not isinstance(v, bool):
         raise ValueError(f"check.{field} must be a boolean, got {v!r}")
     return v
 
 
-def _moment_in(d: object) -> Moment:
+def moment_in(d: object) -> Moment:
     """Decode a serialized moment {symbol: rational}; ValueError on bad shape."""
     if not isinstance(d, dict):
         raise ValueError("moment must be an object")
-    return {sym: _frac(v, f"moment[{sym!r}]") for sym, v in d.items()}
+    return {sym: frac(v, f"moment[{sym!r}]") for sym, v in d.items()}
 
 
-def _moment_out(m: Moment) -> dict:
+def moment_out(m: Moment) -> dict:
     """Serialize a moment deterministically: symbols sorted, coeffs 'n[/d]'."""
     return {sym: str(m[sym]) for sym in sorted(m)}
 
 
 # constant symbol -> LaTeX for cert_tex; unknown symbols fall back to \mathrm
-_SYMBOL_TEX = {
+SYMBOL_TEX = {
     "pi": "\\pi",
     "e": "e",
     "e_q": "e^{q}",
@@ -254,13 +267,13 @@ _SYMBOL_TEX = {
 }
 
 
-def _moment_tex(m: Moment) -> str:
+def moment_tex(m: Moment) -> str:
     """Render a moment as a QQ-linear combination; positive terms lead and the
     '1' term sorts last, matching the site's 'r - C' / 'C - r' print order."""
     out = ""
     for sym in sorted(m, key=lambda s: (m[s] <= 0, s == "1", s)):
         c = m[sym]
-        name = _SYMBOL_TEX.get(sym, f"\\mathrm{{{sym}}}")
+        name = SYMBOL_TEX.get(sym, f"\\mathrm{{{sym}}}")
         term = rat_tex(abs(c)) if sym == "1" else f"{'' if abs(c) == 1 else rat_tex(abs(c))}{name}"
         out += ("-" if c < 0 else "") + term if not out else f" {'-' if c < 0 else '+'} {term}"
     return out or "0"

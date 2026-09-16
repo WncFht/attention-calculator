@@ -25,11 +25,13 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     if sym == "arctan":
 
         def term(k: int) -> tuple[Fraction, Fraction]:
+            """(arctan_q coefficient, rational part) of the x^{2k+odd} moment."""
             return atan_moment(k, q)
     else:
         factor = cfg["factor"]
 
         def term(k: int) -> tuple[Fraction, Fraction]:
+            """(symbol coefficient, rational part) scaled by the kind factor."""
             cc, rat = ln_moment(k, r, odd)
             return cc * factor, rat
 

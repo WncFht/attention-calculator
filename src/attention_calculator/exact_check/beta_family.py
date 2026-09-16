@@ -40,7 +40,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
         sym, alpha, beta = {1: SQRT_BOUND_MOMENT, 2: LT_BOUND_MOMENT}[cu][kind]
         t, b = coeffs[0], Fraction(params["b_val"])
         integrand = {k: v for k, v in {sym: t * alpha, "1": t * beta + b}.items() if v}
-        target = _nonzero(lemniscate_target(kind, comp, power, bound))
+        target = nonzero(lemniscate_target(kind, comp, power, bound))
         return {
             "identity_ok": integrand == target,
             "nonneg": t >= 0 and b >= 0 and bool(integrand),
@@ -54,7 +54,7 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     else:
         basis = [lemniscate_basis(kind, comp, int(params["m"]), i) for i in (0, 1)]
         target = lemniscate_target(kind, comp, power, bound)
-    target = _nonzero(target)
+    target = nonzero(target)
     integrand = combine(coeffs, basis)
     return {
         "identity_ok": integrand == target,
@@ -64,6 +64,6 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
     }
 
 
-def _nonzero(m: dict) -> dict:
+def nonzero(m: dict) -> dict:
     """Drop zero-valued keys; Moments omit zero coefficients."""
     return {k: v for k, v in m.items() if v}

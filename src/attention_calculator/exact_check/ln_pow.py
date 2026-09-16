@@ -15,7 +15,7 @@ from ..kernels.ln_pow import basis_moment, cubic_nonneg, quartic_nonneg
 from ..moment import combine
 
 # kind -> (kernel log power, P coefficient keys, nonneg rule)
-_CFG = {
+CFG = {
     "ln_q_cube": (2, ("au_val", "bu_val", "cu_val", "du_val"), cubic_nonneg),
     "ln_q_quad": (3, ("au_val", "bu_val", "cu_val", "du_val", "eu_val"), quartic_nonneg),
 }
@@ -23,7 +23,7 @@ _CFG = {
 
 def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) -> dict:
     """Verify the claimed identity in exact moments; see exact_check."""
-    lp, keys, nonneg = _CFG[kind]
+    lp, keys, nonneg = CFG[kind]
     m, n = int(params["m"]), int(params["n"])
     u = Fraction(params["u_val"])
     coeffs = [Fraction(params[k]) / u for k in keys]

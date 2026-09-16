@@ -64,7 +64,10 @@ def check(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict) 
         m, n = int(params["m"]), int(params["n"])
         basis = [basis_moment(Fraction(n_k), max(m, n, 1), m, n, j, False) for j in (0, 1)]
         integrand = add(integrand, combine([power * au / u, power * bu / u], basis))
-        nonneg = power > 0 and poly_nonneg([au, bu])
+        # sign rule on the true coefficients au/u, bu/u — params_domain's
+        # u_val >= 0 gate makes this equivalent to [au, bu], but the check
+        # must stay correct even if called without the gate
+        nonneg = power > 0 and poly_nonneg([au / u, bu / u])
     return {
         "identity_ok": integrand == target,
         "nonneg": nonneg,

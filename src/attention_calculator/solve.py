@@ -185,17 +185,27 @@ def certified_cmp(kind: str, q: Fraction, r: Fraction) -> int | None:
             except (TypeError, ValueError, OverflowError, ZeroDivisionError):
                 return None
             if abs(diff) <= guard and dps == 2400:
-                # |C - r| below the smallest guard band: treat as equality
-                # (only reachable for rational C, e.g. Niven points)
+                # |C - r| below the smallest guard band: a finite-precision
+                # equality verdict, not a proof — a rational bound inside C's
+                # 2^-2370 neighborhood is indistinguishable from C at this
+                # cap, so EqualClaim here is heuristic (reachable for
+                # rational C, e.g. Niven points).
                 return 0
-    raise NoSolution
 
 
-def failure_text(exc: Exception, kind: str, comp: str) -> str:
+def failure_text(exc: Exception, kind: str, comp: str, exact: bool = False) -> str:
     """站端 404 文案：WrongDirection -> 方向反了；NoSolution -> 预算内未找到解。"""
     if isinstance(exc, WrongDirection):
         return "要证明的式子不等号方向反了"
     limit = EXPONENT_LIMIT.get(kind, 10)
+    if exact and kind == "gamma":
+        from .kernels.gamma import N_LIMIT
+
+        limit = N_LIMIT  # exact scans N<=600; the site text prints 10 verbatim
+    elif exact and kind in ("varpi", "gauss") and comp == "<":
+        from .kernels.beta_family import EXACT_LT_LIMIT
+
+        limit = EXACT_LT_LIMIT  # exact '<' drops the site's transposed shot
     return f"在指数不超过{limit}的范围内未找到{comp}方向的解"
 
 
@@ -265,6 +275,7 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
     reported as InternalError rather than a wrong proof.
     """
     from .certificate import build as build_cert
+    from .certificate import verify_cert
     from .engine import EqualClaim, InternalError
 
     sign = certified_cmp(kind, q, r)
@@ -286,6 +297,9 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
 
             cert = pade.prove(kind, q, comp, r)
             if cert is not None:
+                # 发射自检与下方 build_cert 同口径：构造器 bug 不外发
+                if not verify_cert(cert):
+                    raise InternalError("emitted proof failed exact self-check") from None
                 return {"type": kind, "prover": "pade", "certificate": cert}
         # W7 AGM 第二证法：gauss 直出区间包络证书；varpi 走 pi 子证 +
         # AGM 的 composite DAG（cert["prover"]=="composite"）
@@ -294,6 +308,8 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
 
             cert = agm.prove(kind, q, comp, r)
             if cert is not None:
+                if not verify_cert(cert):
+                    raise InternalError("emitted proof failed exact self-check") from None
                 return {"type": kind, "prover": cert["prover"], "certificate": cert}
         # W7 Euler--Maclaurin 第二证法：gamma 的 (m,n) 预算耗尽后用 EM
         # 有理包络 + 两个 ln2 子证 DAG 兜底
@@ -302,10 +318,15 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
 
             cert = euler_gamma.prove(kind, q, comp, r)
             if cert is not None:
+                if not verify_cert(cert):
+                    raise InternalError("emitted proof failed exact self-check") from None
                 return {"type": kind, "prover": cert["prover"], "certificate": cert}
         raise
     if resp.get("prover") == "composite":
-        # W6 Γ-型复合证明：证书是子证明 DAG，children 已在构造时逐个验证
+        # W6 Γ-型复合证明：证书是子证明 DAG，children 已在构造时逐个验证；
+        # 发射前仍过一次 verify_cert，与标准路径的自检口径一致
+        if not verify_cert(resp["certificate"]):
+            raise InternalError("emitted proof failed exact self-check")
         return resp
     # certificate.build internally runs exact_check.verify — its embedded
     # check block IS the emit self-check, so a failure stays InternalError
