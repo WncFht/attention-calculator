@@ -75,7 +75,19 @@ def verify_cert(cert: dict) -> bool:
     """Independent re-verification: the cert certifies a true proof iff its
     schema is sane, the recorded check block matches a fresh recomputation
     verbatim, and that recomputation proves the claim (identity_ok and
-    nonneg both hold)."""
+    nonneg both hold).
+
+    Padé certificates (a "serr" key marks the W4 second-prover schema) are
+    dispatched to pade.verify_cert — a different exact argument over the
+    same wire field name.
+    """
+    if isinstance(cert, dict) and "serr" in cert:
+        from . import pade
+
+        try:
+            return pade.verify_cert(pade.cert_parse(cert))
+        except (KeyError, TypeError, ValueError, ZeroDivisionError, AttributeError):
+            return False
     try:
         kind, power, comp, bound, params, recorded = _parse(cert)
         res = exact_check.verify(kind, power, comp, bound, params)

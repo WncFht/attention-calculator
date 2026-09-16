@@ -85,13 +85,12 @@ def test_tight_true_claim_beyond_budget_reports_no_solution():
         solve.prove("ln_q_square", "5", ">", "5709/2204", exact=True)
 
 
-def test_true_claim_budget_exhaustion_reports_no_solution():
-    # ln 22 < 2105/681 is true but needs exponents > 10 (site-mode test pins
-    # NoSolution already); exact mode must fail the same honest way
-    try:
-        resp = solve.prove("ln_q", "22", "<", "2105/681", exact=True)
-    except NoSolution:
-        return
+def test_true_claim_budget_exhaustion_falls_back_to_pade():
+    # ln 22 < 2105/681 is true but needs exponents > 10 — the (m,n) search
+    # exhausts, and the W4 Padé second prover takes over: success with a
+    # certificate that re-verifies over QQ.
+    resp = solve.prove("ln_q", "22", "<", "2105/681", exact=True)
+    assert resp.get("prover") == "pade"
     res = verify_response("ln_q", Fraction(22), "<", Fraction(2105, 681), resp)
     assert res["identity_ok"]
 

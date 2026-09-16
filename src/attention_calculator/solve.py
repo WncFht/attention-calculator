@@ -254,7 +254,18 @@ def prove_exact(module, kind: str, q: Fraction, comp: str, r: Fraction) -> dict:
         raise EqualClaim("二者相等")
     if sign is not None and (sign < 0) == (comp == ">"):
         raise WrongDirection
-    resp = module.prove(kind, q, comp, r, exact=True)
+    try:
+        resp = module.prove(kind, q, comp, r, exact=True)
+    except NoSolution:
+        # W4 Padé 第二证法：ln_q/arctan_q 的 (m,n) 预算耗尽后用插值
+        # Padé 界兜底；证书即证明，无 (m,n,P) 参数可渲染
+        if kind in ("ln_q", "arctan_q"):
+            from . import pade
+
+            cert = pade.prove(kind, q, comp, r)
+            if cert is not None:
+                return {"type": kind, "prover": "pade", "certificate": cert}
+        raise
     # certificate.build internally runs exact_check.verify — its embedded
     # check block IS the emit self-check, so a failure stays InternalError
     cert = build_cert(kind, q, comp, r, resp["parameters"])

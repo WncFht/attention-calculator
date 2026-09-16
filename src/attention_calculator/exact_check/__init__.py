@@ -39,5 +39,15 @@ def verify(kind: str, power: Fraction, comp: str, bound: Fraction, params: dict)
 
 
 def verify_response(kind: str, power: Fraction, comp: str, bound: Fraction, resp: dict) -> dict:
-    """verify() on a /calculate response body."""
+    """verify() on a /calculate response body.
+
+    Padé-fallback responses carry no parameters — the certificate IS the
+    proof; identity_ok reports pade.verify_cert on it (the cert bundles
+    sign and identity in one check, so nonneg reports the same bit).
+    """
+    if resp.get("prover") == "pade":
+        from .. import pade
+
+        ok = pade.verify_cert(pade.cert_parse(resp["certificate"]))
+        return {"identity_ok": ok, "nonneg": ok, "integrand": {}, "target": {}}
     return verify(kind, power, comp, bound, resp["parameters"])

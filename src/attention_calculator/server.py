@@ -246,6 +246,19 @@ def calculate():
         # 站端对一切内核异常走 catch-all 500（probe: e_q 0、ln_q_square 5/7）
         return fail(INTERNAL_ERROR, 500)
 
+    if result.get("prover") == "pade":
+        # W4 Padé 证法：无 (m,n,P) 参数与积分式，证书即完整响应
+        from . import pade
+
+        return respond(
+            {
+                "success": True,
+                "type": result.get("type", kind),
+                "prover": "pade",
+                "certificate": pade.cert_jsonable(result["certificate"]),
+            }
+        )
+
     params = dict(result["parameters"])
     params.setdefault("unified_form", {})
     # 线上响应里 m/n 是 int, au/bu/cu/u_val 是字符串
