@@ -55,5 +55,5 @@
 
 ## 其他端点
 
-- `/convex`（凸函数不等式计算器）、`/health`（健康计算器）为姊妹页面，本复现不含。
+- `/convex`（凸函数不等式计算器）、`/health`（健康计算器）为姊妹应用，已复现——协议细节见 `docs/sibling-apps.md`。
 - 前端：服务端渲染 + MathJax + KaTeX + html2canvas；中英双语；sessionStorage 历史 10 条。
