@@ -1,11 +1,12 @@
-"""Exact-mode tests for the beta_even family: beta4, beta6 (new W7 types).
+"""Exact-mode tests for the beta_even family: beta4..beta10 (new W7 types).
 
 Drives kernels.beta_even.prove + exact_check.beta_even.check directly — the
 types are not yet wired into solve.FAMILY/EXACT_TYPES and have no site
-counterpart. Bounds are CF convergents of β(4)/β(6) computed with mpmath at
+counterpart. Bounds are CF convergents of β(s) computed with mpmath at
 80dps (workdps, not bare mp.dps assignment):
 
     β(4) ≈ 0.98894455174110533611   β(6) ≈ 0.99868522221843813544
+    β(8) ≈ 0.99984999024682965634   β(10) ≈ 0.99998316402619687741
 
 Every emitted proof must pass check() exactly. False claims raise
 WrongDirection mid-scan: the identity ∫f = ±(C−r) holds exactly for every
@@ -25,7 +26,7 @@ from attention_calculator.exact_check import verify
 from attention_calculator.exact_check.beta_even import check
 from attention_calculator.kernels import EXACT_TYPES, beta_even
 
-KINDS = ("beta4", "beta6")
+KINDS = ("beta4", "beta6", "beta8", "beta10")
 
 
 def run(kind, power, comp, bound):
@@ -56,6 +57,24 @@ def run(kind, power, comp, bound):
         ("beta6", "1", ">", "9/10"),  # (1,0)
         ("beta6", "1", ">", "129889/130060"),  # err -1.3e-11 -> (7,7)
         ("beta6", "1", ">", "4048587/4053917"),  # err -2.6e-14 -> (9,10)
+        # β(8) '<' upper bounds
+        ("beta8", "1", "<", "2"),
+        ("beta8", "1", "<", "1"),
+        ("beta8", "1", "<", "199957/199987"),  # err +2.5e-12 -> (6,5)
+        # β(8) '>' lower bounds
+        ("beta8", "1", ">", "0"),
+        ("beta8", "1", ">", "9/10"),
+        ("beta8", "1", ">", "6665/6666"),  # err -5.2e-9 -> (3,2)
+        ("beta8", "1", ">", "86648/86661"),  # err -5.5e-11 -> (5,3)
+        # β(10) '<' upper bounds — β(10) hugs 1, so even 3.8e-13 gaps are easy
+        ("beta10", "1", "<", "2"),
+        ("beta10", "1", "<", "59396/59397"),  # err +1.1e-10 -> (4,0)
+        ("beta10", "1", "<", "475165/475173"),  # err +3.8e-13 -> (6,2)
+        # β(10) '>' lower bounds
+        ("beta10", "1", ">", "0"),
+        ("beta10", "1", ">", "9/10"),
+        ("beta10", "1", ">", "49999/50000"),  # err -3.2e-6 -> (1,0)
+        ("beta10", "1", ">", "999983/1000000"),  # err -1.6e-7 -> (1,0)
         # power as coefficient: 2β(4) ≈ 1.9778891, β(4)/2 ≈ 0.4944723
         ("beta4", "2", ">", "1"),
         ("beta4", "2", "<", "2"),
@@ -74,6 +93,9 @@ def run(kind, power, comp, bound):
         ("beta4", "0", "<", "1/2"),
         ("beta4", "0", ">", "-1"),
         ("beta6", "0", "<", "1"),
+        ("beta8", "2", ">", "1"),
+        ("beta8", "0", "<", "1"),
+        ("beta10", "0", ">", "-1"),
     ],
 )
 def test_emitted_proofs_verify(kind, power, comp, bound):
@@ -95,6 +117,12 @@ def test_emitted_proofs_verify(kind, power, comp, bound):
         ("beta6", "1", "<", "4048587/4053917"),  # below by 2.6e-14
         ("beta6", "1", ">", "760/761"),  # above by 7.2e-7
         ("beta6", "1", ">", "559814/560551"),  # above by 4.1e-13
+        ("beta8", "1", "<", "86648/86661"),  # below by 5.5e-11
+        ("beta8", "1", ">", "199957/199987"),  # above by 2.5e-12
+        ("beta8", "1", ">", "1"),  # β(8) < 1
+        ("beta10", "1", "<", "49999/50000"),  # below by 3.2e-6
+        ("beta10", "1", ">", "59396/59397"),  # above by 1.1e-10
+        ("beta10", "1", ">", "1"),  # β(10) < 1
     ],
 )
 def test_false_claim_raises_wrong_direction(kind, power, comp, bound):

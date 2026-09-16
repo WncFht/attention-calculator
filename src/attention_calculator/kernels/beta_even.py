@@ -1,4 +1,4 @@
-"""beta_even kernel family: power·β(s), s ∈ {4, 6} — exact-mode only.
+"""beta_even kernel family: power·β(s), s ∈ {4, 6, 8, 10} — exact-mode only.
 
 W7 extension types with no site counterpart. Same 1/(1+x²) kernel as
 quadlog's catalan, at the next even-argument rungs of the Dirichlet beta
@@ -29,6 +29,8 @@ from .quadlog import basis_moments, factors_tex, ln_moment, numerator
 BETA = {
     "beta4": 3,
     "beta6": 5,
+    "beta8": 7,
+    "beta10": 9,
 }
 
 LIMIT = 10

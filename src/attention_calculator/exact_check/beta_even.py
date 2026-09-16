@@ -1,4 +1,4 @@
-"""Exact checker for beta_even kernels: beta4, beta6 (exact-mode only).
+"""Exact checker for beta_even kernels: beta4..beta10 (exact-mode only).
 
 params encode P = (au + bu·x²)/u multiplying x^{2m}(1−x²)^n·ln^r(1/x)/(1+x²);
 the true basis moments come from the kernel's own basis() (ln_moment's even
