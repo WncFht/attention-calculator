@@ -363,6 +363,17 @@ def decompose_inequality():
     problem = request.form.get("problem", "").strip()
     if not problem:
         return fail("请输入一个只包含一个 > 或 < 的不等式", 400)
+    # mode=exact 走可证界分配路径（decompose_exact）；缺省保持站端逐字节
+    if request.form.get("mode") == "exact":
+        from . import decompose_exact
+
+        try:
+            result = decompose_exact.decompose_exact(problem)
+        except ValueError as exc:
+            return fail(str(exc), 400)
+        except Exception:
+            return fail("组合证明生成失败，请稍后再试", 500)
+        return respond(result)
     from . import decompose
 
     try:
