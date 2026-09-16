@@ -45,6 +45,8 @@ FAMILY = {
     "zeta7": "zeta_odd",
     "zeta9": "zeta_odd",
     "zeta11": "zeta_odd",
+    "beta4": "beta_even",
+    "beta6": "beta_even",
     "ln_q_cube": "ln_pow",
     "arcsin_q": "arcsin",
     "arsinh_q": "invhyp",

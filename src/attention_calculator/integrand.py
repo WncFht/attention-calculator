@@ -251,6 +251,9 @@ def constant_mpf(kind: str, power: Fraction):
         "zeta7": lambda: q * mp.zeta(7),
         "zeta9": lambda: q * mp.zeta(9),
         "zeta11": lambda: q * mp.zeta(11),
+        # Dirichlet β(4)/β(6)：同 zeta_odd 的 1/(1+x²)·ln^r 机器的奇-r 支路
+        "beta4": lambda: q * mp.dirichlet(4, [0, 1, 0, -1]),
+        "beta6": lambda: q * mp.dirichlet(6, [0, 1, 0, -1]),
         # ln_q_cube 的 power 槽携带 q 本身（与 ln_q 同），常数是 (ln q)^3
         "ln_q_cube": lambda: mp.log(q) ** 3,
         "arcsin_q": lambda: mp.asin(q),

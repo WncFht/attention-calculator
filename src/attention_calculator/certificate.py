@@ -197,6 +197,8 @@ _SYMBOL_TEX = {
     "zeta7": "\\zeta(7)",
     "zeta9": "\\zeta(9)",
     "zeta11": "\\zeta(11)",
+    "beta4": "\\beta(4)",
+    "beta6": "\\beta(6)",
     "gamma": "\\gamma",
     "arctan": "\\arctan q",
     "sin_q": "\\sin q",
