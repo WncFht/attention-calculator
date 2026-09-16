@@ -124,6 +124,8 @@ def domain_error(kind: str, power: Fraction) -> str | None:
             return "Li2的自变量必须小于1"
     if kind == "psi1_q" and power <= 0:
         return "psi1_q 仅接受 q>0：q<=0 是 ψ′ 的极点或域外参数"
+    if kind in ("si_q", "cin_q") and power == 0:
+        return "q不能为0：q=0 时该积分常数退化"
     if kind == "sin_q" and not 0 < float(power) < math.pi:
         return "请在sin后输入一个在(0,π)内的数"
     if kind in ("cos_q", "tan_q", "cot_q") and not 0 < float(power) < math.pi / 2:

@@ -219,6 +219,8 @@ _SYMBOL_TEX = {
     "li2_q": "\\mathrm{Li}_{2}(q)",
     "ln_1mq": "\\ln(1-q)",
     "psi1_q": "\\psi'(q)",
+    "si_q": "\\mathrm{Si}(q)",
+    "cin_q": "\\mathrm{Cin}(q)",
     "C": "C",
 }
 

@@ -73,6 +73,8 @@ EXACT_TYPES = [
     "pi3_a",
     "li2_q",
     "psi1_q",
+    "si_q",
+    "cin_q",
     "gamma14",
     "gamma34",
     "gamma12",

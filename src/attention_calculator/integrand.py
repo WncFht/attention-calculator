@@ -272,6 +272,9 @@ def constant_mpf(kind: str, power: Fraction):
         "li2_q": lambda: mp.polylog(2, q),
         # psi1_q 同理：power 即参数 q，常数是 ψ′(q)，不乘系数
         "psi1_q": lambda: mp.psi(1, q),
+        # si_q/cin_q：power 即参数 q；Cin 是偶函数，核内用 |q| 归约
+        "si_q": lambda: mp.si(q),
+        "cin_q": lambda: mp.euler + mp.log(mp.fabs(q)) - mp.ci(mp.fabs(q)),
         # Γ 特殊值复合型（kernels/gamma_special）：power 是系数 q·C
         "gamma14": lambda: q * mp.gamma(mp.mpf(1) / 4),
         "gamma34": lambda: q * mp.gamma(mp.mpf(3) / 4),

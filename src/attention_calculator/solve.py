@@ -57,6 +57,8 @@ FAMILY = {
     "pi3_a": "dixon",
     "li2_q": "li2",
     "psi1_q": "trigamma",
+    "si_q": "sicin",
+    "cin_q": "sicin",
     "gamma14": "gamma_special",
     "gamma34": "gamma_special",
     "gamma12": "gamma_special",
