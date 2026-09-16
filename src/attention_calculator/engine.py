@@ -42,7 +42,8 @@ class EqualClaim(ValueError):
 
 
 # 搜索预算: e、pi 两类型指数上限 30, 其余 10 (见 docs/kernel-spec.md 搜索顺序)
-EXPONENT_LIMIT = {"pi": 30, "e": 30}
+# arcsin_q 是 exact-only 型，其核 LIMIT=30——q→1 时可证界要求 m ~ O(1/(1−q))
+EXPONENT_LIMIT = {"pi": 30, "e": 30, "arcsin_q": 30}
 
 
 def mn_order(limit: int) -> Iterator[tuple[int, int]]:

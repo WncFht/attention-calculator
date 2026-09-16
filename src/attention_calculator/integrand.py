@@ -251,6 +251,7 @@ def constant_mpf(kind: str, power: Fraction):
         "zeta7": lambda: q * mp.zeta(7),
         # ln_q_cube 的 power 槽携带 q 本身（与 ln_q 同），常数是 (ln q)^3
         "ln_q_cube": lambda: mp.log(q) ** 3,
+        "arcsin_q": lambda: mp.asin(q),
         "e_pi": lambda: q * mp.exp(mp.pi),  # power 是 e^π 的系数，非指数
         # varpi/gauss 的 power 是常数倍率（LHS 形如 q·G、q·ϖ），
         # 与 e/golden 一致；此前漏乘导致 q≠1 时真假判定错。

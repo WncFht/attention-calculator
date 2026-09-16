@@ -60,4 +60,5 @@ EXACT_TYPES = [
     "zeta5",
     "zeta7",
     "ln_q_cube",
+    "arcsin_q",
 ]

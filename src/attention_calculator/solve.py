@@ -44,6 +44,7 @@ FAMILY = {
     "zeta5": "zeta_odd",
     "zeta7": "zeta_odd",
     "ln_q_cube": "ln_pow",
+    "arcsin_q": "arcsin",
 }
 
 # 站端在进核前用 float64 求值命题常数 c，再把有理界与 c 做 *精确* 比较
