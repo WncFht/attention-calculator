@@ -219,6 +219,10 @@ f(x) = B_{m,n}(x) · P(x) · K(x)
 - arctan 同理：`l_n = P_{2n,2n}` 下界、`u_n = P_{2n+1,2n+1}` 上界，`s_n,t_n` 为对应导数（恒正有理函数）。
 - 网站实测的 ln 输出用的是 `(1+cx)^s` 核（非 Padé）。**落地状态（2026-09-16）**：`pade.py` 已作为 mode=exact 的在线兜底——`prove_exact` 对 ln_q/arctan_q 在 (m,n) 搜索耗尽后回落 Padé（预算 MAX_N=50），响应 `prover:"pade"`、无 parameters、证书为 Padé schema（`docs/2026-09-16-certificate-spec.md` §Padé 证书变体）。
 
+## AGM 区间法（gauss/varpi 的第二套方案）
+
+`agm.py`（顶层，与 pade.py 同级）：G = 1/M(1,√2) 的 AGM 迭代 `a_{n+1}=(a_n+b_n)/2, b_{n+1}=√(a_n·b_n)` 用 isqrt 有理包络（a_n↑M≤b_n↓ 三明治），全程 Fraction/int 无浮点。gauss 在 (m,n) 耗尽后直出区间证书（`prover:"agm"`，`agm_iter`/`agm_digits`/`lo`/`hi` 字段，复核器重放到逐字相等）；varpi = π·G 走 composite DAG（gamma_special 新规则 `pi_div_agm`：pi 子证 + AGM 子证，见证 (A,B)）。实测地板：gauss 双向 ~1e-2000 间隙（digits=4096 档，11 步迭代），varpi ~1e-16（pi oracle 地板所限）。细节 `docs/2026-09-16-agm-impl-notes.md`。
+
 ## 组合不等式 /decompose_inequality
 
 输入如 `pi^2+8*pi>35`、`e*pi+phi+sin(1)<11`。实测输出：
