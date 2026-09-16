@@ -142,6 +142,27 @@ def en_slash():
     return fail(NOT_FOUND, 404)
 
 
+# 本地演示页：站端页面引用 jsdelivr/hertzen 三个 CDN 依赖（MathJax/KaTeX/
+# html2canvas），离线或 CDN 不可达时公式不排版。/demo 把 URL 改写为
+# static/vendor 下的本地副本；/ 与 /en 保持站端逐字节不动（parity 夹具）。
+_DEMO_CDN = (
+    ("https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js", "mathjax/tex-mml-chtml.js"),
+    ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css", "katex/katex.min.css"),
+    ("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js", "katex/katex.min.js"),
+    ("https://html2canvas.hertzen.com/dist/html2canvas.min.js", "html2canvas.min.js"),
+)
+DEMO_ASSETS = {cdn: f"/static/vendor/{name}" for cdn, name in _DEMO_CDN}
+
+
+@app.get("/demo")
+def demo():
+    """Same page as / with the three CDN URLs rewritten to vendored copies."""
+    html = render_template("index.html")
+    for cdn, local in DEMO_ASSETS.items():
+        html = html.replace(cdn, local)
+    return html
+
+
 # 同一应用还挂在 /attention 前缀下（页面相同，静态资源路径前缀改写）
 @app.get("/attention")
 @app.get("/attention/")

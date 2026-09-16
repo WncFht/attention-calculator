@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 bench/data/
 bench/out/
+
+# /demo 页的 CDN 前端依赖本地副本（scripts/fetch-vendor-assets.sh 拉取）
+/src/attention_calculator/static/vendor/
 *.egg-info/
 health-records.json
 
