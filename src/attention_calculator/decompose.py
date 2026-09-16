@@ -19,54 +19,54 @@ from .engine import EqualClaim, NoSolution, WrongDirection
 # 与站端 normalized_latex 完全一致；函数也全部用 undefined Function——未定义
 # 应用函数按「类创建序」排 canon，ln,sin,cos,tan,arctan,sinh,tanh,exp 的创建
 # 顺序恰好逐字节复刻站端排序（如 -sin-cos-tan、e+sin(1) 的项序）。
-_E = sp.Symbol("e")
-_PI = sp.Symbol("pi")
-_GAMMA = sp.Symbol("gamma")
-_GOLDEN = sp.Symbol("golden")
-_CATALAN = sp.Symbol("catalan")
-_GAUSS = sp.Symbol("gauss")
-_VARPI = sp.Symbol("varpi")
-_ZETA3 = sp.Symbol("zeta3")
-_LN = sp.Function("ln")
-_SIN = sp.Function("sin")
-_COS = sp.Function("cos")
-_TAN = sp.Function("tan")
-_ARCTAN = sp.Function("arctan")
-_SINH = sp.Function("sinh")
-_TANH = sp.Function("tanh")
-_EXP = sp.Function("exp")
+E = sp.Symbol("e")
+PI = sp.Symbol("pi")
+GAMMA = sp.Symbol("gamma")
+GOLDEN = sp.Symbol("golden")
+CATALAN = sp.Symbol("catalan")
+GAUSS = sp.Symbol("gauss")
+VARPI = sp.Symbol("varpi")
+ZETA3 = sp.Symbol("zeta3")
+LN = sp.Function("ln")
+SIN = sp.Function("sin")
+COS = sp.Function("cos")
+TAN = sp.Function("tan")
+ARCTAN = sp.Function("arctan")
+SINH = sp.Function("sinh")
+TANH = sp.Function("tanh")
+EXP = sp.Function("exp")
 
 LOC = {
-    "e": _E,
-    "pi": _PI,
-    "π": _PI,
-    "gamma": _GAMMA,
-    "phi": _GOLDEN,
-    "golden": _GOLDEN,
-    "catalan": _CATALAN,
-    "gauss": _GAUSS,
-    "varpi": _VARPI,
-    "zeta3": _ZETA3,
-    "ln": _LN,
-    "arctan": _ARCTAN,
-    "atan": _ARCTAN,
-    "exp": _EXP,
-    "sin": _SIN,
-    "cos": _COS,
-    "tan": _TAN,
-    "sinh": _SINH,
-    "tanh": _TANH,
+    "e": E,
+    "pi": PI,
+    "π": PI,
+    "gamma": GAMMA,
+    "phi": GOLDEN,
+    "golden": GOLDEN,
+    "catalan": CATALAN,
+    "gauss": GAUSS,
+    "varpi": VARPI,
+    "zeta3": ZETA3,
+    "ln": LN,
+    "arctan": ARCTAN,
+    "atan": ARCTAN,
+    "exp": EXP,
+    "sin": SIN,
+    "cos": COS,
+    "tan": TAN,
+    "sinh": SINH,
+    "tanh": TANH,
 }
 
 BASE = {
-    _PI: ("pi", Fraction(1)),
-    _E: ("e", Fraction(1)),
-    _GAMMA: ("gamma", Fraction(1)),
-    _GOLDEN: ("golden", Fraction(1)),
-    _CATALAN: ("catalan", Fraction(1)),
-    _ZETA3: ("zeta3", Fraction(1)),
-    _VARPI: ("varpi", Fraction(1)),
-    _GAUSS: ("gauss", Fraction(1)),
+    PI: ("pi", Fraction(1)),
+    E: ("e", Fraction(1)),
+    GAMMA: ("gamma", Fraction(1)),
+    GOLDEN: ("golden", Fraction(1)),
+    CATALAN: ("catalan", Fraction(1)),
+    ZETA3: ("zeta3", Fraction(1)),
+    VARPI: ("varpi", Fraction(1)),
+    GAUSS: ("gauss", Fraction(1)),
 }
 
 # 乘积项里只允许非函数型因子（ln(2)*e、sin(1)*pi 等报"基础常数"错）
@@ -82,7 +82,7 @@ ERR_NUMERIC = "经数值检验，该不等式不成立；请检查不等号方�
 ERR_NO_SPLIT = "暂未找到可由基础注意力积分证明的加法乘积拆解"
 ERR_RHS_FORM = "当前乘积组合只支持“乘积 与 有理数”比较"
 
-_BAD_CHARS = re.compile(r"[^0-9A-Za-z_()+\-*/^.\sπ]")
+BAD_CHARS = re.compile(r"[^0-9A-Za-z_()+\-*/^.\sπ]")
 
 EXPONENT_LIMIT = {"pi": 30, "e": 30}
 
@@ -93,11 +93,11 @@ def parse_atom(expr):
         return BASE[expr]
     if expr.is_Pow:
         b, e = expr.base, expr.exp
-        if b == _E and e == _PI:
+        if b == E and e == PI:
             return "e_pi", Fraction(1)
-        if b in (_PI, _E):
+        if b in (PI, E):
             if e.is_Integer:
-                return ("pi_n" if b == _PI else "e_q"), Fraction(e.p, e.q)
+                return ("pi_n" if b == PI else "e_q"), Fraction(e.p, e.q)
             raise ValueError(ERR_POW_INT)
         if b in BASE:
             raise ValueError(ERR_POW_SPECIAL)
@@ -106,7 +106,7 @@ def parse_atom(expr):
         name = expr.func.__name__
         a = expr.args[0] if expr.args else None
         if name == "exp":
-            if a == _PI:
+            if a == PI:
                 return "e_pi", Fraction(1)
             if a is not None and a.is_Rational:
                 return "e_q", Fraction(a.p, a.q)
@@ -153,6 +153,7 @@ GAUSS_V = float((sp.gamma(sp.Rational(1, 4)) ** 2 / (2 * sp.sqrt(2 * sp.pi**3)))
 
 
 def atom_value(kind, arg):
+    """原子的 float 数值——只用于选记录界；界本身是 Fraction。"""
     f = float(arg)
     return {
         "pi": lambda: math.pi * f,
@@ -177,6 +178,7 @@ def atom_value(kind, arg):
 
 
 def term_true(coef, atoms):
+    """项真值 coef·Πatom_value（float）。"""
     v = float(coef)
     for kind, arg in atoms:
         v *= atom_value(kind, arg)
@@ -187,6 +189,7 @@ class Chain:
     """某常数值的有理记录界：upper = ceil(nk)/k 递减记录，lower = floor 递增记录。"""
 
     def __init__(self, value, k_min, k_max=3000):
+        """遍历 k∈[k_min,k_max] 收 running-min(upper)/running-max(lower) 记录。"""
         up, lo = [], []
         best_u, best_l = math.inf, -math.inf
         for k in range(k_min, k_max + 1):
@@ -205,18 +208,22 @@ class Chain:
         self.lower = lo
 
     def largest_upper(self, cap):
+        """不超过 cap 的最大上界记录。"""
         ok = [b for b in self.upper if b <= cap]
         return ok[0] if ok else None
 
     def largest_upper_strict(self, cap):
+        """严格小于 cap 的最大上界记录。"""
         ok = [b for b in self.upper if b < cap]
         return ok[0] if ok else None
 
     def smallest_lower(self, floor):
+        """严格大于 floor 的最小下界记录。"""
         ok = [b for b in self.lower if b > floor]
         return ok[0] if ok else None
 
     def smallest_lower_geq(self, floor):
+        """不小于 floor 的最小下界记录。"""
         ok = [b for b in self.lower if b >= floor]
         return ok[0] if ok else None
 
@@ -243,6 +250,7 @@ def chain(kind, arg, side):
 
 
 def val_chain(value, side):
+    """任意项值的记录链（非单原子项走 k_min=1 全链）。"""
     key = ("v", round(value, 15), side)
     if key not in CHAINS:
         CHAINS[key] = Chain(value, 1)
@@ -294,6 +302,7 @@ STEP_RANK = {
 
 
 def is_reciprocal(atoms):
+    """atoms 含负幂因子 → 倒数形 a·b^{-1}。"""
     return any(a < 0 for _, a in atoms)
 
 
@@ -506,6 +515,7 @@ def join_signed(pieces):
 
 
 def flip(comp):
+    """不等号镜像。"""
     return "<" if comp == ">" else ">"
 
 
@@ -586,7 +596,7 @@ def decompose_inequality(problem):
     lt_s, rt_s = txt.split(comp)
     if not lt_s.strip() or not rt_s.strip():
         raise ValueError("表达式不能为空")
-    if _BAD_CHARS.search(lt_s) or _BAD_CHARS.search(rt_s):
+    if BAD_CHARS.search(lt_s) or BAD_CHARS.search(rt_s):
         raise ValueError("表达式包含暂不支持的字符")
 
     try:
@@ -730,6 +740,7 @@ def decompose_inequality(problem):
         acomp = ">" if flip_alloc else comp
 
         def contrib(tj):
+            """已分项取记录界，未分项回退项真值。"""
             if tj in done:
                 return done[tj]
             return Fraction(str(term_true(*aterms[tj])))
