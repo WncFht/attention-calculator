@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks git 扫全量历史
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -31,6 +33,16 @@ jobs:
 
       - name: Lint
         run: npm run lint:md
+
+      - name: Autocorrect lint
+        run: |
+          brew install autocorrect
+          git ls-files -z '*.md' | xargs -0 autocorrect --lint
+
+      - name: Secrets scan
+        run: |
+          brew install gitleaks
+          gitleaks git --redact .
 
       - name: Toml & workflows check
         run: |
@@ -57,3 +69,13 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install ruff
       - run: ruff format --check . && ruff check .
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv lock --check
+      - run: uv sync --locked
+      - run: uv run pytest
