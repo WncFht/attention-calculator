@@ -58,6 +58,7 @@ def corpus():
             yield r
 
 
+@pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 def test_corpus_sweep():
     """Every golden success record for the 4 types is checked; only the
     transposed cluster may fail identity_ok, only the zero-integrand
@@ -81,6 +82,7 @@ def test_corpus_sweep():
     assert set(bad_nonneg) == ZERO_INTEGRAND
 
 
+@pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 @pytest.mark.parametrize(("power", "rational"), sorted(TRANSPOSED))
 def test_transposed_records_fail(power, rational):
     params = next(
@@ -163,6 +165,7 @@ def test_equal_claim():
         solve.prove("gauss", "0", "<", "0", exact=True)
 
 
+@pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 def test_zero_integrand_site_params_fail_nonneg():
     """The site emits ``0 = int 0 dx > 0`` for 0-vs-0; the equality holds
     vacuously but the strict inequality is false."""

@@ -56,6 +56,7 @@ def test_exact_proofs_verify(kind, power, comp, bound):
     assert res["nonneg"]
 
 
+@pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 def test_golden_corpus_sweep():
     """Sweep every golden trig record: only the 30 known (1,8) biased
     emissions may fail, and only on the identity (their P stays nonneg)."""
@@ -91,6 +92,7 @@ BIAS18_PINS = [
 ]
 
 
+@pytest.mark.skipif(not GOLDEN.exists(), reason="bench/data 语料不入库（rsync 同步）")
 @pytest.mark.parametrize(("kind", "power", "comp", "bound"), BIAS18_PINS)
 def test_biased_site_params_fail_identity(kind, power, comp, bound):
     """The site's (1,8) emissions are false identities under true moments."""

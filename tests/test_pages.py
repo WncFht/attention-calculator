@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 DATA = Path("bench/data")
+VENDOR = Path("src/attention_calculator/static/vendor")
 
 # (route, site capture) — /en is byte-identical to / (client-side language);
 # /health/ mirrors /health; /attention/* is the same app under a mount prefix.
@@ -47,6 +48,7 @@ def test_page_byte_parity(client, route, fixture):
     assert resp.get_data() == expected
 
 
+@pytest.mark.skipif(not VENDOR.exists(), reason="vendor 资产不入库（fetch-vendor-assets.sh 拉取）")
 def test_demo_route(client):
     """GET /demo serves the index page with CDN URLs rewritten to /static/vendor."""
     resp = client.get("/demo")
