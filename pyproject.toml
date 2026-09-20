@@ -21,6 +21,10 @@ packages = ["src/attention_calculator"]
 # /demo 的 CDN 前端副本是 fetch-vendor-assets.sh 拉取的下载产物，不进 wheel
 exclude = ["src/attention_calculator/static/vendor/**"]
 
+[tool.uv]
+# CI 与本机钉同一 uv 版本——不同版本解析结果不同，uv lock --check 会假失败
+required-version = "==0.11.29"
+
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
