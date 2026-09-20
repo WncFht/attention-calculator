@@ -1,5 +1,7 @@
 # attention-calculator
 
+_English: a reproduction and extension of the "attention calculator" at [zhuyidao.net](https://zhuyidao.net/) — given `constant ⋚ rational`, it automatically constructs a definite-integral identity proof. In `mode=exact` the identity is exact over ℚ and ships with a machine-checkable certificate._
+
 复现并扩展 [zhuyidao.net](https://zhuyidao.net/)「注意力计算器」：输入"常数 ⋚ 有理数"，自动构造定积分恒等式证明。
 
 项目分两阶段：
