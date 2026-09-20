@@ -26,7 +26,8 @@ exclude = ["src/attention_calculator/static/vendor/**"]
 required-version = "==0.11.29"
 
 [[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+# 与本机 UV_DEFAULT_INDEX 环境变量同源——不一致会让 uv 认为 lockfile 过期
+url = "https://mirrors.aliyun.com/pypi/simple"
 default = true
 
 [tool.ruff]
